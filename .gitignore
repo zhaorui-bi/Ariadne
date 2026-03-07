@@ -1,0 +1,9 @@
+.venv/
+*.egg-info/
+__pycache__/
+*.pyc
+.DS_Store
+demo_workspace/
+demo_input/
+demo_output/
+results/
