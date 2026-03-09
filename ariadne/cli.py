@@ -134,6 +134,9 @@ def cmd_motif(args: argparse.Namespace) -> int:
         args.candidates,
         args.coral_reference,
         args.output_dir,
+        tps_anchor_pattern=args.tps_pattern,
+        tps_center_position=args.tps_center_position,
+        tps_search_radius=args.tps_search_radius,
         anchor_pattern=args.anchor_pattern,
         flank=args.flank,
         center_position=args.center_position,
@@ -179,6 +182,9 @@ def cmd_run(args: argparse.Namespace) -> int:
         filtering_outputs["filtered_fasta"],
         coral_reference,
         motif_dir,
+        tps_anchor_pattern=args.tps_pattern,
+        tps_center_position=args.tps_center_position,
+        tps_search_radius=args.tps_search_radius,
         anchor_pattern=args.anchor_pattern,
         flank=args.flank,
         center_position=args.center_position,
@@ -260,7 +266,7 @@ def build_parser() -> argparse.ArgumentParser:
     filter_parser.add_argument("--motif-anchor", default="CFDVL")
     filter_parser.set_defaults(func=cmd_filter)
 
-    classify = subparsers.add_parser("classify", help="Classify candidates in AFLP-style HMM feature space.")
+    classify = subparsers.add_parser("classify", help="Classify TPS candidates in profile feature space.")
     classify.add_argument("--candidates", required=True, type=Path)
     classify.add_argument("--reference-dir", required=True, type=Path)
     classify.add_argument("--output-dir", required=True, type=Path)
@@ -269,10 +275,13 @@ def build_parser() -> argparse.ArgumentParser:
     classify.add_argument("--tree-neighbors", type=int, default=12)
     classify.set_defaults(func=cmd_classify)
 
-    motif = subparsers.add_parser("motif", help="Compare candidate motif windows against coral cembrene references.")
+    motif = subparsers.add_parser("motif", help="First confirm TPS by DDXXD/E near 125 aa, then compare 210 aa motif windows against coral cembrene references.")
     motif.add_argument("--candidates", required=True, type=Path)
     motif.add_argument("--coral-reference", required=True, type=Path)
     motif.add_argument("--output-dir", required=True, type=Path)
+    motif.add_argument("--tps-pattern", default=r"DD..[DE]")
+    motif.add_argument("--tps-center-position", type=int, default=125)
+    motif.add_argument("--tps-search-radius", type=int, default=40)
     motif.add_argument("--anchor-pattern", default=r"CFDVL.")
     motif.add_argument("--flank", type=int, default=10)
     motif.add_argument("--center-position", type=int, default=210)
@@ -291,6 +300,9 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--min-length", type=int, default=300)
     run.add_argument("--identity-threshold", type=float, default=0.95)
     run.add_argument("--motif-anchor", default="CFDVL")
+    run.add_argument("--tps-pattern", default=r"DD..[DE]")
+    run.add_argument("--tps-center-position", type=int, default=125)
+    run.add_argument("--tps-search-radius", type=int, default=40)
     run.add_argument("--anchor-pattern", default=r"CFDVL.")
     run.add_argument("--flank", type=int, default=10)
     run.add_argument("--center-position", type=int, default=210)

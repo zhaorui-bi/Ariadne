@@ -206,7 +206,7 @@ def _render_scatter(records: list[FastaRecord], coords: np.ndarray, output_path:
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" '
         f'viewBox="0 0 {width} {height}">'
         f'<rect width="{width}" height="{height}" fill="white" />'
-        f'<text x="{margin}" y="40" font-size="24" font-weight="bold">Ariadne AFLP-style feature embedding</text>'
+        f'<text x="{margin}" y="40" font-size="24" font-weight="bold">Ariadne TPS candidate feature embedding</text>'
         f'<line x1="{margin}" y1="{height - margin}" x2="{width - margin}" y2="{height - margin}" stroke="#999999" />'
         f'<line x1="{margin}" y1="{margin}" x2="{margin}" y2="{height - margin}" stroke="#999999" />'
         + "".join(points)

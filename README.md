@@ -6,7 +6,7 @@ Ariadne 现在被整理成一个可直接运行的四模块动物 TPS 挖掘 pip
 
 - 用 `python -m ariadne` 提供统一 CLI，覆盖四个模块和端到端运行。
 - 用 `pyrodigal` 替代缺失的 `prodigal` 二进制，用 `pyhmmer` 替代 discovery HMM 搜索。
-- 用仓库内 `AFLP_finder-main/hmm/*.hmm` 做第 3 模块的 AFLP 风格特征提取，不再依赖 R。
+- 用仓库内 `AFLP_finder-main/hmm/*.hmm` 做第 3 模块的 TPS 候选 profile 特征提取，不再依赖 R。
 - 用纯 Python 重写过滤、去重和 motif 分析，去掉旧脚本对 Biopython 的隐式依赖。
 - 增加 `prepare-demo` 和新的 `code.sh`，可以直接做 smoke test。
 - 整理珊瑚 FASTA 与昆虫 Excel 参考数据的预处理流程。
@@ -16,8 +16,8 @@ Ariadne 现在被整理成一个可直接运行的四模块动物 TPS 挖掘 pip
 - `ariadne/cli.py`：主命令行入口。
 - `ariadne/discovery.py`：模块 1，转录组 ORF 预测 + HMM 搜索。
 - `ariadne/filtering.py`：模块 2，coverage / length / 95% 相似性过滤。
-- `ariadne/classification.py`：模块 3，AFLP 风格 HMM 特征分类、局部树和 embedding。
-- `ariadne/motif.py`：模块 4，210 aa 附近 motif window 分析与 cembrene 候选判断。
+- `ariadne/classification.py`：模块 3，用 profile 特征对 TPS 候选做分类、局部树和 embedding。
+- `ariadne/motif.py`：模块 4，先用 125 aa 左右的 `DDXXD/E` 判断是否为 TPS，再对 210 aa 附近 motif window 做 cembrene 候选判断。
 - `ariadne/references.py`：珊瑚 FASTA、昆虫 Excel 和额外参考集整理。
 - `ariadne/demo.py`：构建一个可完整跑通的 demo workspace。
 - `AFLP_finder-main/`：保留原 AFLP 资料和 30 个 HMM profile。
@@ -69,10 +69,10 @@ python -m pip install -e .
 - 旧脚本里的 `500 aa` 阈值不是硬编码了，现在通过 `--min-length 500` 即可复现。
 - `manual_review.tsv` 会把需要人工检查的序列列出来，方便你继续做视觉检查。
 
-### 模块 3：系统发育 / AFLP 风格结构分类
+### 模块 3：系统发育 / TPS 候选 profile 分类
 
 - 使用 `AFLP_finder-main/hmm/*.hmm` 的 30 个 profile 为每条序列打分。
-- 生成 AFLP 风格特征矩阵，不需要 R / t-SNE 也能跑。
+- 生成 TPS 候选的 profile 特征矩阵，不需要 R / t-SNE 也能跑。
 - 输出：
   - `aflp_features.tsv`
   - `embedding.tsv`
@@ -83,15 +83,16 @@ python -m pip install -e .
 
 这里的分类逻辑是：
 
-- 先把参考序列和候选序列都映射到同一个 HMM feature space；
+- 先把参考序列和候选序列都映射到同一个 profile feature space；
 - 再用最近邻判断候选更靠近哪个来源类群；
 - 同时导出局部 UPGMA tree 方便后续看 candidate 周围的邻居。
 
 ### 模块 4：功能基序与 cembrene specificity 分析
 
-- 默认先搜 `CFDVL.` anchor；
-- 如果参考或候选中找不到完全匹配，就回退到 `210 aa` 附近窗口；
-- 再把候选和珊瑚 reference 中标记为 `cembrene` 的序列做窗口相似度比较。
+- 默认先在 `125 aa` 左右搜索 `DDXXD/E`，把候选先判定为是不是 TPS；
+- 只有先通过 TPS 判定的序列，才继续看 `210 aa` 附近的 motif window；
+- 默认优先搜 `CFDVL.` anchor；如果找不到完全匹配，就回退到 `210 aa` 附近窗口；
+- 再把 TPS 候选和珊瑚 reference 中标记为 `cembrene` 的序列做窗口相似度比较。
 
 输出：
 
@@ -156,7 +157,7 @@ python -m ariadne run \
 
 - discovery hits：1 条完整 candidate + 1 条低覆盖/短序列被过滤掉
 - classification：candidate 被判为 `coral`
-- motif：candidate 被判为 `cembrene_like = yes`
+- motif：candidate 先被判为 `is_tps = yes`，再被判为 `predicted_cembrene_like = yes`
 
 ## 实际数据运行
 
@@ -279,7 +280,7 @@ python -m ariadne run \
 - `01_discovery/candidates.hits.tsv`：命中 2 条候选
 - `02_filtering/filter_report.tsv`：低 coverage / 短序列被剔除，只保留 1 条完整候选
 - `03_classification/classification.tsv`：候选被分类为 `coral`
-- `04_motif/motif_summary.tsv`：候选被标记为 `predicted_cembrene_like = yes`
+- `04_motif/motif_summary.tsv`：会先给出 `is_tps`，再给出 `predicted_cembrene_like`
 
 ## 备注
 

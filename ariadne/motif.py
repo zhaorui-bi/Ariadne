@@ -6,6 +6,29 @@ from pathlib import Path
 from ariadne.fasta_utils import FastaRecord, pad_sequence, pairwise_identity, read_fasta, write_fasta, write_tsv
 
 
+def _match_pattern_near_position(
+    sequence: str,
+    pattern: str,
+    *,
+    center_position: int,
+    search_radius: int,
+) -> tuple[int, str] | None:
+    if not sequence:
+        return None
+    search_start = max(0, center_position - search_radius)
+    search_end = min(len(sequence), center_position + search_radius + 1)
+    search_region = sequence[search_start:search_end]
+    matches = list(re.finditer(pattern, search_region))
+    if not matches:
+        return None
+    best_match = min(
+        matches,
+        key=lambda match: abs((search_start + match.start()) - center_position),
+    )
+    start = search_start + best_match.start()
+    return start, sequence[start : search_start + best_match.end()]
+
+
 def _anchor_window(
     sequence: str,
     anchor_pattern: str,
@@ -94,14 +117,39 @@ def analyze_motifs(
     coral_reference_fasta: str | Path,
     output_dir: str | Path,
     *,
+    tps_anchor_pattern: str = r"DD..[DE]",
+    tps_center_position: int = 125,
+    tps_search_radius: int = 40,
     anchor_pattern: str = r"CFDVL.",
     flank: int = 10,
     center_position: int = 210,
 ) -> dict[str, Path]:
     candidates = read_fasta(candidate_fasta)
     coral_records = read_fasta(coral_reference_fasta)
-    cembrene_refs = [record for record in coral_records if "cembrene" in record.header.lower()]
-    non_cembrene_refs = [record for record in coral_records if "cembrene" not in record.header.lower()]
+    cembrene_refs = [
+        record
+        for record in coral_records
+        if "cembrene" in record.header.lower()
+        and _match_pattern_near_position(
+            record.sequence,
+            tps_anchor_pattern,
+            center_position=tps_center_position,
+            search_radius=tps_search_radius,
+        )
+        is not None
+    ]
+    non_cembrene_refs = [
+        record
+        for record in coral_records
+        if "cembrene" not in record.header.lower()
+        and _match_pattern_near_position(
+            record.sequence,
+            tps_anchor_pattern,
+            center_position=tps_center_position,
+            search_radius=tps_search_radius,
+        )
+        is not None
+    ]
 
     cembrene_windows = []
     non_cembrene_windows = []
@@ -119,18 +167,60 @@ def analyze_motifs(
     display_rows: list[tuple[str, str, str]] = []
 
     for candidate in candidates:
-        anchor = _anchor_window(candidate.sequence, anchor_pattern, flank, center_position=center_position)
-        if anchor is None:
+        tps_match = _match_pattern_near_position(
+            candidate.sequence,
+            tps_anchor_pattern,
+            center_position=tps_center_position,
+            search_radius=tps_search_radius,
+        )
+        if tps_match is None:
             summary_rows.append(
                 {
                     "sequence_id": candidate.id,
+                    "is_tps": "no",
+                    "tps_motif_found": "no",
+                    "tps_motif_position": "",
+                    "tps_motif_variant": "",
                     "anchor_found": "no",
+                    "anchor_position": "",
                     "anchor_variant": "",
+                    "cembrene_anchor_found": "no",
+                    "cembrene_window_method": "not_assessed",
+                    "cembrene_anchor_position": "",
+                    "cembrene_anchor_variant": "",
+                    "motif_window": "",
                     "best_cembrene_match": "",
                     "best_cembrene_identity": 0.0,
                     "best_non_cembrene_match": "",
                     "best_non_cembrene_identity": 0.0,
                     "predicted_cembrene_like": "no",
+                }
+            )
+            continue
+
+        tps_position, tps_variant = tps_match
+        anchor = _anchor_window(candidate.sequence, anchor_pattern, flank, center_position=center_position)
+        if anchor is None:
+            summary_rows.append(
+                {
+                    "sequence_id": candidate.id,
+                    "is_tps": "yes",
+                    "tps_motif_found": "yes",
+                    "tps_motif_position": tps_position,
+                    "tps_motif_variant": tps_variant,
+                    "anchor_found": "no",
+                    "anchor_position": "",
+                    "anchor_variant": "",
+                    "cembrene_anchor_found": "no",
+                    "cembrene_window_method": "not_available",
+                    "cembrene_anchor_position": "",
+                    "cembrene_anchor_variant": "",
+                    "motif_window": "",
+                    "best_cembrene_match": "",
+                    "best_cembrene_identity": 0.0,
+                    "best_non_cembrene_match": "",
+                    "best_non_cembrene_identity": 0.0,
+                    "predicted_cembrene_like": "undetermined",
                 }
             )
             continue
@@ -157,9 +247,17 @@ def analyze_motifs(
         summary_rows.append(
             {
                 "sequence_id": candidate.id,
+                "is_tps": "yes",
+                "tps_motif_found": "yes",
+                "tps_motif_position": tps_position,
+                "tps_motif_variant": tps_variant,
                 "anchor_found": "yes" if anchor_method == "anchor_match" else "fallback_window",
                 "anchor_position": motif_position,
                 "anchor_variant": anchor_variant,
+                "cembrene_anchor_found": "yes" if anchor_method == "anchor_match" else "no",
+                "cembrene_window_method": anchor_method,
+                "cembrene_anchor_position": motif_position,
+                "cembrene_anchor_variant": anchor_variant,
                 "motif_window": motif_window,
                 "best_cembrene_match": best_cembrene[0].id if best_cembrene[0] else "",
                 "best_cembrene_identity": round(best_cembrene[1], 4),
