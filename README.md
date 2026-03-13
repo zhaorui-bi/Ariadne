@@ -1,100 +1,84 @@
 # Ariadne
 
-Ariadne 是一个面向 TPS（terpene synthase）发现与注释的蛋白优先（protein-first）分析管线，核心流程为：
+<p align="center">
+  <img src="fig/logo.png" alt="Ariadne Logo" width="320"/>
+</p>
 
-`discover -> filter -> classify -> motif`
+<p align="center">
+  <strong>Protein-first TPS discovery, clade assignment, and cembrene motif analysis pipeline</strong>
+</p>
 
-可视化模块 `visualize` 作为下游独立步骤使用。
+<p align="center">
+  <code>discover -> filter -> classify -> motif</code>
+</p>
 
----
-
-## Ariadne 当前文件夹解析（基于当前仓库代码）
-
-```text
-Ariadne/
-├─ README.md
-├─ pyproject.toml                  # 包配置，入口命令 ariadne=ariadne.cli:main
-├─ Alignment.fasta                 # 示例/参考对齐文件（模块4可直接使用）
-├─ xx.fasta                        # 仓库内样例输入
-├─ install.sh                      # 一键安装脚本
-├─ fig/
-│  ├─ logo.png
-│  ├─ ariadne_pipeline.svg         # 旧版流程图
-│  ├─ ariadne_pipeline.png
-│  └─ ariadne_framework_nature.svg # 新生成：Nature风格结构框架图
-└─ ariadne/
-   ├─ cli.py                       # 所有子命令与 run 编排入口
-   ├─ discovery.py                 # HMM构建 + 候选发现
-   ├─ filtering.py                 # 覆盖度/长度过滤 + 去冗余
-   ├─ classification.py            # HMM特征空间分类 + 邻居树
-   ├─ motif.py                     # DDXXD/E与cembrene-like窗口判断
-   ├─ visualization.py             # t-SNE/聚类可视化
-   ├─ references.py                # 参考库准备与加载
-   ├─ fasta_utils.py               # FASTA/TSV读写与通用工具
-   ├─ demo.py                      # 演示工作区生成
-   ├─ filter_coverage.py           # 兼容脚本
-   ├─ filter_contigs.py            # 兼容脚本
-   ├─ filter_contigs_long.py       # 兼容脚本
-   ├─ DupRemover.py                # 兼容脚本
-   └─ tps_hmm/*.hmm                # 内置TPS HMM（遗留占位，不建议用于最终结论）
-```
-
-### 核心模块职责（代码对齐版）
-
-| 模块                | 主要功能                                               | 关键输出                                                |
-| ------------------- | ------------------------------------------------------ | ------------------------------------------------------- |
-| `discovery.py`      | 从蛋白或转录组中发现 TPS 候选（HMM 搜索）              | `candidates.protein.faa`, `candidates.hits.tsv`         |
-| `filtering.py`      | 覆盖度/长度过滤 + 近似重复序列去冗余                   | `candidates.filtered.faa`, `filter_report.tsv`          |
-| `classification.py` | 候选与参考序列统一打分、降维、近邻分类、局部树         | `tps_features.tsv`, `classification.tsv`, `trees/*.nwk` |
-| `motif.py`          | 先做 TPS 模体闸门，再做 cembrene-like 窗口匹配判断     | `motif_summary.tsv`, `cembrene_candidates.tsv`          |
-| `visualization.py`  | 对 `tps_features.tsv`（或 legacy 表）做 t-SNE + DBSCAN | `tsne-db*.tsv`, `tsne*.svg`                             |
+<p align="center">
+  <a href="https://www.python.org/">
+    <img src="https://img.shields.io/badge/Python-3.9%2B-3776AB?logo=python&logoColor=white" alt="Python >= 3.9"/>
+  </a>
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/License-MIT-22c55e.svg" alt="License: MIT"/>
+  </a>
+  <img src="https://img.shields.io/badge/Version-0.1.0-7c3aed.svg" alt="Version 0.1.0"/>
+  <a href="https://doi.org/10.1038/s41467-023-44497-0">
+    <img src="https://img.shields.io/badge/DOI-10.1038%2Fs41467--023--44497--0-0ea5e9.svg" alt="DOI"/>
+  </a>
+</p>
 
 ---
 
-## 结构框架图
+## 第一部分：软件介绍（Software Overview）
 
-![Ariadne Framework (Nature-style)](fig/ariadne_framework_nature.svg)
+### 1.1 软件定位
 
-**图注（Figure 1）**：该图按当前实现重建了 Ariadne 的输入层、四段核心管线、可视化分支与最终输出层；图中模块名、参数入口与产物文件名均与 `ariadne/cli.py`、`discovery.py`、`filtering.py`、`classification.py`、`motif.py`、`visualization.py` 保持一致。
+Ariadne 是一个面向 TPS（terpene synthase）序列发现与注释的分析管线，核心目标是：
+
+1. 从蛋白或转录组数据中筛选 TPS 候选序列。
+2. 将候选序列投影到多类群参考空间（bacteria/fungal/plant/insect/coral）中进行来源判定。
+3. 以两阶段 motif 逻辑评估 cembrene 相关特征（支持严格/宽松两种模式）。
+
+### 1.2 核心能力
+
+- 模块化流程：`discover`、`filter`、`classify`、`motif`。
+- 多类群参考库自动构建：支持自动识别本地标准文件名。
+- 类群证据输出：`classification.tsv`、`assignment_summary.tsv`、`global_context_tree.nwk`、`embedding_3d_sections.svg`。
+- 模体判定两种策略：
+  - 严格模式（默认）：TPS 通过后必须命中 anchor 再做 cembrene 判断。
+  - 宽松模式（`--allow-center-fallback`）：anchor 缺失时允许中心窗口回退判断。
+
+### 1.3 Nature 风格架构图
+
+![Ariadne Nature-style Architecture](fig/ariadne_framework_nature.svg)
+
+**Figure 1.** 该图与当前代码实现对齐，展示了输入层、四模块主线、strict/lenient motif 开关以及用于论文汇报的关键输出。
+
+### 1.4 关键模块与产物
+
+| 模块 | 主要功能 | 主要产物 |
+|---|---|---|
+| `discovery.py` | HMM 搜索候选 TPS | `candidates.protein.faa`, `candidates.hits.tsv` |
+| `filtering.py` | 覆盖度/长度过滤与去冗余 | `candidates.filtered.faa`, `filter_report.tsv` |
+| `classification.py` | 多类群判定、嵌入、树构建 | `classification.tsv`, `assignment_summary.tsv`, `global_context_tree.nwk`, `embedding_3d_sections.svg` |
+| `motif.py` | TPS gate + cembrene motif 判定 | `motif_summary.tsv`, `cembrene_candidates.tsv`, `motif_windows.svg` |
+| `visualization.py` | t-SNE/聚类可视化 | `tsne-db*.tsv`, `tsne*.svg` |
 
 ---
 
-## 关键声明：内置 HMM 的来源
+## 第二部分：安装（Installation）
 
-`ariadne/tps_hmm/*.hmm` 为历史遗留（AFLP 来源）占位 profile，不是严格策展的高置信 TPS HMM 库。
-
-用于论文级结论或最终筛选时，请通过 `--tps-hmm-dir` 提供你自己的 TPS HMM 库。
-
----
-
-## 当前软件能力
-
-- 支持蛋白优先模式：`--protein-folder`（推荐）
-- 兼容转录组模式：`--transcriptomes`
-- 模块 4（`motif`）逻辑：
-  - 先确认 TPS 特征模体：`DD..[DE]`（约 125 aa 附近）
-  - 再评估 210 aa 附近窗口是否偏向 cembrene-like
-  - 默认会优先寻找 `./Alignment.fasta` 作为模块 4 的参考对齐
-- 可视化模块已内置：`ariadne visualize`
-  - 支持 `tps_features.tsv`（Ariadne classify 输出）
-  - 也支持 legacy `hmm_tab.txt` 风格输入
-
----
-
-## 安装
-
-要求：
+### 2.1 环境要求
 
 - Python `>=3.9`
+- 建议使用虚拟环境
 
-### 方式 1：脚本安装
+### 2.2 快速安装
 
 ```bash
 bash install.sh
 ariadne --help
 ```
 
-### 方式 2：手动安装
+### 2.3 手动安装
 
 ```bash
 python3 -m venv .venv
@@ -104,66 +88,68 @@ python -m pip install -e .
 
 ---
 
-## 推荐科研工作流
+## 第三部分：使用说明（Usage）
 
-### 1) 构建你自己的 TPS HMM 库（推荐）
+### 3.0 快速开始一键复制命令块（Quick Copy）
+
+> GitHub 中每个代码块右上角都有复制按钮，可一键复制。
+
+1) 构建参考库（自动识别）
 
 ```bash
-ariadne build-tps-hmm-library \
-  --alignment cladeA=/path/to/cladeA_alignment.fasta \
-  --alignment cladeB=/path/to/cladeB_alignment.fasta \
-  --output-dir /path/to/real_tps_hmm
+ariadne prepare-references \
+  --output-dir /private/tmp/ariadne_refs_auto
 ```
 
-如果只有一个对齐文件，也可以：
+2) 构建 TPS HMM 库
 
 ```bash
 ariadne build-tps-hmm-library \
   --alignment tps_core=Alignment.fasta \
-  --output-dir ./tps_hmm_real
+  --output-dir /private/tmp/ariadne_tps_hmm_real
 ```
 
-### 2) 用真实 TPS HMM 库运行完整管线
+3) 运行完整流程（严格模式）
 
 ```bash
 ariadne run \
-  --protein-folder /path/to/protein_folder \
-  --seed-alignment /path/to/seed_alignment.fasta \
-  --reference-dir /path/to/references \
-  --reference-alignment /path/to/Alignment.fasta \
-  --tps-hmm-dir /path/to/real_tps_hmm \
-  --output-dir /path/to/run_output
+  --protein-folder ./protein \
+  --seed-alignment ./Alignment.fasta \
+  --reference-dir /private/tmp/ariadne_refs_auto \
+  --reference-alignment "./coralTPS (modified)-cembrene.fasta" \
+  --tps-hmm-dir /private/tmp/ariadne_tps_hmm_real \
+  --output-dir /private/tmp/ariadne_run_strict
 ```
 
-关键参数：
+4) 运行完整流程（宽松模式）
 
-- `--tps-hmm-dir`：你自己的 TPS HMM 库目录
-- `--reference-alignment`：模块 4 的参考对齐
-- `--min-length`、`--min-coverage`、`--identity-threshold`：过滤严格度
+```bash
+ariadne run \
+  --protein-folder ./protein \
+  --seed-alignment ./Alignment.fasta \
+  --reference-dir /private/tmp/ariadne_refs_auto \
+  --reference-alignment "./coralTPS (modified)-cembrene.fasta" \
+  --tps-hmm-dir /private/tmp/ariadne_tps_hmm_real \
+  --allow-center-fallback \
+  --output-dir /private/tmp/ariadne_run_lenient
+```
 
----
-
-## 第 3 步：多类群来源判定（树 + 3D 切面）
-
-你提出的“与 bacteria/fungal/plant + insect + coral 做类群判定”这一步，现在可以按下面流程直接执行。
-
-### A) 先构建多来源参考库
-
-推荐（自动识别当前目录中的标准文件名）：
+### 3.1 构建多类群参考库（推荐自动模式）
 
 ```bash
 ariadne prepare-references \
-  --output-dir /private/tmp/ariadne_refs_auto_20260313
+  --output-dir /private/tmp/ariadne_refs_auto
 ```
 
-自动识别规则（存在则加载）：
+自动识别（存在则加载）：
+
 - `coralTPS (modified)-cembrene.fasta`
 - `Insecta TPS.xlsx`
 - `bacteria.fasta`（也支持 `.fa/.faa`）
 - `fungal.fasta` 或 `fungi.fasta`（也支持 `.fa/.faa`）
 - `plant.fasta`（也支持 `.fa/.faa`）
 
-如需手动指定路径：
+手动指定路径示例：
 
 ```bash
 ariadne prepare-references \
@@ -172,231 +158,110 @@ ariadne prepare-references \
   --bacteria-fasta "./bacteria.fasta" \
   --fungi-fasta "./fungi.fasta" \
   --plant-fasta "./plant.fasta" \
-  --output-dir /tmp/ariadne_refs_all
+  --output-dir /private/tmp/ariadne_refs_manual
 ```
 
-说明：
-- `--bacteria-fasta/--fungal-fasta/--plant-fasta` 是可选参数。
-- `--fungi-fasta` 是 `--fungal-fasta` 的别名。
-- 如果某个文件不存在，CLI 会给出 warning 并跳过该类群，不会中断。
+### 3.2 构建 TPS HMM 库
 
-### B) 用多类群参考库运行 pipeline
+```bash
+ariadne build-tps-hmm-library \
+  --alignment tps_core=Alignment.fasta \
+  --output-dir /private/tmp/ariadne_tps_hmm_real
+```
+
+### 3.3 运行完整流程（严格/宽松）
+
+严格模式（默认）：
 
 ```bash
 ariadne run \
   --protein-folder ./protein \
   --seed-alignment ./Alignment.fasta \
-  --reference-dir /tmp/ariadne_refs_all \
+  --reference-dir /private/tmp/ariadne_refs_auto \
   --reference-alignment "./coralTPS (modified)-cembrene.fasta" \
-  --tps-hmm-dir /tmp/ariadne_real_hmm \
-  --output-dir /tmp/ariadne_multiclade_run
+  --tps-hmm-dir /private/tmp/ariadne_tps_hmm_real \
+  --output-dir /private/tmp/ariadne_run_strict
 ```
 
-### C) 重点看这些输出（判断是否动物来源 TPS）
-
-- `03_classification/classification.tsv`
-  - 每条候选的 `predicted_source`（例如 bacteria/fungal/plant/insect/coral）。
-- `03_classification/assignment_summary.tsv`
-  - 按类群汇总的数量与平均置信度。
-- `03_classification/global_context_tree.nwk`
-  - 全局树（参考序列 + 候选序列）。
-- `03_classification/trees/*.nwk`
-  - 每条候选的局部邻域树。
-- `03_classification/embedding_3d_sections.svg`
-  - 3D PCA 切面图（PC1-PC2、PC1-PC3、PC2-PC3），可视化候选落在哪个类群区域。
-
-### D) 2026-03-13 最新实测（已包含 bacteria/fungal(or fungi)/plant）
-
-- 参考库：`/private/tmp/ariadne_refs_auto_20260313`
-  - 共 `774` 条参考序列  
-  - `insect=420`, `coral=240`, `bacteria=47`, `plant=41`, `fungal=26`
-- 运行目录：`/private/tmp/ariadne_multiclade_run_auto_20260313/run_output`
-- 分类结果：
-  - `03_classification/classification.tsv`：36 条候选（文件 37 行含表头）
-  - `03_classification/assignment_summary.tsv`：`coral=36`，平均置信度 `1.0`
-- 模体结果：
-  - `04_motif/motif_summary.tsv`：36 条候选（文件 37 行含表头）
-  - `04_motif/cembrene_candidates.tsv`：8 行（含表头）
-
----
-
-## 仓库内真实样例测试（当前文件）
-
-本仓库可直接复现的输入：
-
-- `Alignment.fasta`
-- `xx.fasta`
-
-### 使用命令
+宽松模式（启用中心窗口回退）：
 
 ```bash
-source .venv/bin/activate
-
-REAL=/tmp/ariadne_real_sample
-rm -rf "$REAL"
-mkdir -p "$REAL/proteins" "$REAL/references"
-
-cp xx.fasta "$REAL/proteins/xx.faa"
-cp Alignment.fasta "$REAL/references/coral.fasta"
-
-ariadne build-tps-hmm-library \
-  --alignment tps_core=Alignment.fasta \
-  --output-dir "$REAL/tps_hmm_real"
-
 ariadne run \
-  --protein-folder "$REAL/proteins" \
-  --seed-alignment Alignment.fasta \
-  --reference-dir "$REAL/references" \
-  --reference-alignment Alignment.fasta \
-  --tps-hmm-dir "$REAL/tps_hmm_real" \
-  --output-dir "$REAL/run_output"
+  --protein-folder ./protein \
+  --seed-alignment ./Alignment.fasta \
+  --reference-dir /private/tmp/ariadne_refs_auto \
+  --reference-alignment "./coralTPS (modified)-cembrene.fasta" \
+  --tps-hmm-dir /private/tmp/ariadne_tps_hmm_real \
+  --allow-center-fallback \
+  --output-dir /private/tmp/ariadne_run_lenient
 ```
 
-### 已观察到的输出（真实运行）
+### 3.4 关键结果怎么看
 
-- `01_discovery/candidates.hits.tsv`: `236` 行
-- `02_filtering/filter_report.tsv`: `236` 行
-- `03_classification/classification.tsv`: `160` 行
-- `04_motif/motif_summary.tsv`: `160` 行
+优先查看：
 
-示例输出文件：
+1. `run_output/03_classification/assignment_summary.tsv`（类群汇总）
+2. `run_output/03_classification/classification.tsv`（每条候选来源）
+3. `run_output/03_classification/global_context_tree.nwk`（全局树）
+4. `run_output/03_classification/embedding_3d_sections.svg`（3D 切面）
+5. `run_output/04_motif/motif_summary.tsv`（两阶段门控细节）
+6. `run_output/04_motif/cembrene_candidates.tsv`（最终 cembrene-like 候选）
 
-- `/tmp/ariadne_real_sample/run_output/pipeline_summary.tsv`
-- `/tmp/ariadne_real_sample/run_output/03_classification/tps_features.tsv`
-- `/tmp/ariadne_real_sample/run_output/04_motif/motif_summary.tsv`
+### 3.5 当前仓库最新实测（2026-03-13）
+
+参考库：`/private/tmp/ariadne_refs_auto_20260313`
+
+- total: `774`
+- insect: `420`
+- coral: `240`
+- bacteria: `47`
+- plant: `41`
+- fungal: `26`
+
+严格模式结果（`/private/tmp/ariadne_multiclade_run_auto_strict_20260313/run_output`）：
+
+- classification: `36` candidates (`coral=36`, mean confidence `1.0`)
+- motif: `is_tps=yes 32`, `is_tps=no 4`
+- cembrene candidates: `0`
+
+宽松模式结果（`/private/tmp/ariadne_multiclade_run_auto_lenient_20260313/run_output`）：
+
+- motif `predicted_cembrene_like=yes`: `7`
+- `cembrene_candidates.tsv`: `8` lines (含表头)
+
+### 3.6 常见排错
+
+- `candidates.hits.tsv` 很少或为空：检查 `--seed-alignment` 和输入 FASTA 质量。
+- `filter_report.tsv` 大量 `low_coverage`：调低 `--min-coverage`。
+- `filter_report.tsv` 大量 `too_short`：调低 `--min-length`。
+- 严格模式下 `cembrene_candidates.tsv` 为空：常见且合理，可切换 `--allow-center-fallback` 对比。
 
 ---
 
-## 可视化模块（`ariadne visualize`）
+## 第四部分：引用（Citation）
 
-### A) 可视化 Ariadne 的 `tps_features.tsv`（推荐）
+### 4.1 软件引用
 
-```bash
-ariadne visualize \
-  --input-table /tmp/ariadne_real_sample/run_output/03_classification/tps_features.tsv \
-  --output-dir /tmp/ariadne_real_sample/visualization
-```
-
-会生成：
-
-- `tsne-db<perplexity>.tsv`
-- `tsne<perplexity>.svg`
-- `visualization_summary.tsv`
-
-### B) 可视化 legacy `hmm_tab` 风格输入
-
-```bash
-ariadne visualize \
-  --input-table /path/to/hmm_tab.txt \
-  --output-dir /path/to/visualization
-```
-
-可选参数：
-
-- `--perplexities 25 38`
-- `--min-points 20`
-
----
-
-## 运行后关键目录（`ariadne run`）
+如果 Ariadne 被用于论文或报告，请至少引用本仓库并注明版本与访问日期：
 
 ```text
-run_output/
-├─ 01_discovery/
-├─ 02_filtering/
-├─ 03_classification/
-├─ 04_motif/
-└─ pipeline_summary.tsv
+Ariadne TPS Pipeline (v0.1.0). Available at: <your-repo-url>. Accessed: YYYY-MM-DD.
 ```
 
----
+### 4.2 方法学参考文献（你提供的 Nature 链接）
 
-## `run_output` 内容解析
+- URL: https://www.nature.com/articles/s41467-023-44497-0
+- DOI: `10.1038/s41467-023-44497-0`
 
-以下解析对应本次测试输出目录：`/tmp/ariadne_tps_debug_20260313/run_output`。
+BibTeX（可直接放入论文参考文献库）：
 
-### 1) 总索引文件
-
-- `pipeline_summary.tsv`
-  - 作用：把每个模块产出的文件路径集中登记（stage/artifact/path 三列）。
-  - 用法：先看它，快速定位每个阶段文件，不用手工找路径。
-
-### 2) `01_discovery/`（候选发现）
-
-- 关键文件：
-  - `candidates.protein.faa`：HMM 命中的候选蛋白序列。
-  - `candidates.hits.tsv`：每条命中的 HMM 评分明细（score/evalue/env_from/env_to）。
-  - `query.hmm`：由 `--seed-alignment` 构建的查询 HMM。
-- 本次统计：
-  - `candidates.protein.faa`：100 条候选序列。
-  - `candidates.hits.tsv`：101 行（1 行表头 + 100 行命中）。
-
-### 3) `02_filtering/`（过滤与去冗余）
-
-- 关键文件：
-  - `filter_report.tsv`：每条候选是 `kept` 还是 `removed`，以及原因（`low_coverage`、`too_short`、`deduplicated_against:*`）。
-  - `candidates.filtered.faa`：最终保留序列（进入 classify/motif）。
-  - `dedupe_clusters.tsv`：去冗余聚类关系（代表序列与成员）。
-  - `manual_review.tsv`：人工复核辅助（起始是否 M、anchor 是否存在等）。
-- 本次统计：
-  - `kept=36`，`removed=64`。
-  - `candidates.filtered.faa`：36 条序列。
-
-### 4) `03_classification/`（特征空间分类）
-
-- 关键文件：
-  - `classification.tsv`：每条候选的预测来源、最近参考序列、距离、置信度。
-  - `assignment_summary.tsv`：按预测类群聚合后的数量与平均置信度。
-  - `tps_features.tsv`：用于降维/可视化的原始特征矩阵。
-  - `embedding.tsv`、`embedding.svg`：二维/三维嵌入坐标与图。
-  - `embedding_3d_sections.svg`：三视角 3D 切面图（PC1-PC2/PC1-PC3/PC2-PC3）。
-  - `global_context_tree.nwk`：全局 UPGMA 树（参考 + 候选）。
-  - `nearest_neighbors.tsv`：每条候选的 Top-K 近邻明细。
-  - `trees/*.nwk`：每个候选对应的局部 UPGMA 树。
-- 本次统计：
-  - `classification.tsv`：36 条候选。
-  - `trees/`：36 个 `.nwk`（每条候选一个局部树）。
-  - `tps_features.tsv`：92 行数据（= 参考序列 + 36 条候选），因此会大于 `classification.tsv`。
-  - 预测来源全为 `coral`，平均置信度 `1.0000`（针对本次参考集）。
-
-### 5) `04_motif/`（TPS/cembrene 模体判断）
-
-- 关键文件：
-  - `motif_summary.tsv`：每条序列是否为 TPS（`is_tps`）、是否命中 anchor、cembrene-like 判定。
-  - `motif_windows.fasta`、`motif_windows.svg`：模体窗口序列与可视化。
-  - `cembrene_candidates.tsv`：`predicted_cembrene_like=yes` 的子集。
-- 本次统计：
-  - `motif_summary.tsv`：36 条候选。
-  - `is_tps=yes`：32 条；`is_tps=no`：4 条。
-  - `cembrene_candidates.tsv`：空文件（0 行），表示本次没有 `predicted_cembrene_like=yes`。
-
-### 6) 快速排错建议
-
-- `candidates.hits.tsv` 很小或为空：优先检查 `--seed-alignment` 质量和输入蛋白文件格式。
-- `filter_report.tsv` 大量 `low_coverage`：考虑降低 `--min-coverage`。
-- `filter_report.tsv` 大量 `too_short`：考虑降低 `--min-length`。
-- `cembrene_candidates.tsv` 为空：不一定是报错，表示当前数据在模块 4 条件下未命中 cembrene-like。
-
----
-
-## 当前可用命令
-
-```bash
-ariadne --help
+```bibtex
+@article{s41467_023_44497_0,
+  doi = {10.1038/s41467-023-44497-0},
+  url = {https://www.nature.com/articles/s41467-023-44497-0},
+  journal = {Nature Communications},
+  year = {2023}
+}
 ```
 
-主子命令：
-
-- `prepare-references`
-- `prepare-demo`
-- `build-hmm`
-- `build-tps-hmm-library`
-- `discover`
-- `filter`
-- `classify`
-- `motif`
-- `run`
-- `visualize`
-- `filter-coverage-only`
-- `filter-length-only`
-- `dedupe-exact`
+> 建议投稿前再次核对该条目的题名、作者列表与研究主题是否与当前稿件完全匹配。
