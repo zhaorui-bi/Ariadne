@@ -39,6 +39,7 @@ def _anchor_window(
     *,
     center_position: int,
     fallback_span: int = 6,
+    allow_center_fallback: bool = True,
 ) -> Optional[Tuple[str, int, str, str]]:
     match = re.search(anchor_pattern, sequence)
     if match is not None:
@@ -46,6 +47,8 @@ def _anchor_window(
         end = match.end()
         method = "anchor_match"
     else:
+        if not allow_center_fallback:
+            return None
         if len(sequence) < center_position + 1:
             return None
         start = max(0, center_position)
@@ -126,6 +129,7 @@ def analyze_motifs(
     anchor_pattern: str = r"CFDVL.",
     flank: int = 10,
     center_position: int = 210,
+    allow_center_fallback: bool = False,
 ) -> dict[str, Path]:
     candidates = read_fasta(candidate_fasta)
     reference_records = read_fasta(reference_alignment_fasta)
@@ -157,11 +161,23 @@ def analyze_motifs(
     cembrene_windows = []
     non_cembrene_windows = []
     for record in cembrene_refs:
-        anchor = _anchor_window(record.sequence, anchor_pattern, flank, center_position=center_position)
+        anchor = _anchor_window(
+            record.sequence,
+            anchor_pattern,
+            flank,
+            center_position=center_position,
+            allow_center_fallback=allow_center_fallback,
+        )
         if anchor is not None:
             cembrene_windows.append((record, anchor[0], anchor[1], anchor[2]))
     for record in non_cembrene_refs:
-        anchor = _anchor_window(record.sequence, anchor_pattern, flank, center_position=center_position)
+        anchor = _anchor_window(
+            record.sequence,
+            anchor_pattern,
+            flank,
+            center_position=center_position,
+            allow_center_fallback=allow_center_fallback,
+        )
         if anchor is not None:
             non_cembrene_windows.append((record, anchor[0], anchor[1], anchor[2]))
 
@@ -202,7 +218,13 @@ def analyze_motifs(
             continue
 
         tps_position, tps_variant = tps_match
-        anchor = _anchor_window(candidate.sequence, anchor_pattern, flank, center_position=center_position)
+        anchor = _anchor_window(
+            candidate.sequence,
+            anchor_pattern,
+            flank,
+            center_position=center_position,
+            allow_center_fallback=allow_center_fallback,
+        )
         if anchor is None:
             summary_rows.append(
                 {
@@ -215,7 +237,7 @@ def analyze_motifs(
                     "anchor_position": "",
                     "anchor_variant": "",
                     "cembrene_anchor_found": "no",
-                    "cembrene_window_method": "not_available",
+                    "cembrene_window_method": "anchor_not_found",
                     "cembrene_anchor_position": "",
                     "cembrene_anchor_variant": "",
                     "motif_window": "",
@@ -223,7 +245,7 @@ def analyze_motifs(
                     "best_cembrene_identity": 0.0,
                     "best_non_cembrene_match": "",
                     "best_non_cembrene_identity": 0.0,
-                    "predicted_cembrene_like": "undetermined",
+                    "predicted_cembrene_like": "no",
                 }
             )
             continue

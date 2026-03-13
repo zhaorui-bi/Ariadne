@@ -328,6 +328,7 @@ def cmd_motif(args: argparse.Namespace) -> int:
         anchor_pattern=args.anchor_pattern,
         flank=args.flank,
         center_position=args.center_position,
+        allow_center_fallback=args.allow_center_fallback,
     )
     for key, value in outputs.items():
         print(f"{key}: {value}")
@@ -406,6 +407,7 @@ def cmd_run(args: argparse.Namespace) -> int:
         anchor_pattern=args.anchor_pattern,
         flank=args.flank,
         center_position=args.center_position,
+        allow_center_fallback=args.allow_center_fallback,
     )
     summary_rows = []
     for label, outputs in (
@@ -542,7 +544,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     motif = subparsers.add_parser(
         "motif",
-        help="First confirm TPS by DDXXD/E near 125 aa, then compare 210 aa motif windows against cembrene synthase alignment references.",
+        help="Two-stage motif gate: first confirm TPS by DDXXD/E near 125 aa, then cembrene motif judgment (strict by default, optional center fallback).",
     )
     motif.add_argument("--candidates", required=True, type=Path)
     motif.add_argument(
@@ -558,6 +560,11 @@ def build_parser() -> argparse.ArgumentParser:
     motif.add_argument("--anchor-pattern", default=r"CFDVL.")
     motif.add_argument("--flank", type=int, default=10)
     motif.add_argument("--center-position", type=int, default=210)
+    motif.add_argument(
+        "--allow-center-fallback",
+        action="store_true",
+        help="Enable lenient mode: if anchor motif is absent, fall back to center-position window for cembrene comparison.",
+    )
     motif.set_defaults(func=cmd_motif)
 
     run = subparsers.add_parser("run", help="Execute the four Ariadne modules end-to-end.")
@@ -592,6 +599,11 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--anchor-pattern", default=r"CFDVL.")
     run.add_argument("--flank", type=int, default=10)
     run.add_argument("--center-position", type=int, default=210)
+    run.add_argument(
+        "--allow-center-fallback",
+        action="store_true",
+        help="Enable lenient motif mode for module 4 when anchor motif is absent.",
+    )
     run.add_argument("--tps-hmm-dir", default=_default_tps_hmms(), type=Path, help="Directory containing TPS HMM profiles (*.hmm).")
     run.add_argument("--top-k", type=int, default=5)
     run.add_argument("--tree-neighbors", type=int, default=12)
