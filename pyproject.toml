@@ -7,12 +7,13 @@ name = "ariadne-tps"
 version = "0.1.0"
 description = "Ariadne pipeline for animal terpene synthase discovery and cembrene-focused annotation."
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.9"
 dependencies = [
   "numpy>=1.24",
   "openpyxl>=3.1",
   "pyhmmer>=0.12.0",
   "pyrodigal>=3.7.0",
+  "scikit-learn>=1.4",
 ]
 
 [project.scripts]
@@ -20,3 +21,6 @@ ariadne = "ariadne.cli:main"
 
 [tool.setuptools]
 packages = ["ariadne"]
+
+[tool.setuptools.package-data]
+ariadne = ["tps_hmm/*.hmm"]

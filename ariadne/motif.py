@@ -2,8 +2,11 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
+from typing import Optional, Tuple, Union
 
 from ariadne.fasta_utils import FastaRecord, pad_sequence, pairwise_identity, read_fasta, write_fasta, write_tsv
+
+PathLike = Union[str, Path]
 
 
 def _match_pattern_near_position(
@@ -12,7 +15,7 @@ def _match_pattern_near_position(
     *,
     center_position: int,
     search_radius: int,
-) -> tuple[int, str] | None:
+) -> Optional[Tuple[int, str]]:
     if not sequence:
         return None
     search_start = max(0, center_position - search_radius)
@@ -36,7 +39,7 @@ def _anchor_window(
     *,
     center_position: int,
     fallback_span: int = 6,
-) -> tuple[str, int, str, str] | None:
+) -> Optional[Tuple[str, int, str, str]]:
     match = re.search(anchor_pattern, sequence)
     if match is not None:
         start = match.start()
@@ -74,7 +77,7 @@ def _aa_color(amino_acid: str) -> str:
     return "#333333"
 
 
-def _render_motif_svg(rows: list[tuple[str, str, str]], flank: int, output_path: str | Path) -> Path:
+def _render_motif_svg(rows: list[tuple[str, str, str]], flank: int, output_path: PathLike) -> Path:
     cell_width = 16
     cell_height = 24
     label_width = 320
@@ -113,9 +116,9 @@ def _render_motif_svg(rows: list[tuple[str, str, str]], flank: int, output_path:
 
 
 def analyze_motifs(
-    candidate_fasta: str | Path,
-    coral_reference_fasta: str | Path,
-    output_dir: str | Path,
+    candidate_fasta: PathLike,
+    reference_alignment_fasta: PathLike,
+    output_dir: PathLike,
     *,
     tps_anchor_pattern: str = r"DD..[DE]",
     tps_center_position: int = 125,
@@ -125,10 +128,10 @@ def analyze_motifs(
     center_position: int = 210,
 ) -> dict[str, Path]:
     candidates = read_fasta(candidate_fasta)
-    coral_records = read_fasta(coral_reference_fasta)
+    reference_records = read_fasta(reference_alignment_fasta)
     cembrene_refs = [
         record
-        for record in coral_records
+        for record in reference_records
         if "cembrene" in record.header.lower()
         and _match_pattern_near_position(
             record.sequence,
@@ -140,7 +143,7 @@ def analyze_motifs(
     ]
     non_cembrene_refs = [
         record
-        for record in coral_records
+        for record in reference_records
         if "cembrene" not in record.header.lower()
         and _match_pattern_near_position(
             record.sequence,

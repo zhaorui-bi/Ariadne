@@ -4,6 +4,7 @@ import math
 import tempfile
 from collections import Counter
 from pathlib import Path
+from typing import Union
 
 import numpy as np
 import pyhmmer
@@ -11,12 +12,17 @@ import pyhmmer
 from ariadne.fasta_utils import FastaRecord, ensure_directory, read_fasta, sanitize_newick_name, write_fasta, write_tsv
 from ariadne.references import load_reference_records
 
+PathLike = Union[str, Path]
 
-def sorted_hmm_paths(hmm_dir: str | Path) -> list[Path]:
+
+def sorted_hmm_paths(hmm_dir: PathLike) -> list[Path]:
     directory = Path(hmm_dir)
     hmm_paths = list(directory.glob("*.hmm"))
     if not hmm_paths:
-        raise FileNotFoundError(f"No HMM profiles were found in {directory}.")
+        raise FileNotFoundError(
+            f"No HMM profiles were found in {directory}. "
+            "Please check whether the bundled ariadne/tps_hmm directory exists, or pass --tps-hmm-dir explicitly."
+        )
     return sorted(hmm_paths, key=lambda path: (0, int(path.stem)) if path.stem.isdigit() else (1, path.stem))
 
 
@@ -154,7 +160,7 @@ def _color_map(sources: list[str]) -> dict[str, str]:
     return mapping
 
 
-def _render_scatter(records: list[FastaRecord], coords: np.ndarray, output_path: str | Path) -> Path:
+def _render_scatter(records: list[FastaRecord], coords: np.ndarray, output_path: PathLike) -> Path:
     if len(records) == 0:
         return Path(output_path)
     sources = [record.metadata.get("source", "unknown") for record in records]
@@ -218,12 +224,100 @@ def _render_scatter(records: list[FastaRecord], coords: np.ndarray, output_path:
     return target
 
 
+def _render_3d_sections(records: list[FastaRecord], coords: np.ndarray, output_path: PathLike) -> Path:
+    target = Path(output_path)
+    if len(records) == 0:
+        target.write_text("<svg xmlns='http://www.w3.org/2000/svg' width='1200' height='500'></svg>")
+        return target
+    if coords.shape[1] < 3:
+        coords = np.pad(coords, ((0, 0), (0, 3 - coords.shape[1])))
+
+    sources = [record.metadata.get("source", "unknown") for record in records]
+    colors = _color_map(sources)
+    projections = [
+        (0, 1, "PC1", "PC2"),
+        (0, 2, "PC1", "PC3"),
+        (1, 2, "PC2", "PC3"),
+    ]
+    panel_width = 500
+    panel_height = 400
+    panel_gap = 24
+    margin = 56
+    legend_height = 90
+    width = (panel_width * 3) + (panel_gap * 2) + (margin * 2)
+    height = panel_height + legend_height + (margin * 2)
+
+    def panel_scale(values_x: np.ndarray, values_y: np.ndarray):
+        min_x, max_x = float(values_x.min()), float(values_x.max())
+        min_y, max_y = float(values_y.min()), float(values_y.max())
+        span_x = max(max_x - min_x, 1e-9)
+        span_y = max(max_y - min_y, 1e-9)
+
+        def sx(value: float, x0: float) -> float:
+            return x0 + ((value - min_x) / span_x) * (panel_width - (2 * margin))
+
+        def sy(value: float, y0: float) -> float:
+            return y0 + panel_height - margin - ((value - min_y) / span_y) * (panel_height - (2 * margin))
+
+        return sx, sy
+
+    svg_lines = [
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">',
+        f'<rect width="{width}" height="{height}" fill="white" />',
+        f'<text x="{margin}" y="34" font-size="24" font-weight="bold">Ariadne 3D section views (PCA)</text>',
+    ]
+
+    for panel_index, (dim_x, dim_y, label_x, label_y) in enumerate(projections):
+        panel_x = margin + (panel_index * (panel_width + panel_gap))
+        panel_y = margin
+        xs = coords[:, dim_x]
+        ys = coords[:, dim_y]
+        scale_x, scale_y = panel_scale(xs, ys)
+        svg_lines.append(
+            f'<rect x="{panel_x}" y="{panel_y}" width="{panel_width}" height="{panel_height}" fill="#fbfdff" stroke="#dbe3ee" />'
+        )
+        svg_lines.append(
+            f'<line x1="{panel_x + margin}" y1="{panel_y + panel_height - margin}" x2="{panel_x + panel_width - margin}" y2="{panel_y + panel_height - margin}" stroke="#94a3b8" />'
+        )
+        svg_lines.append(
+            f'<line x1="{panel_x + margin}" y1="{panel_y + margin}" x2="{panel_x + margin}" y2="{panel_y + panel_height - margin}" stroke="#94a3b8" />'
+        )
+        svg_lines.append(
+            f'<text x="{panel_x + margin}" y="{panel_y + 24}" font-size="16" font-weight="600">{label_x} vs {label_y}</text>'
+        )
+        for record, x_val, y_val in zip(records, xs, ys):
+            source = record.metadata.get("source", "unknown")
+            is_candidate = source == "candidate"
+            radius = 6.0 if is_candidate else 3.8
+            opacity = 0.9 if is_candidate else 0.6
+            cx = scale_x(float(x_val), panel_x)
+            cy = scale_y(float(y_val), panel_y)
+            stroke = "#111827" if is_candidate else "none"
+            svg_lines.append(
+                f'<circle cx="{cx:.2f}" cy="{cy:.2f}" r="{radius}" fill="{colors[source]}" opacity="{opacity}" stroke="{stroke}" stroke-width="1" />'
+            )
+            if is_candidate:
+                svg_lines.append(
+                    f'<text x="{cx + 8:.2f}" y="{cy - 8:.2f}" font-size="9.5" font-family="monospace" fill="#111827">{record.id}</text>'
+                )
+
+    legend_y = margin + panel_height + 30
+    legend_x = margin
+    for index, source in enumerate(sorted(colors)):
+        x = legend_x + (index * 180)
+        svg_lines.append(f'<circle cx="{x}" cy="{legend_y}" r="7" fill="{colors[source]}" />')
+        svg_lines.append(f'<text x="{x + 12}" y="{legend_y + 5}" font-size="14">{source}</text>')
+    svg_lines.append("</svg>")
+    target.write_text("".join(svg_lines))
+    return target
+
+
 def classify_candidates(
-    candidate_fasta: str | Path,
-    reference_dir: str | Path,
-    output_dir: str | Path,
+    candidate_fasta: PathLike,
+    reference_dir: PathLike,
+    output_dir: PathLike,
     *,
-    hmm_dir: str | Path,
+    hmm_dir: PathLike,
     top_k: int = 5,
     tree_neighbors: int = 12,
 ) -> dict[str, Path]:
@@ -249,10 +343,12 @@ def classify_candidates(
             "source": record.metadata.get("source", "unknown"),
             "label": record.metadata.get("label", ""),
         }
-        for column_name, value in zip(column_names, raw_matrix[index], strict=True):
+        if len(column_names) != len(raw_matrix[index]):
+            raise ValueError("Feature column names and feature values have different lengths.")
+        for column_name, value in zip(column_names, raw_matrix[index]):
             row[column_name] = round(float(value), 6)
         feature_rows.append(row)
-    features_path = write_tsv(feature_rows, output_root / "aflp_features.tsv")
+    features_path = write_tsv(feature_rows, output_root / "tps_features.tsv")
 
     embedding_rows = []
     for index, record in enumerate(all_records):
@@ -326,6 +422,24 @@ def classify_candidates(
     classification_path = write_tsv(candidate_rows, output_root / "classification.tsv")
     neighbors_path = write_tsv(neighbor_rows, output_root / "nearest_neighbors.tsv")
     scatter_path = _render_scatter(all_records, coords, output_root / "embedding.svg")
+    sections_path = _render_3d_sections(all_records, coords, output_root / "embedding_3d_sections.svg")
+    global_tree_path = output_root / "global_context_tree.nwk"
+    global_tree_path.write_text(_upgma_newick([record.id for record in all_records], distances) + "\n")
+    assignment_summary_rows = []
+    grouped: dict[str, list[float]] = {}
+    for row in candidate_rows:
+        source = str(row["predicted_source"])
+        grouped.setdefault(source, []).append(float(row["confidence"]))
+    for source in sorted(grouped):
+        confidences = grouped[source]
+        assignment_summary_rows.append(
+            {
+                "predicted_source": source,
+                "count": len(confidences),
+                "mean_confidence": round(sum(confidences) / len(confidences), 6),
+            }
+        )
+    assignment_summary_path = write_tsv(assignment_summary_rows, output_root / "assignment_summary.tsv")
     return {
         "features": features_path,
         "embedding": embedding_path,
@@ -333,5 +447,8 @@ def classify_candidates(
         "classification": classification_path,
         "neighbors": neighbors_path,
         "embedding_svg": scatter_path,
+        "embedding_3d_sections": sections_path,
+        "global_tree": global_tree_path,
+        "assignment_summary": assignment_summary_path,
         "tree_dir": tree_dir,
     }

@@ -2,8 +2,11 @@ from __future__ import annotations
 
 import math
 from pathlib import Path
+from typing import Optional, Union
 
 from ariadne.fasta_utils import FastaRecord, parse_coverage, read_fasta, write_fasta, write_tsv
+
+PathLike = Union[str, Path]
 
 
 def _edit_distance_with_limit(sequence_a: str, sequence_b: str, max_edits: int) -> int:
@@ -68,8 +71,8 @@ def deduplicate_exact(records: list[FastaRecord]) -> list[FastaRecord]:
 
 
 def filter_candidates(
-    input_fasta: str | Path,
-    output_dir: str | Path,
+    input_fasta: PathLike,
+    output_dir: PathLike,
     *,
     min_coverage: float = 10.0,
     min_length: int = 300,
@@ -103,7 +106,7 @@ def filter_candidates(
     representatives: list[FastaRecord] = []
     clusters: list[list[FastaRecord]] = []
     for record in sorted(kept_after_basic_filters, key=record_priority, reverse=True):
-        matched_cluster: list[FastaRecord] | None = None
+        matched_cluster: Optional[list[FastaRecord]] = None
         for cluster in clusters:
             if near_duplicate(record.sequence, cluster[0].sequence, identity_threshold):
                 matched_cluster = cluster

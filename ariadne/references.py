@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Optional, Union
 
 from ariadne.fasta_utils import FastaRecord, ensure_directory, read_fasta, slugify, ungap, write_fasta, write_tsv
 
+PathLike = Union[str, Path]
 
-def _prepare_record(record: FastaRecord, *, source: str, extra: dict[str, str] | None = None) -> FastaRecord:
+
+def _prepare_record(record: FastaRecord, *, source: str, extra: Optional[dict[str, str]] = None) -> FastaRecord:
     prepared = record.clone(sequence=ungap(record.sequence).replace("*", ""))
     prepared.metadata["source"] = source
     prepared.metadata["header"] = prepared.header
@@ -16,7 +19,13 @@ def _prepare_record(record: FastaRecord, *, source: str, extra: dict[str, str] |
     return prepared
 
 
-def prepare_coral_reference(input_fasta: str | Path, output_dir: str | Path, *, filename: str = "coral.fasta", limit: int | None = None) -> tuple[Path, list[FastaRecord]]:
+def prepare_coral_reference(
+    input_fasta: PathLike,
+    output_dir: PathLike,
+    *,
+    filename: str = "coral.fasta",
+    limit: Optional[int] = None,
+) -> tuple[Path, list[FastaRecord]]:
     destination = ensure_directory(output_dir)
     records = [_prepare_record(record, source="coral") for record in read_fasta(input_fasta, keep_gaps=True)]
     if limit is not None:
@@ -27,12 +36,12 @@ def prepare_coral_reference(input_fasta: str | Path, output_dir: str | Path, *, 
 
 
 def prepare_insect_reference(
-    input_xlsx: str | Path,
-    output_dir: str | Path,
+    input_xlsx: PathLike,
+    output_dir: PathLike,
     *,
     filename: str = "insect.fasta",
     sheet_name: str = "Protein Science",
-    limit: int | None = None,
+    limit: Optional[int] = None,
 ) -> tuple[Path, list[FastaRecord]]:
     try:
         import openpyxl
@@ -82,7 +91,7 @@ def prepare_insect_reference(
     return output_path, records
 
 
-def prepare_extra_reference(input_fasta: str | Path, output_dir: str | Path, *, source: str) -> tuple[Path, list[FastaRecord]]:
+def prepare_extra_reference(input_fasta: PathLike, output_dir: PathLike, *, source: str) -> tuple[Path, list[FastaRecord]]:
     destination = ensure_directory(output_dir)
     filename = f"{slugify(source)}.fasta"
     records = [_prepare_record(record, source=source) for record in read_fasta(input_fasta, keep_gaps=True)]
@@ -91,7 +100,7 @@ def prepare_extra_reference(input_fasta: str | Path, output_dir: str | Path, *, 
     return output_path, records
 
 
-def write_reference_metadata(records: list[FastaRecord], output_dir: str | Path, *, filename: str = "metadata.tsv") -> Path:
+def write_reference_metadata(records: list[FastaRecord], output_dir: PathLike, *, filename: str = "metadata.tsv") -> Path:
     rows: list[dict[str, object]] = []
     for record in records:
         row = {"sequence_id": record.id, "header": record.header}
@@ -100,7 +109,7 @@ def write_reference_metadata(records: list[FastaRecord], output_dir: str | Path,
     return write_tsv(rows, ensure_directory(output_dir) / filename)
 
 
-def load_reference_records(reference_dir: str | Path) -> list[FastaRecord]:
+def load_reference_records(reference_dir: PathLike) -> list[FastaRecord]:
     directory = Path(reference_dir)
     metadata_map: dict[str, dict[str, str]] = {}
     metadata_path = directory / "metadata.tsv"

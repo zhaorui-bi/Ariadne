@@ -3,14 +3,16 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Iterable, Iterator
+from typing import Iterable, Iterator, Optional, Union
+
+PathLike = Union[str, Path]
 
 AA_ALPHABET = "ACDEFGHIKLMNPQRSTVWY"
 AA_PATTERN = re.compile(r"[^A-Z*\-]")
 COVERAGE_PATTERN = re.compile(r"cov_([0-9]+(?:\.[0-9]+)?)", re.IGNORECASE)
 
 
-@dataclass(slots=True)
+@dataclass
 class FastaRecord:
     header: str
     sequence: str
@@ -26,7 +28,7 @@ class FastaRecord:
             return ""
         return self.header.split(" ", 1)[1]
 
-    def clone(self, *, header: str | None = None, sequence: str | None = None) -> "FastaRecord":
+    def clone(self, *, header: Optional[str] = None, sequence: Optional[str] = None) -> "FastaRecord":
         return FastaRecord(
             header=header if header is not None else self.header,
             sequence=sequence if sequence is not None else self.sequence,
@@ -34,7 +36,7 @@ class FastaRecord:
         )
 
 
-def ensure_directory(path: str | Path) -> Path:
+def ensure_directory(path: PathLike) -> Path:
     directory = Path(path)
     directory.mkdir(parents=True, exist_ok=True)
     return directory
@@ -49,9 +51,9 @@ def clean_sequence(sequence: str, *, keep_gaps: bool = False) -> str:
     return AA_PATTERN.sub("", sequence)
 
 
-def read_fasta(path: str | Path, *, keep_gaps: bool = False) -> list[FastaRecord]:
+def read_fasta(path: PathLike, *, keep_gaps: bool = False) -> list[FastaRecord]:
     records: list[FastaRecord] = []
-    header: str | None = None
+    header: Optional[str] = None
     chunks: list[str] = []
     with Path(path).open() as handle:
         for raw_line in handle:
@@ -70,7 +72,7 @@ def read_fasta(path: str | Path, *, keep_gaps: bool = False) -> list[FastaRecord
     return records
 
 
-def write_fasta(records: Iterable[FastaRecord], path: str | Path, *, width: int = 80) -> Path:
+def write_fasta(records: Iterable[FastaRecord], path: PathLike, *, width: int = 80) -> Path:
     target = Path(path)
     with target.open("w") as handle:
         for record in records:
@@ -80,7 +82,7 @@ def write_fasta(records: Iterable[FastaRecord], path: str | Path, *, width: int 
     return target
 
 
-def parse_coverage(text: str) -> float | None:
+def parse_coverage(text: str) -> Optional[float]:
     match = COVERAGE_PATTERN.search(text)
     if match is None:
         return None
@@ -96,7 +98,7 @@ def slugify(text: str) -> str:
     return compact.strip("_") or "unknown"
 
 
-def first_existing(*paths: str | Path) -> Path | None:
+def first_existing(*paths: PathLike) -> Optional[Path]:
     for path in paths:
         candidate = Path(path)
         if candidate.exists():
@@ -104,7 +106,7 @@ def first_existing(*paths: str | Path) -> Path | None:
     return None
 
 
-def write_tsv(rows: Iterable[dict[str, object]], path: str | Path) -> Path:
+def write_tsv(rows: Iterable[dict[str, object]], path: PathLike) -> Path:
     rows = list(rows)
     target = Path(path)
     if not rows:

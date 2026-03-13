@@ -1,0 +1,123 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1680" height="960" viewBox="0 0 1680 960">
+  <defs>
+    <style>
+      .bg { fill: #fbfcfe; }
+      .title { font: 700 34px 'Helvetica Neue', Helvetica, Arial, sans-serif; fill: #0f172a; }
+      .subtitle { font: 500 18px 'Helvetica Neue', Helvetica, Arial, sans-serif; fill: #334155; }
+      .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; rx: 18; ry: 18; }
+      .panel-label { font: 700 24px 'Helvetica Neue', Helvetica, Arial, sans-serif; fill: #0f172a; }
+      .box-input { fill: #f8fafc; stroke: #64748b; stroke-width: 1.8; rx: 12; ry: 12; }
+      .box-core { fill: #eef2ff; stroke: #334155; stroke-width: 2.2; rx: 12; ry: 12; }
+      .box-out { fill: #f0fdf4; stroke: #166534; stroke-width: 1.8; rx: 12; ry: 12; }
+      .box-opt { fill: #eff6ff; stroke: #1d4ed8; stroke-width: 1.8; rx: 12; ry: 12; }
+      .h1 { font: 700 19px 'Helvetica Neue', Helvetica, Arial, sans-serif; fill: #0f172a; }
+      .h2 { font: 600 15px 'Helvetica Neue', Helvetica, Arial, sans-serif; fill: #1e293b; }
+      .txt { font: 500 14px 'Helvetica Neue', Helvetica, Arial, sans-serif; fill: #334155; }
+      .mini { font: 500 12px 'Helvetica Neue', Helvetica, Arial, sans-serif; fill: #475569; }
+      .arrow { stroke: #475569; stroke-width: 2.2; fill: none; marker-end: url(#arrowHead); }
+      .arrow-dashed { stroke: #1d4ed8; stroke-width: 2; stroke-dasharray: 7 6; fill: none; marker-end: url(#arrowHeadBlue); }
+    </style>
+    <marker id="arrowHead" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#475569"/>
+    </marker>
+    <marker id="arrowHeadBlue" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#1d4ed8"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1680" height="960" class="bg"/>
+  <text x="56" y="64" class="title">Figure 1 | Ariadne: Protein-first TPS Discovery and Cembrene-focused Annotation Workflow</text>
+  <text x="56" y="95" class="subtitle">Code-consistent framework reconstructed from ariadne/cli.py + discovery/filtering/classification/motif/visualization modules</text>
+
+  <rect x="56" y="128" width="430" height="740" class="panel"/>
+  <text x="82" y="170" class="panel-label">A. Inputs and References</text>
+
+  <rect x="84" y="204" width="374" height="126" class="box-input"/>
+  <text x="104" y="238" class="h1">Biological Input</text>
+  <text x="104" y="268" class="txt">• Preferred: --protein-folder (*.faa/*.fa/*.fasta)</text>
+  <text x="104" y="294" class="txt">• Compatible: --transcriptomes (ORF predicted by pyrodigal)</text>
+
+  <rect x="84" y="356" width="374" height="116" class="box-input"/>
+  <text x="104" y="390" class="h1">Query Model Input</text>
+  <text x="104" y="420" class="txt">• --seed-alignment  -> build_hmm()</text>
+  <text x="104" y="446" class="txt">• or --query-hmm (pre-built model)</text>
+
+  <rect x="84" y="498" width="374" height="182" class="box-input"/>
+  <text x="104" y="532" class="h1">Reference Context</text>
+  <text x="104" y="562" class="txt">• --reference-dir (reference FASTA + metadata.tsv)</text>
+  <text x="104" y="588" class="txt">• --reference-alignment (motif module)</text>
+  <text x="104" y="614" class="txt">• --tps-hmm-dir (library for classification)</text>
+  <text x="104" y="644" class="mini">Note: bundled ariadne/tps_hmm is legacy AFLP-derived placeholder.</text>
+
+  <rect x="84" y="706" width="374" height="130" class="box-input"/>
+  <text x="104" y="740" class="h1">Execution Entry</text>
+  <text x="104" y="770" class="txt">CLI: ariadne run / discover / filter / classify / motif / visualize</text>
+  <text x="104" y="796" class="txt">Script: [project.scripts] ariadne = ariadne.cli:main</text>
+
+  <rect x="534" y="128" width="694" height="740" class="panel"/>
+  <text x="560" y="170" class="panel-label">B. Core Pipeline (run Orchestration)</text>
+
+  <rect x="564" y="206" width="636" height="96" class="box-core"/>
+  <text x="586" y="240" class="h1">Module 1: discovery.py</text>
+  <text x="586" y="266" class="txt">collect_protein_files() / discover_candidates_from_proteins() / discover_candidates()</text>
+  <text x="586" y="288" class="h2">Output: 01_discovery/candidates.protein.faa + candidates.hits.tsv</text>
+
+  <rect x="564" y="332" width="636" height="104" class="box-core"/>
+  <text x="586" y="366" class="h1">Module 2: filtering.py</text>
+  <text x="586" y="392" class="txt">Coverage-length filtering + near-duplicate collapsing (identity threshold)</text>
+  <text x="586" y="414" class="h2">Output: 02_filtering/candidates.filtered.faa + filter_report.tsv + manual_review.tsv</text>
+
+  <rect x="564" y="466" width="636" height="114" class="box-core"/>
+  <text x="586" y="500" class="h1">Module 3: classification.py</text>
+  <text x="586" y="526" class="txt">Score matrix against TPS HMM library -> normalization -> PCA embedding -> nearest-neighbor class</text>
+  <text x="586" y="548" class="h2">Output: 03_classification/tps_features.tsv + classification.tsv + embedding.svg + trees/*.nwk</text>
+
+  <rect x="564" y="610" width="636" height="114" class="box-core"/>
+  <text x="586" y="644" class="h1">Module 4: motif.py</text>
+  <text x="586" y="670" class="txt">TPS gate (DD..[DE] near ~125 aa) -> motif-window identity against cembrene/non-cembrene references</text>
+  <text x="586" y="692" class="h2">Output: 04_motif/motif_summary.tsv + cembrene_candidates.tsv + motif_windows.svg</text>
+
+  <rect x="564" y="756" width="636" height="80" class="box-out"/>
+  <text x="586" y="789" class="h1">Integrated Artifact</text>
+  <text x="586" y="814" class="h2">pipeline_summary.tsv (stage/artifact/path registry)</text>
+
+  <rect x="1268" y="128" width="356" height="740" class="panel"/>
+  <text x="1294" y="170" class="panel-label">C. Downstream Readouts</text>
+
+  <rect x="1296" y="214" width="300" height="142" class="box-out"/>
+  <text x="1318" y="248" class="h1">Primary Deliverables</text>
+  <text x="1318" y="276" class="txt">• classification.tsv</text>
+  <text x="1318" y="300" class="txt">• motif_summary.tsv</text>
+  <text x="1318" y="324" class="txt">• cembrene_candidates.tsv</text>
+
+  <rect x="1296" y="390" width="300" height="184" class="box-opt"/>
+  <text x="1318" y="424" class="h1">Optional Visualization Branch</text>
+  <text x="1318" y="452" class="txt">Input: tps_features.tsv (or legacy hmm_tab)</text>
+  <text x="1318" y="476" class="txt">Command: ariadne visualize</text>
+  <text x="1318" y="500" class="txt">Output: tsne-db&lt;perplexity&gt;.tsv</text>
+  <text x="1318" y="524" class="txt">         tsne&lt;perplexity&gt;.svg</text>
+  <text x="1318" y="548" class="txt">         visualization_summary.tsv</text>
+
+  <rect x="1296" y="610" width="300" height="226" class="box-out"/>
+  <text x="1318" y="644" class="h1">Interpretation Layer</text>
+  <text x="1318" y="672" class="txt">• Candidate TPS confidence and nearest references</text>
+  <text x="1318" y="696" class="txt">• Motif-supported cembrene-like call</text>
+  <text x="1318" y="720" class="txt">• Local phylogenetic context (*.nwk)</text>
+  <text x="1318" y="744" class="txt">• Publication-ready plots (SVG)</text>
+
+  <path d="M458 266 L564 254" class="arrow"/>
+  <path d="M458 412 L564 254" class="arrow"/>
+  <path d="M458 588 L564 522" class="arrow"/>
+  <path d="M458 770 L564 522" class="arrow"/>
+
+  <path d="M882 302 L882 332" class="arrow"/>
+  <path d="M882 436 L882 466" class="arrow"/>
+  <path d="M882 580 L882 610" class="arrow"/>
+  <path d="M882 724 L882 756" class="arrow"/>
+
+  <path d="M1200 796 L1296 286" class="arrow"/>
+  <path d="M1200 796 L1296 726" class="arrow"/>
+  <path d="M1116 522 L1296 482" class="arrow-dashed"/>
+
+  <text x="56" y="912" class="mini">Dashed arrow indicates optional analysis branch. All file names and stage names are directly aligned with current repository implementation.</text>
+</svg>

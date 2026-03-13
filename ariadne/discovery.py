@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Dict, List, Optional, Sequence, Tuple, Union
 
 import pyhmmer
 import pyrodigal
 
 from ariadne.fasta_utils import FastaRecord, ensure_directory, parse_coverage, read_fasta, write_fasta, write_tsv
 
+PathLike = Union[str, Path]
 
-def build_hmm(alignment_fasta: str | Path, output_hmm: str | Path, *, name: str | None = None) -> Path:
+def build_hmm(alignment_fasta: PathLike, output_hmm: PathLike, *, name: Optional[str] = None) -> Path:
     alignment_path = Path(alignment_fasta)
     alphabet = pyhmmer.easel.Alphabet.amino()
     format_name = None
@@ -27,12 +29,15 @@ def build_hmm(alignment_fasta: str | Path, output_hmm: str | Path, *, name: str 
     return output_path
 
 
-def _protein_and_nt_records(transcriptome_path: str | Path, sample_name: str | None = None) -> tuple[list[FastaRecord], dict[str, FastaRecord]]:
+def _protein_and_nt_records(
+    transcriptome_path: PathLike,
+    sample_name: Optional[str] = None,
+) -> Tuple[List[FastaRecord], Dict[str, FastaRecord]]:
     transcript_records = read_fasta(transcriptome_path)
     sample = sample_name or Path(transcriptome_path).stem
     finder = pyrodigal.GeneFinder(meta=True)
-    proteins: list[FastaRecord] = []
-    nucleotide_by_id: dict[str, FastaRecord] = {}
+    proteins: List[FastaRecord] = []
+    nucleotide_by_id: Dict[str, FastaRecord] = {}
     for transcript in transcript_records:
         genes = finder.find_genes(transcript.sequence)
         coverage = parse_coverage(transcript.header)
@@ -56,11 +61,11 @@ def _protein_and_nt_records(transcriptome_path: str | Path, sample_name: str | N
 
 
 def search_proteins_with_hmm(
-    protein_fasta: str | Path,
-    hmm_path: str | Path,
+    protein_fasta: PathLike,
+    hmm_path: PathLike,
     *,
-    min_score: float | None = None,
-    max_evalue: float | None = None,
+    min_score: Optional[float] = None,
+    max_evalue: Optional[float] = None,
 ) -> list[dict[str, object]]:
     alphabet = pyhmmer.easel.Alphabet.amino()
     background = pyhmmer.plan7.Background(alphabet)
@@ -97,12 +102,12 @@ def search_proteins_with_hmm(
 
 
 def discover_candidates(
-    transcriptome_paths: list[str | Path],
-    hmm_path: str | Path,
-    output_dir: str | Path,
+    transcriptome_paths: List[PathLike],
+    hmm_path: PathLike,
+    output_dir: PathLike,
     *,
-    min_score: float | None = None,
-    max_evalue: float | None = None,
+    min_score: Optional[float] = None,
+    max_evalue: Optional[float] = None,
 ) -> dict[str, Path]:
     root = ensure_directory(output_dir)
     combined_proteins: list[FastaRecord] = []
@@ -137,6 +142,84 @@ def discover_candidates(
     combined_proteins_path = write_fasta(combined_proteins, root / "all_predicted_proteins.faa")
     candidate_proteins_path = write_fasta(combined_hits_proteins, root / "candidates.protein.faa")
     candidate_nucleotides_path = write_fasta(combined_hits_nucleotides, root / "candidates.orf.fna")
+    hits_tsv_path = write_tsv(combined_hit_rows, root / "candidates.hits.tsv")
+    return {
+        "all_predicted_proteins": combined_proteins_path,
+        "candidate_proteins": candidate_proteins_path,
+        "candidate_nucleotides": candidate_nucleotides_path,
+        "hits_tsv": hits_tsv_path,
+    }
+
+
+def collect_protein_files(
+    protein_dir: PathLike,
+    *,
+    protein_glob: Sequence[str] = ("*.faa", "*.fa", "*.fasta", "*.pep", "*.prot"),
+) -> list[Path]:
+    root = Path(protein_dir)
+    if not root.exists():
+        raise FileNotFoundError(f"Protein directory does not exist: {root}")
+    files: dict[Path, None] = {}
+    for pattern in protein_glob:
+        for path in root.rglob(pattern):
+            if path.is_file():
+                files[path] = None
+    return sorted(files)
+
+
+def _protein_records_with_sample_prefix(records: Sequence[FastaRecord], sample_name: str) -> list[FastaRecord]:
+    normalized: list[FastaRecord] = []
+    seen_ids: set[str] = set()
+    for index, record in enumerate(records, start=1):
+        base_id = f"{sample_name}|{record.id}"
+        record_id = base_id
+        if record_id in seen_ids:
+            record_id = f"{base_id}|dup{index}"
+        seen_ids.add(record_id)
+        description = record.description
+        header = record_id if not description else f"{record_id} {description}"
+        normalized_record = FastaRecord(header=header, sequence=record.sequence)
+        normalized_record.metadata["sample"] = sample_name
+        normalized.append(normalized_record)
+    return normalized
+
+
+def discover_candidates_from_proteins(
+    protein_paths: Sequence[PathLike],
+    hmm_path: PathLike,
+    output_dir: PathLike,
+    *,
+    min_score: Optional[float] = None,
+    max_evalue: Optional[float] = None,
+) -> dict[str, Path]:
+    root = ensure_directory(output_dir)
+    combined_proteins: list[FastaRecord] = []
+    combined_hits_proteins: list[FastaRecord] = []
+    combined_hit_rows: list[dict[str, object]] = []
+
+    for protein_path in protein_paths:
+        source_path = Path(protein_path)
+        sample_name = source_path.stem
+        sample_dir = ensure_directory(root / sample_name)
+        records = _protein_records_with_sample_prefix(read_fasta(source_path), sample_name)
+        proteins_path = write_fasta(records, sample_dir / f"{sample_name}.proteins.faa")
+        combined_proteins.extend(records)
+
+        hit_rows = search_proteins_with_hmm(proteins_path, hmm_path, min_score=min_score, max_evalue=max_evalue)
+        protein_by_id = {record.id: record for record in records}
+        hit_ids = {row["sequence_id"] for row in hit_rows}
+        sample_hit_proteins = [protein_by_id[sequence_id] for sequence_id in protein_by_id if sequence_id in hit_ids]
+        for row in hit_rows:
+            row["sample"] = sample_name
+            row["source_file"] = str(source_path)
+        combined_hit_rows.extend(hit_rows)
+        combined_hits_proteins.extend(sample_hit_proteins)
+        write_fasta(sample_hit_proteins, sample_dir / f"{sample_name}.hits.faa")
+        write_tsv(hit_rows, sample_dir / f"{sample_name}.hits.tsv")
+
+    combined_proteins_path = write_fasta(combined_proteins, root / "all_predicted_proteins.faa")
+    candidate_proteins_path = write_fasta(combined_hits_proteins, root / "candidates.protein.faa")
+    candidate_nucleotides_path = write_fasta([], root / "candidates.orf.fna")
     hits_tsv_path = write_tsv(combined_hit_rows, root / "candidates.hits.tsv")
     return {
         "all_predicted_proteins": combined_proteins_path,

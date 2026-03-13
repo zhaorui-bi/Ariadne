@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Union
 
 from ariadne.fasta_utils import FastaRecord, ensure_directory, read_fasta, ungap, write_fasta
 from ariadne.references import prepare_insect_reference, write_reference_metadata
+
+PathLike = Union[str, Path]
 
 CODON_TABLE = {
     "A": "GCT",
@@ -39,13 +42,14 @@ def _pick_records(records: list[FastaRecord], keyword: str, limit: int) -> list[
 
 
 def prepare_demo_workspace(
-    output_dir: str | Path,
+    output_dir: PathLike,
     *,
-    coral_alignment_fasta: str | Path,
-    insect_xlsx: str | Path,
+    coral_alignment_fasta: PathLike,
+    insect_xlsx: PathLike,
 ) -> dict[str, Path]:
     root = ensure_directory(output_dir)
     transcriptome_dir = ensure_directory(root / "transcriptomes")
+    protein_dir = ensure_directory(root / "proteins")
     reference_dir = ensure_directory(root / "references")
 
     aligned_coral = read_fasta(coral_alignment_fasta, keep_gaps=True)
@@ -83,6 +87,12 @@ def prepare_demo_workspace(
         FastaRecord(header="demo_decoy_cov_30", sequence=reverse_translate(decoy_protein)),
     ]
     transcriptome_path = write_fasta(transcript_records, transcriptome_dir / "demo_sample_transcripts.fasta")
+    protein_records = [
+        FastaRecord(header="demo_full_cov_25", sequence=full_length_protein),
+        FastaRecord(header="demo_partial_cov_4", sequence=truncated_protein),
+        FastaRecord(header="demo_decoy_cov_30", sequence=decoy_protein),
+    ]
+    protein_path = write_fasta(protein_records, protein_dir / "demo_sample_proteins.faa")
 
     preferred_cembrene_terms = [
         "DgTC-2-cembreneA",
@@ -145,6 +155,8 @@ def prepare_demo_workspace(
 
     return {
         "transcriptome": transcriptome_path,
+        "protein_fasta": protein_path,
+        "protein_dir": protein_dir,
         "seed_alignment": seed_alignment_path,
         "reference_dir": reference_dir,
         "coral_reference": coral_reference_path,
