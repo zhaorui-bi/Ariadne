@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import math
 from pathlib import Path
 from typing import Optional, Sequence, Union
@@ -11,6 +12,8 @@ from sklearn.manifold import TSNE
 from ariadne.fasta_utils import ensure_directory, write_tsv
 
 PathLike = Union[str, Path]
+
+logger = logging.getLogger(__name__)
 
 LEGACY_PALETTE = [
     "#87CEFA",

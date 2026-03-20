@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Union
 
 from ariadne.fasta_utils import FastaRecord, ensure_directory, pairwise_identity, read_fasta, write_fasta, write_tsv
 
 PathLike = Union[str, Path]
+
+logger = logging.getLogger(__name__)
 
 
 def _normalize_sequence(sequence: str) -> str:

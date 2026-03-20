@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import re
 from pathlib import Path
 from typing import Optional, Tuple, Union
@@ -7,6 +8,8 @@ from typing import Optional, Tuple, Union
 from ariadne.fasta_utils import FastaRecord, pad_sequence, pairwise_identity, read_fasta, write_fasta, write_tsv
 
 PathLike = Union[str, Path]
+
+logger = logging.getLogger(__name__)
 
 
 def _match_pattern_near_position(

@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Optional, Union
 
 from ariadne.fasta_utils import FastaRecord, ensure_directory, read_fasta, slugify, ungap, write_fasta, write_tsv
 
 PathLike = Union[str, Path]
+
+logger = logging.getLogger(__name__)
 
 
 def _prepare_record(record: FastaRecord, *, source: str, extra: Optional[dict[str, str]] = None) -> FastaRecord:

@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable, Iterator, Optional, Union
 
 PathLike = Union[str, Path]
+
+logger = logging.getLogger(__name__)
 
 AA_ALPHABET = "ACDEFGHIKLMNPQRSTVWY"
 AA_PATTERN = re.compile(r"[^A-Z*\-]")

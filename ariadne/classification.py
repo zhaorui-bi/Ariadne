@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import math
 import tempfile
 from collections import Counter
@@ -13,6 +14,8 @@ from ariadne.fasta_utils import FastaRecord, ensure_directory, read_fasta, sanit
 from ariadne.references import load_reference_records
 
 PathLike = Union[str, Path]
+
+logger = logging.getLogger(__name__)
 
 
 def sorted_hmm_paths(hmm_dir: PathLike) -> list[Path]:

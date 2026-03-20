@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Tuple, Union
 
@@ -7,6 +8,8 @@ import pyhmmer
 import pyrodigal
 
 from ariadne.fasta_utils import FastaRecord, ensure_directory, parse_coverage, read_fasta, write_fasta, write_tsv
+
+logger = logging.getLogger(__name__)
 
 PathLike = Union[str, Path]
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import math
 from pathlib import Path
 from typing import Optional, Union
@@ -7,6 +8,8 @@ from typing import Optional, Union
 from ariadne.fasta_utils import FastaRecord, parse_coverage, read_fasta, write_fasta, write_tsv
 
 PathLike = Union[str, Path]
+
+logger = logging.getLogger(__name__)
 
 
 def _edit_distance_with_limit(sequence_a: str, sequence_b: str, max_edits: int) -> int:

@@ -1,11 +1,17 @@
 from __future__ import annotations
 
 import argparse
+import logging
 import sys
 from pathlib import Path
 from typing import Optional, Tuple, Union
 
+from ariadne import __version__
+from ariadne import log as _log
+
 PathLike = Union[str, Path]
+
+logger = logging.getLogger(__name__)
 
 
 def _repo_root() -> Path:
@@ -89,11 +95,10 @@ def _is_bundled_tps_hmms(path: PathLike) -> bool:
 def _warn_legacy_tps_hmms(path: PathLike) -> None:
     if not _is_bundled_tps_hmms(path):
         return
-    print(
-        "Warning: using bundled TPS HMMs under ariadne/tps_hmm. "
+    logger.warning(
+        "Using bundled TPS HMMs under ariadne/tps_hmm. "
         "These profiles are legacy AFLP-derived placeholders. "
-        "For publication-grade TPS analysis, build and pass your own --tps-hmm-dir.",
-        file=sys.stderr,
+        "For publication-grade TPS analysis, build and pass your own --tps-hmm-dir."
     )
 
 
@@ -140,7 +145,7 @@ def _existing_path_or_none(value: Optional[PathLike], *, label: str) -> Optional
     path = Path(value).expanduser()
     if path.exists():
         return path
-    print(f"Warning: {label} file not found, skipped: {path}", file=sys.stderr)
+    logger.warning("%s file not found, skipped: %s", label, path)
     return None
 
 
@@ -189,8 +194,8 @@ def cmd_prepare_references(args: argparse.Namespace) -> int:
         )
 
     metadata_path = write_reference_metadata(all_records, output_dir)
-    print(f"Prepared {len(all_records)} reference sequences in {output_dir}")
-    print(f"Metadata: {metadata_path}")
+    logger.info("Prepared %d reference sequences in %s", len(all_records), output_dir)
+    logger.info("Metadata: %s", metadata_path)
     return 0
 
 
@@ -214,7 +219,7 @@ def cmd_prepare_demo(args: argparse.Namespace) -> int:
         insect_xlsx=args.insect_xlsx,
     )
     for key, value in outputs.items():
-        print(f"{key}: {value}")
+        logger.info("  %-28s %s", key + ":", value)
     return 0
 
 
@@ -222,7 +227,7 @@ def cmd_build_hmm(args: argparse.Namespace) -> int:
     from ariadne.discovery import build_hmm
 
     hmm_path = build_hmm(args.alignment, args.output, name=args.name)
-    print(f"HMM written to {hmm_path}")
+    logger.info("HMM written to %s", hmm_path)
     return 0
 
 
@@ -242,9 +247,9 @@ def cmd_build_tps_hmm_library(args: argparse.Namespace) -> int:
             hmm_name = alignment_path.stem
         output_path = output_dir / f"{hmm_name}.hmm"
         built_paths.append(build_hmm(alignment_path, output_path, name=hmm_name))
-    print(f"Built {len(built_paths)} TPS HMM profiles in {output_dir}")
+    logger.info("Built %d TPS HMM profiles in %s", len(built_paths), output_dir)
     for path in built_paths:
-        print(path)
+        logger.info("  %s", path)
     return 0
 
 
@@ -276,7 +281,7 @@ def cmd_discover(args: argparse.Namespace) -> int:
     else:
         raise ValueError("Please provide either --protein-folder (preferred) or --transcriptomes for discover.")
     for key, value in outputs.items():
-        print(f"{key}: {value}")
+        logger.info("  %-28s %s", key + ":", value)
     return 0
 
 
@@ -292,7 +297,7 @@ def cmd_filter(args: argparse.Namespace) -> int:
         motif_anchor=args.motif_anchor,
     )
     for key, value in outputs.items():
-        print(f"{key}: {value}")
+        logger.info("  %-28s %s", key + ":", value)
     return 0
 
 
@@ -310,7 +315,7 @@ def cmd_classify(args: argparse.Namespace) -> int:
         tree_neighbors=args.tree_neighbors,
     )
     for key, value in outputs.items():
-        print(f"{key}: {value}")
+        logger.info("  %-28s %s", key + ":", value)
     return 0
 
 
@@ -332,7 +337,7 @@ def cmd_motif(args: argparse.Namespace) -> int:
         allow_center_fallback=args.allow_center_fallback,
     )
     for key, value in outputs.items():
-        print(f"{key}: {value}")
+        logger.info("  %-28s %s", key + ":", value)
     return 0
 
 
@@ -431,7 +436,7 @@ def cmd_run(args: argparse.Namespace) -> int:
         for key, value in outputs.items():
             summary_rows.append({"stage": label, "artifact": key, "path": value})
     summary_path = write_tsv(summary_rows, root / "pipeline_summary.tsv")
-    print(f"Pipeline completed. Summary: {summary_path}")
+    logger.info("Pipeline completed. Summary: %s", summary_path)
     return 0
 
 
@@ -440,7 +445,7 @@ def cmd_compare_fasta(args: argparse.Namespace) -> int:
 
     outputs = compare_fasta_sets(args.predicted_fasta, args.expected_fasta, args.output_dir)
     for key, value in outputs.items():
-        print(f"{key}: {value}")
+        logger.info("  %-28s %s", key + ":", value)
     return 0
 
 
@@ -454,7 +459,7 @@ def cmd_visualize(args: argparse.Namespace) -> int:
         min_points=args.min_points,
     )
     for key, value in outputs.items():
-        print(f"{key}: {value}")
+        logger.info("  %-28s %s", key + ":", value)
     return 0
 
 
@@ -464,7 +469,7 @@ def cmd_filter_coverage_only(args: argparse.Namespace) -> int:
 
     records = filter_by_coverage(read_fasta(args.input_fasta), args.min_coverage)
     output_path = write_fasta(records, args.output)
-    print(output_path)
+    logger.info("Output: %s", output_path)
     return 0
 
 
@@ -474,7 +479,7 @@ def cmd_filter_length_only(args: argparse.Namespace) -> int:
 
     records = filter_by_length(read_fasta(args.input_fasta), args.min_length)
     output_path = write_fasta(records, args.output)
-    print(output_path)
+    logger.info("Output: %s", output_path)
     return 0
 
 
@@ -484,13 +489,27 @@ def cmd_dedupe_exact(args: argparse.Namespace) -> int:
 
     records = deduplicate_exact(read_fasta(args.input_fasta))
     output_path = write_fasta(records, args.output)
-    print(output_path)
+    logger.info("Output: %s", output_path)
     return 0
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="ariadne", description="Ariadne TPS discovery and annotation pipeline.")
-    subparsers = parser.add_subparsers(dest="command", required=True)
+    parser = argparse.ArgumentParser(
+        prog="ariadne",
+        description="Ariadne — Terpene Synthase Discovery & Annotation Pipeline.",
+    )
+    parser.add_argument(
+        "--version", "-V",
+        action="version",
+        version=f"%(prog)s {__version__}",
+    )
+    parser.add_argument(
+        "--verbose", "-v",
+        action="store_true",
+        default=False,
+        help="Enable verbose (DEBUG level) logging.",
+    )
+    subparsers = parser.add_subparsers(dest="command", required=False)
 
     prepare_refs = subparsers.add_parser("prepare-references", help="Prepare clean reference FASTA files from the bundled coral and insect resources.")
     prepare_refs.add_argument("--coral", default=_default_coral(), type=Path)
@@ -675,4 +694,14 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: Optional[list[str]] = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
+
+    _log.setup_logging(verbose=getattr(args, "verbose", False))
+
+    if not hasattr(args, "func"):
+        # No subcommand supplied: print banner + help then exit cleanly.
+        _log.print_banner(__version__)
+        parser.print_help(sys.stderr)
+        return 0
+
+    _log.print_banner(__version__)
     return args.func(args)
