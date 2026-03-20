@@ -1,148 +1,148 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1040" viewBox="0 0 1800 1040">
+<svg xmlns="http://www.w3.org/2000/svg" width="1680" height="980" viewBox="0 0 1680 980">
   <defs>
     <style>
-      .bg { fill: #f8fbff; }
-      .title { font: 700 36px 'Helvetica Neue', Helvetica, Arial, sans-serif; fill: #0f172a; }
-      .subtitle { font: 500 18px 'Helvetica Neue', Helvetica, Arial, sans-serif; fill: #334155; }
-      .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.6; rx: 16; ry: 16; }
-      .panel-title { font: 700 24px 'Helvetica Neue', Helvetica, Arial, sans-serif; fill: #0f172a; }
-      .box-input { fill: #f8fafc; stroke: #64748b; stroke-width: 1.7; rx: 11; ry: 11; }
-      .box-core { fill: #eef2ff; stroke: #334155; stroke-width: 2.0; rx: 11; ry: 11; }
-      .box-mode { fill: #fefce8; stroke: #a16207; stroke-width: 1.8; rx: 11; ry: 11; }
-      .box-out { fill: #ecfdf5; stroke: #166534; stroke-width: 1.8; rx: 11; ry: 11; }
+      .bg { fill: #f6f8fb; }
+      .panel { fill: #ffffff; stroke: #d7dee8; stroke-width: 1.6; rx: 18; ry: 18; }
+      .title { font: 700 34px 'Helvetica Neue', Helvetica, Arial, sans-serif; fill: #0f172a; }
+      .subtitle { font: 500 17px 'Helvetica Neue', Helvetica, Arial, sans-serif; fill: #475569; }
+      .section { font: 700 23px 'Helvetica Neue', Helvetica, Arial, sans-serif; fill: #0f172a; }
+      .box-input { fill: #f8fafc; stroke: #64748b; stroke-width: 1.6; rx: 12; ry: 12; }
+      .box-core { fill: #eef4ff; stroke: #35558a; stroke-width: 1.8; rx: 12; ry: 12; }
+      .box-mode { fill: #fdf7e7; stroke: #a16207; stroke-width: 1.8; rx: 12; ry: 12; }
+      .box-out { fill: #eefbf4; stroke: #1f7a4f; stroke-width: 1.8; rx: 12; ry: 12; }
+      .box-bench { fill: #fff1f2; stroke: #be123c; stroke-width: 1.8; rx: 12; ry: 12; }
       .h1 { font: 700 18px 'Helvetica Neue', Helvetica, Arial, sans-serif; fill: #0f172a; }
       .h2 { font: 600 14px 'Helvetica Neue', Helvetica, Arial, sans-serif; fill: #1e293b; }
       .txt { font: 500 13px 'Helvetica Neue', Helvetica, Arial, sans-serif; fill: #334155; }
-      .mini { font: 500 12px 'Helvetica Neue', Helvetica, Arial, sans-serif; fill: #475569; }
-      .arrow { stroke: #475569; stroke-width: 2.1; fill: none; marker-end: url(#ah); }
-      .arrow-alt { stroke: #a16207; stroke-width: 2.0; fill: none; marker-end: url(#ah2); }
+      .mini { font: 500 12px 'Helvetica Neue', Helvetica, Arial, sans-serif; fill: #64748b; }
+      .arrow { stroke: #475569; stroke-width: 2.1; fill: none; marker-end: url(#arrowHead); }
+      .arrow-bench { stroke: #be123c; stroke-width: 2.1; fill: none; marker-end: url(#arrowBench); }
       .dashed { stroke-dasharray: 7 6; }
     </style>
-    <marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+    <marker id="arrowHead" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
       <path d="M0,0 L8,3 L0,6 Z" fill="#475569"/>
     </marker>
-    <marker id="ah2" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
-      <path d="M0,0 L8,3 L0,6 Z" fill="#a16207"/>
+    <marker id="arrowBench" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#be123c"/>
     </marker>
   </defs>
 
-  <rect class="bg" x="0" y="0" width="1800" height="1040"/>
-  <text x="50" y="58" class="title">Figure 1 | Ariadne Pipeline for TPS Discovery, Clade Assignment, and Cembrene Motif Decision</text>
-  <text x="50" y="88" class="subtitle">Code-aligned workflow: discovery -> filtering -> classification -> motif, with strict/lenient motif gate switch</text>
+  <rect class="bg" width="1680" height="980"/>
+  <text x="48" y="58" class="title">Figure 1 | Ariadne: TPS discovery, motif-aware clustering, and benchmark comparison</text>
+  <text x="48" y="86" class="subtitle">NeurIPS-style pipeline summary aligned to the current CLI: input -> discover -> filter -> motif gate -> classify -> benchmark</text>
 
-  <rect x="50" y="120" width="430" height="850" class="panel"/>
-  <text x="74" y="160" class="panel-title">A. Inputs and Reference Library</text>
+  <rect x="42" y="118" width="400" height="816" class="panel"/>
+  <text x="68" y="156" class="section">A. Inputs and references</text>
 
-  <rect x="72" y="190" width="386" height="120" class="box-input"/>
-  <text x="92" y="222" class="h1">Biological Input</text>
-  <text x="92" y="246" class="txt">- Preferred: --protein-folder</text>
-  <text x="92" y="268" class="txt">- Compatible: --transcriptomes</text>
-  <text x="92" y="290" class="txt">- Query model: --seed-alignment / --query-hmm</text>
+  <rect x="66" y="184" width="352" height="132" class="box-input"/>
+  <text x="88" y="216" class="h1">Biological input</text>
+  <text x="88" y="240" class="txt">Preferred entry: input/*.fasta via --protein-folder</text>
+  <text x="88" y="262" class="txt">Optional transcriptome mode: --transcriptomes</text>
+  <text x="88" y="284" class="txt">Query model: --seed-alignment or --query-hmm</text>
 
-  <rect x="72" y="330" width="386" height="220" class="box-input"/>
-  <text x="92" y="362" class="h1">Auto Multi-clade Reference Build</text>
-  <text x="92" y="386" class="txt">ariadne prepare-references --output-dir ...</text>
-  <text x="92" y="410" class="txt">Auto-detected files:</text>
-  <text x="92" y="432" class="txt">- coralTPS (modified)-cembrene.fasta</text>
-  <text x="92" y="454" class="txt">- Insecta TPS.xlsx</text>
-  <text x="92" y="476" class="txt">- bacteria.fasta(.fa/.faa)</text>
-  <text x="92" y="498" class="txt">- fungal.fasta or fungi.fasta</text>
-  <text x="92" y="520" class="txt">- plant.fasta(.fa/.faa)</text>
+  <rect x="66" y="336" width="352" height="224" class="box-input"/>
+  <text x="88" y="368" class="h1">Reference library</text>
+  <text x="88" y="392" class="txt">ariadne prepare-references --output-dir ...</text>
+  <text x="88" y="420" class="txt">Auto-detected reference sources:</text>
+  <text x="88" y="444" class="txt">- coralTPS (modified)-cembrene.fasta</text>
+  <text x="88" y="466" class="txt">- Insecta TPS.xlsx</text>
+  <text x="88" y="488" class="txt">- bacteria.fasta</text>
+  <text x="88" y="510" class="txt">- fungal.fasta / fungi.fasta</text>
+  <text x="88" y="532" class="txt">- plant.fasta</text>
 
-  <rect x="72" y="570" width="386" height="150" class="box-input"/>
-  <text x="92" y="602" class="h1">Reference Artifacts</text>
-  <text x="92" y="626" class="txt">- coral.fasta / insect.fasta / bacteria.fasta</text>
-  <text x="92" y="648" class="txt">- fungal.fasta / plant.fasta</text>
-  <text x="92" y="670" class="txt">- metadata.tsv</text>
-  <text x="92" y="694" class="mini">Used by Module 3 (classification) and Module 4 (motif)</text>
+  <rect x="66" y="580" width="352" height="152" class="box-input"/>
+  <text x="88" y="612" class="h1">Benchmark files</text>
+  <text x="88" y="636" class="txt">- input/all_cn_tp.fasta: runtime entry set</text>
+  <text x="88" y="658" class="txt">- output/output.fasta: ideal result set</text>
+  <text x="88" y="684" class="mini">Passed to --expected-fasta for exact and near-exact comparison</text>
 
-  <rect x="72" y="740" width="386" height="210" class="box-input"/>
-  <text x="92" y="772" class="h1">CLI Entry Points</text>
-  <text x="92" y="796" class="txt">- ariadne run (end-to-end)</text>
-  <text x="92" y="818" class="txt">- ariadne motif (module-only)</text>
-  <text x="92" y="840" class="txt">- ariadne classify / visualize</text>
-  <text x="92" y="862" class="txt">New switch:</text>
-  <text x="92" y="884" class="txt">--allow-center-fallback (lenient mode)</text>
+  <rect x="66" y="752" width="352" height="154" class="box-input"/>
+  <text x="88" y="784" class="h1">Interface highlights</text>
+  <text x="88" y="808" class="txt">- ariadne run</text>
+  <text x="88" y="830" class="txt">- ariadne compare-fasta</text>
+  <text x="88" y="852" class="txt">- --allow-center-fallback</text>
+  <text x="88" y="874" class="txt">- motif-aware 3D cluster context</text>
 
-  <rect x="520" y="120" width="830" height="850" class="panel"/>
-  <text x="544" y="160" class="panel-title">B. Core Computational Pipeline</text>
+  <rect x="476" y="118" width="730" height="816" class="panel"/>
+  <text x="502" y="156" class="section">B. Core pipeline</text>
 
-  <rect x="544" y="190" width="782" height="92" class="box-core"/>
-  <text x="564" y="222" class="h1">Module 1: discovery.py</text>
-  <text x="564" y="244" class="txt">Protein HMM search (or transcriptome ORF prediction + HMM search)</text>
-  <text x="564" y="266" class="h2">Output: 01_discovery/candidates.protein.faa + candidates.hits.tsv</text>
+  <rect x="502" y="184" width="678" height="88" class="box-core"/>
+  <text x="524" y="216" class="h1">1. Discovery</text>
+  <text x="524" y="238" class="txt">Search protein FASTA with a TPS query HMM and collect candidate hits.</text>
+  <text x="524" y="258" class="h2">01_discovery/candidates.protein.faa + candidates.hits.tsv</text>
 
-  <rect x="544" y="306" width="782" height="92" class="box-core"/>
-  <text x="564" y="338" class="h1">Module 2: filtering.py</text>
-  <text x="564" y="360" class="txt">Coverage/length filtering + near-duplicate collapsing</text>
-  <text x="564" y="382" class="h2">Output: 02_filtering/candidates.filtered.faa + filter_report.tsv</text>
+  <rect x="502" y="296" width="678" height="88" class="box-core"/>
+  <text x="524" y="328" class="h1">2. Filtering</text>
+  <text x="524" y="350" class="txt">Apply coverage/length thresholds and collapse near-duplicate proteins.</text>
+  <text x="524" y="370" class="h2">02_filtering/candidates.filtered.faa + filter_report.tsv</text>
 
-  <rect x="544" y="422" width="782" height="104" class="box-core"/>
-  <text x="564" y="454" class="h1">Module 3: classification.py</text>
-  <text x="564" y="476" class="txt">TPS HMM feature matrix -> normalization -> PCA -> nearest-neighbor clade assignment</text>
-  <text x="564" y="498" class="h2">Output: classification.tsv + assignment_summary.tsv + trees/*.nwk + embedding_3d_sections.svg</text>
+  <rect x="502" y="408" width="678" height="110" class="box-mode"/>
+  <text x="524" y="440" class="h1">3. Two-stage motif gate</text>
+  <text x="524" y="462" class="txt">Stage I: DDXXD/E confirms TPS-like candidates before downstream interpretation.</text>
+  <text x="524" y="484" class="txt">Stage II: cembrene anchor window is scored in strict or lenient mode.</text>
+  <text x="524" y="504" class="h2">04_motif/motif_summary.tsv + cembrene_candidates.fasta</text>
 
-  <rect x="544" y="550" width="782" height="118" class="box-core"/>
-  <text x="564" y="582" class="h1">Module 4: motif.py (Two-stage gate)</text>
-  <text x="564" y="604" class="txt">Stage 1 TPS gate: DD..[DE] near ~125 aa</text>
-  <text x="564" y="626" class="txt">Stage 2 cembrene gate: compare motif windows near ~210 aa against references</text>
-  <text x="564" y="648" class="h2">Output: motif_summary.tsv + cembrene_candidates.tsv + motif_windows.svg</text>
+  <rect x="502" y="542" width="678" height="110" class="box-core"/>
+  <text x="524" y="574" class="h1">4. Classification and 3D context</text>
+  <text x="524" y="596" class="txt">Project reference plus candidate TPS profiles into PCA space, then overlay motif labels.</text>
+  <text x="524" y="618" class="txt">Foreground markers separate candidate TPS+, candidate TPS-, and cembrene-like points.</text>
+  <text x="524" y="638" class="h2">03_classification/embedding_3d_sections.svg + candidate_cluster_context.tsv</text>
 
-  <rect x="544" y="692" width="782" height="122" class="box-mode"/>
-  <text x="564" y="724" class="h1">Motif Mode Switch</text>
-  <text x="564" y="746" class="txt">Strict (default): require anchor motif match before cembrene decision</text>
-  <text x="564" y="768" class="txt">Lenient: --allow-center-fallback enables center-window fallback when anchor is absent</text>
-  <text x="564" y="790" class="h2">Effect observed in tests: strict -> fewer/no cembrene positives; lenient -> more positives</text>
+  <rect x="502" y="676" width="678" height="114" class="box-bench"/>
+  <text x="524" y="708" class="h1">5. Benchmark comparison</text>
+  <text x="524" y="730" class="txt">Compare final cembrene_candidates.fasta against output/output.fasta after ungapping sequences.</text>
+  <text x="524" y="752" class="txt">Report exact recovery, unmatched sequences, and best near matches.</text>
+  <text x="524" y="772" class="h2">05_benchmark/benchmark_summary.tsv + benchmark_comparison.tsv</text>
 
-  <rect x="544" y="838" width="782" height="112" class="box-out"/>
-  <text x="564" y="870" class="h1">Integrated Outputs</text>
-  <text x="564" y="892" class="txt">pipeline_summary.tsv (artifact index) + per-stage tables and figures</text>
-  <text x="564" y="914" class="txt">Supports publication-style figure and evidence traceability</text>
+  <rect x="502" y="814" width="678" height="92" class="box-out"/>
+  <text x="524" y="846" class="h1">6. Reproducible package</text>
+  <text x="524" y="868" class="txt">pipeline_summary.tsv indexes all generated tables, trees, FASTA files, and SVG figures.</text>
+  <text x="524" y="888" class="h2">Conference-ready outputs for methods, figures, and supplements</text>
 
-  <rect x="1380" y="120" width="370" height="850" class="panel"/>
-  <text x="1404" y="160" class="panel-title">C. Readouts for Reporting</text>
+  <rect x="1240" y="118" width="398" height="816" class="panel"/>
+  <text x="1266" y="156" class="section">C. Evidence and readout</text>
 
-  <rect x="1404" y="192" width="322" height="170" class="box-out"/>
-  <text x="1424" y="224" class="h1">Clade Evidence</text>
-  <text x="1424" y="246" class="txt">- classification.tsv</text>
-  <text x="1424" y="268" class="txt">- assignment_summary.tsv</text>
-  <text x="1424" y="290" class="txt">- global_context_tree.nwk</text>
-  <text x="1424" y="312" class="txt">- trees/*.nwk (local trees)</text>
+  <rect x="1264" y="184" width="350" height="164" class="box-out"/>
+  <text x="1286" y="216" class="h1">Clade evidence</text>
+  <text x="1286" y="240" class="txt">- classification.tsv</text>
+  <text x="1286" y="262" class="txt">- assignment_summary.tsv</text>
+  <text x="1286" y="284" class="txt">- nearest_neighbors.tsv</text>
+  <text x="1286" y="306" class="txt">- global_context_tree.nwk and trees/*.nwk</text>
 
-  <rect x="1404" y="384" width="322" height="170" class="box-out"/>
-  <text x="1424" y="416" class="h1">Embedding Evidence</text>
-  <text x="1424" y="438" class="txt">- embedding.tsv / embedding.svg</text>
-  <text x="1424" y="460" class="txt">- embedding_3d_sections.svg</text>
-  <text x="1424" y="482" class="txt">- tps_features.tsv (input matrix)</text>
+  <rect x="1264" y="370" width="350" height="170" class="box-out"/>
+  <text x="1286" y="402" class="h1">3D cluster evidence</text>
+  <text x="1286" y="426" class="txt">- embedding.svg</text>
+  <text x="1286" y="448" class="txt">- embedding_3d_sections.svg</text>
+  <text x="1286" y="470" class="txt">- embedding.tsv</text>
+  <text x="1286" y="492" class="txt">- candidate_cluster_context.tsv</text>
+  <text x="1286" y="516" class="mini">AFPK-style low-dimensional grouping with motif-aware candidate labels</text>
 
-  <rect x="1404" y="576" width="322" height="180" class="box-out"/>
-  <text x="1424" y="608" class="h1">Motif Evidence</text>
-  <text x="1424" y="630" class="txt">- motif_summary.tsv</text>
-  <text x="1424" y="652" class="txt">- cembrene_candidates.tsv</text>
-  <text x="1424" y="674" class="txt">- motif_windows.fasta / motif_windows.svg</text>
-  <text x="1424" y="696" class="mini">Columns expose TPS gate status and motif decision path</text>
+  <rect x="1264" y="562" width="350" height="160" class="box-out"/>
+  <text x="1286" y="594" class="h1">Motif evidence</text>
+  <text x="1286" y="618" class="txt">- motif_summary.tsv</text>
+  <text x="1286" y="640" class="txt">- cembrene_candidates.tsv</text>
+  <text x="1286" y="662" class="txt">- cembrene_candidates.fasta</text>
+  <text x="1286" y="684" class="txt">- motif_windows.svg</text>
 
-  <rect x="1404" y="780" width="322" height="170" class="box-out"/>
-  <text x="1424" y="812" class="h1">Conference-ready Packaging</text>
-  <text x="1424" y="834" class="txt">- Reproducible commands in README</text>
-  <text x="1424" y="856" class="txt">- Figure + table artifacts in SVG/TSV</text>
-  <text x="1424" y="878" class="txt">- Method switch documented (strict/lenient)</text>
+  <rect x="1264" y="744" width="350" height="162" class="box-bench"/>
+  <text x="1286" y="776" class="h1">Benchmark evidence</text>
+  <text x="1286" y="800" class="txt">- benchmark_summary.tsv</text>
+  <text x="1286" y="822" class="txt">- benchmark_comparison.tsv</text>
+  <text x="1286" y="844" class="txt">- exact_matches.tsv</text>
+  <text x="1286" y="866" class="txt">- only_in_predicted.fasta / only_in_expected.fasta</text>
 
-  <path class="arrow" d="M458 248 L544 236"/>
-  <path class="arrow" d="M458 436 L544 454"/>
-  <path class="arrow" d="M458 646 L544 476"/>
-  <path class="arrow" d="M458 864 L544 604"/>
+  <path class="arrow" d="M418 250 L502 226"/>
+  <path class="arrow" d="M418 658 L502 730"/>
+  <path class="arrow" d="M841 272 L841 296"/>
+  <path class="arrow" d="M841 384 L841 408"/>
+  <path class="arrow" d="M841 518 L841 542"/>
+  <path class="arrow-bench" d="M841 652 L841 676"/>
+  <path class="arrow" d="M841 790 L841 814"/>
 
-  <path class="arrow" d="M935 282 L935 306"/>
-  <path class="arrow" d="M935 398 L935 422"/>
-  <path class="arrow" d="M935 526 L935 550"/>
-  <path class="arrow-alt" d="M935 668 L935 692"/>
-  <path class="arrow" d="M935 814 L935 838"/>
+  <path class="arrow" d="M1180 596 L1264 456"/>
+  <path class="arrow" d="M1180 596 L1264 268"/>
+  <path class="arrow" d="M1180 462 L1264 644"/>
+  <path class="arrow-bench dashed" d="M1180 736 L1264 826"/>
 
-  <path class="arrow" d="M1326 476 L1404 262"/>
-  <path class="arrow dashed" d="M1326 476 L1404 470"/>
-  <path class="arrow" d="M1326 604 L1404 666"/>
-  <path class="arrow" d="M1326 894 L1404 848"/>
-
-  <text x="50" y="1010" class="mini">Dashed edge marks optional visualization emphasis. Figure content is synchronized with current CLI options and module outputs.</text>
+  <text x="46" y="956" class="mini">Figure reflects the current implementation: motif analysis is executed before classification during ariadne run so the 3D embedding can highlight TPS+, TPS-, and cembrene-like candidates.</text>
 </svg>

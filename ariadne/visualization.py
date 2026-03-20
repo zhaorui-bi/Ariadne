@@ -39,7 +39,7 @@ def _load_tps_features_tsv(path: PathLike) -> tuple[list[str], np.ndarray, list[
         reader = csv.DictReader(handle, delimiter="\t")
         if not reader.fieldnames:
             raise ValueError(f"{path} does not contain header fields.")
-        non_feature_columns = {"sequence_id", "source", "label"}
+        non_feature_columns = {"sequence_id", "source", "label", "candidate_group"}
         feature_columns = [name for name in reader.fieldnames if name not in non_feature_columns]
         if not feature_columns:
             raise ValueError(f"{path} does not contain numeric feature columns.")

@@ -4,7 +4,7 @@ import math
 import tempfile
 from collections import Counter
 from pathlib import Path
-from typing import Union
+from typing import Optional, Union
 
 import numpy as np
 import pyhmmer
@@ -160,11 +160,123 @@ def _color_map(sources: list[str]) -> dict[str, str]:
     return mapping
 
 
+def _load_candidate_annotations(path: Optional[PathLike]) -> dict[str, dict[str, str]]:
+    if path is None:
+        return {}
+    annotation_path = Path(path)
+    if not annotation_path.exists():
+        return {}
+    import csv
+
+    annotations: dict[str, dict[str, str]] = {}
+    with annotation_path.open() as handle:
+        reader = csv.DictReader(handle, delimiter="\t")
+        for row in reader:
+            sequence_id = (row.get("sequence_id") or "").strip()
+            if sequence_id:
+                annotations[sequence_id] = {key: value for key, value in row.items() if value}
+    return annotations
+
+
+def _candidate_group(record: FastaRecord) -> str:
+    if record.metadata.get("source") != "candidate":
+        return f"ref:{record.metadata.get('source', 'unknown')}"
+    if record.metadata.get("predicted_cembrene_like") == "yes":
+        return "candidate:cembrene_like"
+    if record.metadata.get("is_tps") == "yes":
+        return "candidate:tps_positive"
+    if record.metadata.get("is_tps") == "no":
+        return "candidate:tps_negative"
+    return "candidate:unlabeled"
+
+
+def _display_styles(records: list[FastaRecord]) -> dict[str, dict[str, str]]:
+    reference_sources = sorted({record.metadata.get("source", "unknown") for record in records if record.metadata.get("source") != "candidate"})
+    reference_colors = _color_map(reference_sources)
+    styles: dict[str, dict[str, str]] = {}
+    for source in reference_sources:
+        styles[f"ref:{source}"] = {
+            "label": f"reference:{source}",
+            "fill": reference_colors[source],
+            "shape": "circle",
+            "opacity": "0.42",
+            "radius": "3.8",
+            "stroke": "none",
+        }
+    styles["candidate:unlabeled"] = {
+        "label": "candidate",
+        "fill": "#111827",
+        "shape": "circle",
+        "opacity": "0.88",
+        "radius": "6.0",
+        "stroke": "#111827",
+    }
+    styles["candidate:tps_positive"] = {
+        "label": "candidate TPS+",
+        "fill": "#0f766e",
+        "shape": "diamond",
+        "opacity": "0.92",
+        "radius": "7.4",
+        "stroke": "#134e4a",
+    }
+    styles["candidate:tps_negative"] = {
+        "label": "candidate TPS-",
+        "fill": "#dc2626",
+        "shape": "square",
+        "opacity": "0.92",
+        "radius": "7.0",
+        "stroke": "#7f1d1d",
+    }
+    styles["candidate:cembrene_like"] = {
+        "label": "candidate cembrene-like",
+        "fill": "#f59e0b",
+        "shape": "triangle",
+        "opacity": "0.96",
+        "radius": "8.2",
+        "stroke": "#92400e",
+    }
+    return styles
+
+
+def _marker_svg(x: float, y: float, *, shape: str, radius: float, fill: str, stroke: str, opacity: float, stroke_width: float = 1.0) -> str:
+    if shape == "square":
+        size = radius * 2
+        return (
+            f'<rect x="{x - radius:.2f}" y="{y - radius:.2f}" width="{size:.2f}" height="{size:.2f}" '
+            f'fill="{fill}" opacity="{opacity}" stroke="{stroke}" stroke-width="{stroke_width}" />'
+        )
+    if shape == "diamond":
+        points = [
+            f"{x:.2f},{y - radius:.2f}",
+            f"{x + radius:.2f},{y:.2f}",
+            f"{x:.2f},{y + radius:.2f}",
+            f"{x - radius:.2f},{y:.2f}",
+        ]
+        return (
+            f'<polygon points="{" ".join(points)}" fill="{fill}" opacity="{opacity}" '
+            f'stroke="{stroke}" stroke-width="{stroke_width}" />'
+        )
+    if shape == "triangle":
+        points = [
+            f"{x:.2f},{y - radius:.2f}",
+            f"{x + radius:.2f},{y + radius:.2f}",
+            f"{x - radius:.2f},{y + radius:.2f}",
+        ]
+        return (
+            f'<polygon points="{" ".join(points)}" fill="{fill}" opacity="{opacity}" '
+            f'stroke="{stroke}" stroke-width="{stroke_width}" />'
+        )
+    return (
+        f'<circle cx="{x:.2f}" cy="{y:.2f}" r="{radius:.2f}" fill="{fill}" opacity="{opacity}" '
+        f'stroke="{stroke}" stroke-width="{stroke_width}" />'
+    )
+
+
 def _render_scatter(records: list[FastaRecord], coords: np.ndarray, output_path: PathLike) -> Path:
     if len(records) == 0:
         return Path(output_path)
-    sources = [record.metadata.get("source", "unknown") for record in records]
-    colors = _color_map(sources)
+    styles = _display_styles(records)
+    groups = [_candidate_group(record) for record in records]
     width = 1200
     height = 800
     margin = 80
@@ -182,25 +294,42 @@ def _render_scatter(records: list[FastaRecord], coords: np.ndarray, output_path:
         return height - margin - ((value - min_y) / span_y) * (height - (2 * margin))
 
     legend_entries = []
-    for legend_index, source in enumerate(sorted(colors)):
+    ordered_groups = [group for group in styles if group in groups]
+    for legend_index, group in enumerate(ordered_groups):
         y = margin + (legend_index * 24)
+        style = styles[group]
         legend_entries.append(
-            f'<circle cx="{width - 220}" cy="{y}" r="7" fill="{colors[source]}" />'
-            f'<text x="{width - 205}" y="{y + 5}" font-size="14">{source}</text>'
+            _marker_svg(
+                width - 220,
+                y,
+                shape=style["shape"],
+                radius=7,
+                fill=style["fill"],
+                stroke=style["stroke"],
+                opacity=float(style["opacity"]),
+                stroke_width=1.0,
+            )
+            + f'<text x="{width - 205}" y="{y + 5}" font-size="14">{style["label"]}</text>'
         )
 
     points = []
     for record, coordinate in zip(records, coords):
         x = scale_x(float(coordinate[0]))
         y = scale_y(float(coordinate[1] if len(coordinate) > 1 else 0.0))
-        source = record.metadata.get("source", "unknown")
-        is_candidate = source == "candidate"
-        radius = 8 if is_candidate else 4
-        opacity = 0.95 if is_candidate else 0.55
-        stroke = "#111111" if is_candidate else "none"
+        group = _candidate_group(record)
+        style = styles[group]
+        is_candidate = record.metadata.get("source") == "candidate"
         points.append(
-            f'<circle cx="{x:.2f}" cy="{y:.2f}" r="{radius}" fill="{colors[source]}" '
-            f'opacity="{opacity}" stroke="{stroke}" stroke-width="1.2" />'
+            _marker_svg(
+                x,
+                y,
+                shape=style["shape"],
+                radius=float(style["radius"]),
+                fill=style["fill"],
+                stroke=style["stroke"],
+                opacity=float(style["opacity"]),
+                stroke_width=1.2 if is_candidate else 0.8,
+            )
         )
         if is_candidate:
             points.append(
@@ -212,7 +341,7 @@ def _render_scatter(records: list[FastaRecord], coords: np.ndarray, output_path:
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" '
         f'viewBox="0 0 {width} {height}">'
         f'<rect width="{width}" height="{height}" fill="white" />'
-        f'<text x="{margin}" y="40" font-size="24" font-weight="bold">Ariadne TPS candidate feature embedding</text>'
+        f'<text x="{margin}" y="40" font-size="24" font-weight="bold">Ariadne TPS feature embedding</text>'
         f'<line x1="{margin}" y1="{height - margin}" x2="{width - margin}" y2="{height - margin}" stroke="#999999" />'
         f'<line x1="{margin}" y1="{margin}" x2="{margin}" y2="{height - margin}" stroke="#999999" />'
         + "".join(points)
@@ -232,8 +361,8 @@ def _render_3d_sections(records: list[FastaRecord], coords: np.ndarray, output_p
     if coords.shape[1] < 3:
         coords = np.pad(coords, ((0, 0), (0, 3 - coords.shape[1])))
 
-    sources = [record.metadata.get("source", "unknown") for record in records]
-    colors = _color_map(sources)
+    styles = _display_styles(records)
+    ordered_groups = [group for group in styles if group in {_candidate_group(record) for record in records}]
     projections = [
         (0, 1, "PC1", "PC2"),
         (0, 2, "PC1", "PC3"),
@@ -264,7 +393,8 @@ def _render_3d_sections(records: list[FastaRecord], coords: np.ndarray, output_p
     svg_lines = [
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">',
         f'<rect width="{width}" height="{height}" fill="white" />',
-        f'<text x="{margin}" y="34" font-size="24" font-weight="bold">Ariadne 3D section views (PCA)</text>',
+        f'<text x="{margin}" y="34" font-size="24" font-weight="bold">Ariadne 3D cluster context (PCA sections)</text>',
+        f'<text x="{margin}" y="58" font-size="14" fill="#475569">Reference clades are shown as faint background points; motif-aware candidate states are highlighted as foreground markers.</text>',
     ]
 
     for panel_index, (dim_x, dim_y, label_x, label_y) in enumerate(projections):
@@ -286,15 +416,22 @@ def _render_3d_sections(records: list[FastaRecord], coords: np.ndarray, output_p
             f'<text x="{panel_x + margin}" y="{panel_y + 24}" font-size="16" font-weight="600">{label_x} vs {label_y}</text>'
         )
         for record, x_val, y_val in zip(records, xs, ys):
-            source = record.metadata.get("source", "unknown")
-            is_candidate = source == "candidate"
-            radius = 6.0 if is_candidate else 3.8
-            opacity = 0.9 if is_candidate else 0.6
+            group = _candidate_group(record)
+            style = styles[group]
+            is_candidate = record.metadata.get("source") == "candidate"
             cx = scale_x(float(x_val), panel_x)
             cy = scale_y(float(y_val), panel_y)
-            stroke = "#111827" if is_candidate else "none"
             svg_lines.append(
-                f'<circle cx="{cx:.2f}" cy="{cy:.2f}" r="{radius}" fill="{colors[source]}" opacity="{opacity}" stroke="{stroke}" stroke-width="1" />'
+                _marker_svg(
+                    cx,
+                    cy,
+                    shape=style["shape"],
+                    radius=float(style["radius"]) if is_candidate else 3.6,
+                    fill=style["fill"],
+                    stroke=style["stroke"],
+                    opacity=float(style["opacity"]) if is_candidate else 0.38,
+                    stroke_width=1.0 if is_candidate else 0.6,
+                )
             )
             if is_candidate:
                 svg_lines.append(
@@ -303,10 +440,22 @@ def _render_3d_sections(records: list[FastaRecord], coords: np.ndarray, output_p
 
     legend_y = margin + panel_height + 30
     legend_x = margin
-    for index, source in enumerate(sorted(colors)):
+    for index, group in enumerate(ordered_groups):
         x = legend_x + (index * 180)
-        svg_lines.append(f'<circle cx="{x}" cy="{legend_y}" r="7" fill="{colors[source]}" />')
-        svg_lines.append(f'<text x="{x + 12}" y="{legend_y + 5}" font-size="14">{source}</text>')
+        style = styles[group]
+        svg_lines.append(
+            _marker_svg(
+                x,
+                legend_y,
+                shape=style["shape"],
+                radius=7,
+                fill=style["fill"],
+                stroke=style["stroke"],
+                opacity=float(style["opacity"]),
+                stroke_width=1.0,
+            )
+        )
+        svg_lines.append(f'<text x="{x + 12}" y="{legend_y + 5}" font-size="14">{style["label"]}</text>')
     svg_lines.append("</svg>")
     target.write_text("".join(svg_lines))
     return target
@@ -318,6 +467,7 @@ def classify_candidates(
     output_dir: PathLike,
     *,
     hmm_dir: PathLike,
+    candidate_annotations: Optional[PathLike] = None,
     top_k: int = 5,
     tree_neighbors: int = 12,
 ) -> dict[str, Path]:
@@ -325,9 +475,12 @@ def classify_candidates(
     if not references:
         raise ValueError(f"No reference sequences were found in {reference_dir}.")
     candidates = read_fasta(candidate_fasta)
+    annotations = _load_candidate_annotations(candidate_annotations)
     for candidate in candidates:
         candidate.metadata["source"] = "candidate"
         candidate.metadata["label"] = "candidate"
+        candidate.metadata.update(annotations.get(candidate.id, {}))
+        candidate.metadata["candidate_group"] = _candidate_group(candidate)
     all_records = references + candidates
     hmm_paths = sorted_hmm_paths(hmm_dir)
     raw_matrix, column_names = _score_records_against_hmms(all_records, hmm_paths)
@@ -342,6 +495,7 @@ def classify_candidates(
             "sequence_id": record.id,
             "source": record.metadata.get("source", "unknown"),
             "label": record.metadata.get("label", ""),
+            "candidate_group": record.metadata.get("candidate_group", ""),
         }
         if len(column_names) != len(raw_matrix[index]):
             raise ValueError("Feature column names and feature values have different lengths.")
@@ -356,6 +510,7 @@ def classify_candidates(
             {
                 "sequence_id": record.id,
                 "source": record.metadata.get("source", "unknown"),
+                "candidate_group": record.metadata.get("candidate_group", ""),
                 "pc1": round(float(coords[index, 0]), 6),
                 "pc2": round(float(coords[index, 1]), 6),
                 "pc3": round(float(coords[index, 2]), 6),
@@ -373,6 +528,7 @@ def classify_candidates(
     reference_count = len(references)
     candidate_rows: list[dict[str, object]] = []
     neighbor_rows: list[dict[str, object]] = []
+    cluster_context_rows: list[dict[str, object]] = []
     tree_dir = ensure_directory(output_root / "trees")
 
     for candidate_index in range(reference_count, len(all_records)):
@@ -392,6 +548,9 @@ def classify_candidates(
         candidate_rows.append(
             {
                 "sequence_id": candidate.id,
+                "candidate_group": candidate.metadata.get("candidate_group", "candidate:unlabeled"),
+                "is_tps": candidate.metadata.get("is_tps", ""),
+                "predicted_cembrene_like": candidate.metadata.get("predicted_cembrene_like", ""),
                 "predicted_source": predicted_source,
                 "confidence": round(confidence, 4),
                 "nearest_reference": nearest_reference.id,
@@ -411,6 +570,18 @@ def classify_candidates(
                     "distance": round(distance, 6),
                 }
             )
+        cluster_context_rows.append(
+            {
+                "sequence_id": candidate.id,
+                "candidate_group": candidate.metadata.get("candidate_group", "candidate:unlabeled"),
+                "predicted_source": predicted_source,
+                "nearest_reference_source": nearest_reference.metadata.get("source", "unknown"),
+                "nearest_distance": round(nearest_distance, 6),
+                "pc1": round(float(coords[candidate_index, 0]), 6),
+                "pc2": round(float(coords[candidate_index, 1]), 6),
+                "pc3": round(float(coords[candidate_index, 2]), 6),
+            }
+        )
 
         local_neighbor_indices = [neighbor_index for neighbor_index, _ in reference_distances[: max(2, tree_neighbors)]]
         subset_indices = local_neighbor_indices + [candidate_index]
@@ -421,6 +592,7 @@ def classify_candidates(
 
     classification_path = write_tsv(candidate_rows, output_root / "classification.tsv")
     neighbors_path = write_tsv(neighbor_rows, output_root / "nearest_neighbors.tsv")
+    cluster_context_path = write_tsv(cluster_context_rows, output_root / "candidate_cluster_context.tsv")
     scatter_path = _render_scatter(all_records, coords, output_root / "embedding.svg")
     sections_path = _render_3d_sections(all_records, coords, output_root / "embedding_3d_sections.svg")
     global_tree_path = output_root / "global_context_tree.nwk"
@@ -446,6 +618,7 @@ def classify_candidates(
         "variance": variance_path,
         "classification": classification_path,
         "neighbors": neighbors_path,
+        "candidate_cluster_context": cluster_context_path,
         "embedding_svg": scatter_path,
         "embedding_3d_sections": sections_path,
         "global_tree": global_tree_path,

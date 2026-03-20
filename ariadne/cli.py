@@ -305,6 +305,7 @@ def cmd_classify(args: argparse.Namespace) -> int:
         args.reference_dir,
         args.output_dir,
         hmm_dir=args.tps_hmm_dir,
+        candidate_annotations=args.candidate_annotations,
         top_k=args.top_k,
         tree_neighbors=args.tree_neighbors,
     )
@@ -336,6 +337,7 @@ def cmd_motif(args: argparse.Namespace) -> int:
 
 
 def cmd_run(args: argparse.Namespace) -> int:
+    from ariadne.benchmark import compare_fasta_sets
     from ariadne.classification import classify_candidates
     from ariadne.discovery import build_hmm, collect_protein_files, discover_candidates, discover_candidates_from_proteins
     from ariadne.fasta_utils import ensure_directory, write_tsv
@@ -387,15 +389,6 @@ def cmd_run(args: argparse.Namespace) -> int:
         identity_threshold=args.identity_threshold,
         motif_anchor=args.motif_anchor,
     )
-    _warn_legacy_tps_hmms(args.tps_hmm_dir)
-    classification_outputs = classify_candidates(
-        filtering_outputs["filtered_fasta"],
-        args.reference_dir,
-        classification_dir,
-        hmm_dir=args.tps_hmm_dir,
-        top_k=args.top_k,
-        tree_neighbors=args.tree_neighbors,
-    )
     reference_alignment = Path(args.reference_alignment) if args.reference_alignment else _find_reference_alignment(args.reference_dir)
     motif_outputs = analyze_motifs(
         filtering_outputs["filtered_fasta"],
@@ -409,17 +402,45 @@ def cmd_run(args: argparse.Namespace) -> int:
         center_position=args.center_position,
         allow_center_fallback=args.allow_center_fallback,
     )
+    _warn_legacy_tps_hmms(args.tps_hmm_dir)
+    classification_outputs = classify_candidates(
+        filtering_outputs["filtered_fasta"],
+        args.reference_dir,
+        classification_dir,
+        hmm_dir=args.tps_hmm_dir,
+        candidate_annotations=motif_outputs["motif_summary"],
+        top_k=args.top_k,
+        tree_neighbors=args.tree_neighbors,
+    )
+    benchmark_outputs = {}
+    if args.expected_fasta:
+        benchmark_dir = ensure_directory(root / "05_benchmark")
+        benchmark_outputs = compare_fasta_sets(
+            motif_outputs["cembrene_fasta"],
+            args.expected_fasta,
+            benchmark_dir,
+        )
     summary_rows = []
     for label, outputs in (
         ("discovery", discovery_outputs),
         ("filtering", filtering_outputs),
-        ("classification", classification_outputs),
         ("motif", motif_outputs),
+        ("classification", classification_outputs),
+        ("benchmark", benchmark_outputs),
     ):
         for key, value in outputs.items():
             summary_rows.append({"stage": label, "artifact": key, "path": value})
     summary_path = write_tsv(summary_rows, root / "pipeline_summary.tsv")
     print(f"Pipeline completed. Summary: {summary_path}")
+    return 0
+
+
+def cmd_compare_fasta(args: argparse.Namespace) -> int:
+    from ariadne.benchmark import compare_fasta_sets
+
+    outputs = compare_fasta_sets(args.predicted_fasta, args.expected_fasta, args.output_dir)
+    for key, value in outputs.items():
+        print(f"{key}: {value}")
     return 0
 
 
@@ -538,6 +559,7 @@ def build_parser() -> argparse.ArgumentParser:
     classify.add_argument("--reference-dir", required=True, type=Path)
     classify.add_argument("--output-dir", required=True, type=Path)
     classify.add_argument("--tps-hmm-dir", default=_default_tps_hmms(), type=Path, help="Directory containing TPS HMM profiles (*.hmm).")
+    classify.add_argument("--candidate-annotations", type=Path, default=None, help="Optional motif/benchmark annotation TSV keyed by sequence_id.")
     classify.add_argument("--top-k", type=int, default=5)
     classify.add_argument("--tree-neighbors", type=int, default=12)
     classify.set_defaults(func=cmd_classify)
@@ -580,6 +602,7 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--query-hmm", type=Path, default=None, help="Use an existing query HMM instead of building from --seed-alignment.")
     run.add_argument("--reference-dir", required=True, type=Path)
     run.add_argument("--output-dir", required=True, type=Path)
+    run.add_argument("--expected-fasta", type=Path, default=None, help="Optional benchmark FASTA used to compare against the final cembrene candidate FASTA.")
     run.add_argument(
         "--reference-alignment",
         type=Path,
@@ -608,6 +631,12 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--top-k", type=int, default=5)
     run.add_argument("--tree-neighbors", type=int, default=12)
     run.set_defaults(func=cmd_run)
+
+    compare_fasta = subparsers.add_parser("compare-fasta", help="Compare a predicted FASTA against an expected FASTA benchmark.")
+    compare_fasta.add_argument("--predicted-fasta", required=True, type=Path)
+    compare_fasta.add_argument("--expected-fasta", required=True, type=Path)
+    compare_fasta.add_argument("--output-dir", required=True, type=Path)
+    compare_fasta.set_defaults(func=cmd_compare_fasta)
 
     visualize = subparsers.add_parser(
         "visualize",

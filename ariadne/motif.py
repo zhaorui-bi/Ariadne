@@ -183,6 +183,7 @@ def analyze_motifs(
 
     summary_rows = []
     motif_records: list[FastaRecord] = []
+    cembrene_candidate_records: list[FastaRecord] = []
     display_rows: list[tuple[str, str, str]] = []
 
     for candidate in candidates:
@@ -291,6 +292,8 @@ def analyze_motifs(
                 "predicted_cembrene_like": predicted,
             }
         )
+        if predicted == "yes":
+            cembrene_candidate_records.append(candidate.clone())
         motif_records.append(FastaRecord(header=f"{candidate.id}|motif_window", sequence=motif_window))
         display_rows.append(("candidate", candidate.id, motif_window))
         if best_cembrene[0] is not None:
@@ -309,9 +312,11 @@ def analyze_motifs(
         [row for row in summary_rows if row.get("predicted_cembrene_like") == "yes"],
         output_root / "cembrene_candidates.tsv",
     )
+    cembrene_fasta_path = write_fasta(cembrene_candidate_records, output_root / "cembrene_candidates.fasta")
     return {
         "motif_summary": summary_path,
         "motif_windows": motif_fasta_path,
         "motif_svg": motif_svg_path,
         "cembrene_candidates": cembrene_candidates_path,
+        "cembrene_fasta": cembrene_fasta_path,
     }
