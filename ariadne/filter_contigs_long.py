@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+"""Legacy command-line wrapper for maximum-length FASTA filtering."""
+
 from __future__ import annotations
 
 import argparse
@@ -12,6 +14,7 @@ from ariadne.fasta_utils import read_fasta, write_fasta
 
 
 def main() -> int:
+    """Filter a FASTA file by maximum amino-acid length."""
     parser = argparse.ArgumentParser(description="Legacy maximum-length filter wrapper for Ariadne.")
     parser.add_argument("max_length", type=int)
     parser.add_argument("input_fasta", type=Path)

@@ -19,13 +19,11 @@ python -m pip install -e "$ROOT_DIR"
 ariadne prepare-demo --output-dir "$DEMO_INPUT"
 ariadne run \
   --transcriptomes "$DEMO_INPUT/transcriptomes/demo_sample_transcripts.fasta" \
-  --seed-alignment "$DEMO_INPUT/seed_alignment.fasta" \
   --reference-dir "$DEMO_INPUT/references" \
   --output-dir "$DEMO_OUTPUT_TRANSCRIPT"
 
 ariadne run \
   --protein-folder "$DEMO_INPUT/proteins" \
-  --seed-alignment "$DEMO_INPUT/seed_alignment.fasta" \
   --reference-dir "$DEMO_INPUT/references" \
   --output-dir "$DEMO_OUTPUT_PROTEIN"
 

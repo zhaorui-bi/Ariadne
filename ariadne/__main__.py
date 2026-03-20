@@ -1,3 +1,5 @@
+"""Allow ``python -m ariadne`` to behave like the ``ariadne`` CLI entrypoint."""
+
 from ariadne.cli import main
 
 

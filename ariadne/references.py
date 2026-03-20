@@ -1,3 +1,5 @@
+"""Utilities for turning heterogeneous reference sources into Ariadne inputs."""
+
 from __future__ import annotations
 
 import logging
@@ -12,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 def _prepare_record(record: FastaRecord, *, source: str, extra: Optional[dict[str, str]] = None) -> FastaRecord:
+    """Normalise a reference record and attach source-level metadata."""
     prepared = record.clone(sequence=ungap(record.sequence).replace("*", ""))
     prepared.metadata["source"] = source
     prepared.metadata["header"] = prepared.header
@@ -29,6 +32,7 @@ def prepare_coral_reference(
     filename: str = "coral.fasta",
     limit: Optional[int] = None,
 ) -> tuple[Path, list[FastaRecord]]:
+    """Prepare coral TPS references from a FASTA alignment/source file."""
     destination = ensure_directory(output_dir)
     records = [_prepare_record(record, source="coral") for record in read_fasta(input_fasta, keep_gaps=True)]
     if limit is not None:
@@ -46,6 +50,7 @@ def prepare_insect_reference(
     sheet_name: str = "Protein Science",
     limit: Optional[int] = None,
 ) -> tuple[Path, list[FastaRecord]]:
+    """Extract insect TPS references from the curated Excel workbook."""
     try:
         import openpyxl
     except ImportError as exc:
@@ -95,6 +100,7 @@ def prepare_insect_reference(
 
 
 def prepare_extra_reference(input_fasta: PathLike, output_dir: PathLike, *, source: str) -> tuple[Path, list[FastaRecord]]:
+    """Prepare an extra reference FASTA such as plant, fungal, or bacterial TPSs."""
     destination = ensure_directory(output_dir)
     filename = f"{slugify(source)}.fasta"
     records = [_prepare_record(record, source=source) for record in read_fasta(input_fasta, keep_gaps=True)]
@@ -104,6 +110,7 @@ def prepare_extra_reference(input_fasta: PathLike, output_dir: PathLike, *, sour
 
 
 def write_reference_metadata(records: list[FastaRecord], output_dir: PathLike, *, filename: str = "metadata.tsv") -> Path:
+    """Write a flattened metadata table for all prepared reference records."""
     rows: list[dict[str, object]] = []
     for record in records:
         row = {"sequence_id": record.id, "header": record.header}
@@ -113,6 +120,7 @@ def write_reference_metadata(records: list[FastaRecord], output_dir: PathLike, *
 
 
 def load_reference_records(reference_dir: PathLike) -> list[FastaRecord]:
+    """Load prepared reference FASTA files and merge metadata when present."""
     directory = Path(reference_dir)
     metadata_map: dict[str, dict[str, str]] = {}
     metadata_path = directory / "metadata.tsv"

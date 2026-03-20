@@ -1,3 +1,5 @@
+"""Stage 2: candidate quality filtering and near-duplicate collapsing."""
+
 from __future__ import annotations
 
 import logging
@@ -13,6 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 def _edit_distance_with_limit(sequence_a: str, sequence_b: str, max_edits: int) -> int:
+    """Compute bounded edit distance and stop early once the limit is exceeded."""
     if max_edits < 0:
         return max_edits + 1
     if abs(len(sequence_a) - len(sequence_b)) > max_edits:
@@ -40,6 +43,7 @@ def _edit_distance_with_limit(sequence_a: str, sequence_b: str, max_edits: int) 
 
 
 def near_duplicate(sequence_a: str, sequence_b: str, identity_threshold: float) -> bool:
+    """Return ``True`` when two sequences meet the configured identity cutoff."""
     if not sequence_a and not sequence_b:
         return True
     max_length = max(len(sequence_a), len(sequence_b))
@@ -49,11 +53,13 @@ def near_duplicate(sequence_a: str, sequence_b: str, identity_threshold: float) 
 
 
 def record_priority(record: FastaRecord) -> tuple[float, int, str]:
+    """Rank sequences so higher-coverage and longer representatives are kept first."""
     coverage = parse_coverage(record.header)
     return (coverage if coverage is not None else -1.0, len(record.sequence), record.id)
 
 
 def filter_by_coverage(records: list[FastaRecord], min_coverage: float) -> list[FastaRecord]:
+    """Keep sequences whose parsed coverage is missing or above the threshold."""
     filtered: list[FastaRecord] = []
     for record in records:
         coverage = parse_coverage(record.header)
@@ -63,10 +69,12 @@ def filter_by_coverage(records: list[FastaRecord], min_coverage: float) -> list[
 
 
 def filter_by_length(records: list[FastaRecord], min_length: int) -> list[FastaRecord]:
+    """Keep sequences longer than or equal to ``min_length`` amino acids."""
     return [record for record in records if len(record.sequence) >= min_length]
 
 
 def deduplicate_exact(records: list[FastaRecord]) -> list[FastaRecord]:
+    """Remove exact duplicate sequences while keeping the first occurrence."""
     seen: dict[str, FastaRecord] = {}
     for record in records:
         seen.setdefault(record.sequence, record)
@@ -82,6 +90,7 @@ def filter_candidates(
     identity_threshold: float = 0.95,
     motif_anchor: str = "CFDVL",
 ) -> dict[str, Path]:
+    """Apply basic QC, near-duplicate clustering, and manual-review summaries."""
     records = read_fasta(input_fasta)
     kept_after_basic_filters: list[FastaRecord] = []
     removed_rows: list[dict[str, object]] = []

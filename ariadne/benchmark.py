@@ -1,3 +1,5 @@
+"""Stage 5: compare predicted candidate FASTA files against expected outputs."""
+
 from __future__ import annotations
 
 import logging
@@ -12,10 +14,12 @@ logger = logging.getLogger(__name__)
 
 
 def _normalize_sequence(sequence: str) -> str:
+    """Normalise sequence text before exact or near-exact comparison."""
     return sequence.replace("-", "").replace(".", "").replace("*", "").upper()
 
 
 def _best_match(record: FastaRecord, targets: list[FastaRecord]) -> tuple[str, float]:
+    """Return the target with the highest pairwise identity to ``record``."""
     if not targets:
         return "", 0.0
     best_target = max(targets, key=lambda target: pairwise_identity(record.sequence, target.sequence))
@@ -27,6 +31,7 @@ def compare_fasta_sets(
     expected_fasta: PathLike,
     output_dir: PathLike,
 ) -> dict[str, Path]:
+    """Compare predicted and expected FASTA sets and write benchmark artifacts."""
     predicted = read_fasta(predicted_fasta)
     expected = read_fasta(expected_fasta, keep_gaps=True)
     normalized_predicted_records = [record.clone(sequence=_normalize_sequence(record.sequence)) for record in predicted]

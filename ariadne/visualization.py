@@ -1,3 +1,5 @@
+"""Legacy feature-table visualisation helpers used by Ariadne."""
+
 from __future__ import annotations
 
 import logging
@@ -32,6 +34,7 @@ LEGACY_PALETTE = [
 
 
 def _load_tps_features_tsv(path: PathLike) -> tuple[list[str], np.ndarray, list[str], list[str]]:
+    """Load the modern ``tps_features.tsv`` format produced by classification."""
     import csv
 
     ids: list[str] = []
@@ -64,6 +67,7 @@ def _load_tps_features_tsv(path: PathLike) -> tuple[list[str], np.ndarray, list[
 
 
 def _load_legacy_hmm_tab(path: PathLike) -> tuple[list[str], np.ndarray, list[str], list[str]]:
+    """Load the older whitespace-delimited HMM score table format."""
     ids: list[str] = []
     clades: list[str] = []
     lengths: list[str] = []
@@ -91,6 +95,7 @@ def _load_legacy_hmm_tab(path: PathLike) -> tuple[list[str], np.ndarray, list[st
 
 
 def _load_hmm_score_table(path: PathLike) -> tuple[list[str], np.ndarray, list[str], list[str]]:
+    """Dispatch to the correct parser for modern or legacy feature tables."""
     first_line = ""
     with Path(path).open() as handle:
         for raw_line in handle:
@@ -104,12 +109,14 @@ def _load_hmm_score_table(path: PathLike) -> tuple[list[str], np.ndarray, list[s
 
 
 def _normalize_by_column_mean(matrix: np.ndarray) -> np.ndarray:
+    """Normalise each feature column by its mean."""
     means = matrix.mean(axis=0)
     means[means == 0] = 1.0
     return matrix / means
 
 
 def _default_perplexities(n_rows: int) -> list[int]:
+    """Choose legacy-style default perplexities from dataset size."""
     if n_rows <= 2:
         return [1]
     scale = round(n_rows / 100) / 10.0
@@ -120,6 +127,7 @@ def _default_perplexities(n_rows: int) -> list[int]:
 
 
 def _sanitize_perplexities(values: Sequence[int], n_rows: int) -> list[int]:
+    """Clamp t-SNE perplexities to values valid for the current dataset."""
     if n_rows <= 2:
         return [1]
     normalized: list[int] = []
@@ -133,6 +141,7 @@ def _sanitize_perplexities(values: Sequence[int], n_rows: int) -> list[int]:
 
 
 def _pca_fallback(matrix: np.ndarray) -> np.ndarray:
+    """Fallback to PCA coordinates when t-SNE is not meaningful."""
     centered = matrix - matrix.mean(axis=0, keepdims=True)
     if centered.shape[0] == 1:
         return np.zeros((1, 2), dtype=float)
@@ -145,6 +154,7 @@ def _pca_fallback(matrix: np.ndarray) -> np.ndarray:
 
 
 def _cluster_coordinates(coords: np.ndarray, min_points: int) -> np.ndarray:
+    """Run a lightweight DBSCAN clustering on the embedding coordinates."""
     if len(coords) < min_points or len(coords) < 3:
         return np.full((len(coords),), -1, dtype=int)
     spread = float(np.std(coords))
@@ -154,6 +164,7 @@ def _cluster_coordinates(coords: np.ndarray, min_points: int) -> np.ndarray:
 
 
 def _color_map(clades: list[str]) -> dict[str, str]:
+    """Assign deterministic colours to clades."""
     mapping: dict[str, str] = {}
     for index, clade in enumerate(sorted(set(clades))):
         mapping[clade] = LEGACY_PALETTE[index % len(LEGACY_PALETTE)]
@@ -168,6 +179,7 @@ def _render_tsne_svg(
     *,
     title: str,
 ) -> Path:
+    """Render a simple SVG scatter plot for the t-SNE coordinates."""
     if len(ids) == 0:
         target = Path(output_path)
         target.write_text("<svg xmlns='http://www.w3.org/2000/svg' width='800' height='400'></svg>")
@@ -229,6 +241,7 @@ def visualize_profiles(
     perplexities: Optional[Sequence[int]] = None,
     min_points: int = 20,
 ) -> dict[str, Path]:
+    """Generate t-SNE tables and SVGs from a TPS feature table."""
     ids, matrix, clades, lengths = _load_hmm_score_table(input_table)
     normalized = _normalize_by_column_mean(matrix)
     n_rows = normalized.shape[0]

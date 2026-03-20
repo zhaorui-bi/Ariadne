@@ -1,3 +1,5 @@
+"""Helpers for creating a small reproducible demo workspace."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -33,10 +35,12 @@ CODON_TABLE = {
 
 
 def reverse_translate(protein_sequence: str) -> str:
+    """Generate a simple synthetic CDS for a protein sequence."""
     return "".join(CODON_TABLE[amino_acid] for amino_acid in protein_sequence if amino_acid in CODON_TABLE) + "TAA"
 
 
 def _pick_records(records: list[FastaRecord], keyword: str, limit: int) -> list[FastaRecord]:
+    """Return up to ``limit`` records whose headers contain the keyword."""
     picked = [record for record in records if keyword.lower() in record.header.lower()]
     return picked[:limit]
 
@@ -47,6 +51,7 @@ def prepare_demo_workspace(
     coral_alignment_fasta: PathLike,
     insect_xlsx: PathLike,
 ) -> dict[str, Path]:
+    """Assemble a compact demo dataset spanning transcripts, proteins, and references."""
     root = ensure_directory(output_dir)
     transcriptome_dir = ensure_directory(root / "transcriptomes")
     protein_dir = ensure_directory(root / "proteins")
@@ -57,17 +62,6 @@ def prepare_demo_workspace(
     non_cembrene_records = [record for record in aligned_coral if "cembrene" not in record.header.lower()]
     if len(cembrene_records) < 3:
         raise ValueError("The coral reference file does not contain enough cembrene-labelled sequences for the demo.")
-
-    preferred_seed_terms = ["S_CdTC-2", "DgTC-2-cembreneA", "AbTC-2-cembreneA"]
-    seed_records: list[FastaRecord] = []
-    for term in preferred_seed_terms:
-        for record in cembrene_records:
-            if term.lower() in record.header.lower():
-                seed_records.append(record)
-                break
-    if len(seed_records) < 3:
-        seed_records = cembrene_records[:3]
-    seed_alignment_path = write_fasta(seed_records[:3], root / "seed_alignment.fasta")
 
     preferred_candidate_terms = ["DgTC-2-cembreneA", "AbTC-2-cembreneA", "StTC-1-cembreneC"]
     preferred_candidate = None
@@ -157,7 +151,6 @@ def prepare_demo_workspace(
         "transcriptome": transcriptome_path,
         "protein_fasta": protein_path,
         "protein_dir": protein_dir,
-        "seed_alignment": seed_alignment_path,
         "reference_dir": reference_dir,
         "coral_reference": coral_reference_path,
         "insect_reference": insect_reference_path,

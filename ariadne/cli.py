@@ -1,3 +1,10 @@
+"""Command-line interface for the Ariadne TPS discovery pipeline.
+
+The CLI is organised around pipeline stages so users can either run the full
+workflow with ``ariadne run`` or execute individual modules for debugging and
+method development.
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -15,10 +22,12 @@ logger = logging.getLogger(__name__)
 
 
 def _repo_root() -> Path:
+    """Return the repository root, used for bundled resource lookup."""
     return Path(__file__).resolve().parent.parent
 
 
 def _first_existing_path(*candidates: PathLike) -> Optional[Path]:
+    """Return the first existing path from a prioritized list of candidates."""
     for candidate in candidates:
         if candidate is None:
             continue
@@ -29,6 +38,7 @@ def _first_existing_path(*candidates: PathLike) -> Optional[Path]:
 
 
 def _default_coral() -> Optional[Path]:
+    """Locate the default coral reference FASTA when present."""
     return _first_existing_path(
         Path.cwd() / "coralTPS (modified)-cembrene.fasta",
         _repo_root() / "coralTPS (modified)-cembrene.fasta",
@@ -37,6 +47,7 @@ def _default_coral() -> Optional[Path]:
 
 
 def _default_insect() -> Optional[Path]:
+    """Locate the default insect workbook when present."""
     return _first_existing_path(
         Path.cwd() / "Insecta TPS.xlsx",
         _repo_root() / "Insecta TPS.xlsx",
@@ -45,6 +56,7 @@ def _default_insect() -> Optional[Path]:
 
 
 def _default_bacteria() -> Optional[Path]:
+    """Locate an optional bacterial reference FASTA."""
     return _first_existing_path(
         Path.cwd() / "bacteria.fasta",
         Path.cwd() / "bacteria.fa",
@@ -56,6 +68,7 @@ def _default_bacteria() -> Optional[Path]:
 
 
 def _default_fungal() -> Optional[Path]:
+    """Locate an optional fungal reference FASTA."""
     return _first_existing_path(
         Path.cwd() / "fungal.fasta",
         Path.cwd() / "fungal.fa",
@@ -73,6 +86,7 @@ def _default_fungal() -> Optional[Path]:
 
 
 def _default_plant() -> Optional[Path]:
+    """Locate an optional plant reference FASTA."""
     return _first_existing_path(
         Path.cwd() / "plant.fasta",
         Path.cwd() / "plant.fa",
@@ -84,15 +98,26 @@ def _default_plant() -> Optional[Path]:
 
 
 def _default_tps_hmms() -> Path:
+    """Return the bundled TPS HMM directory."""
     bundled = Path(__file__).resolve().parent / "tps_hmm"
     return bundled
 
 
+def _default_reference_dir() -> Optional[Path]:
+    """Locate the default tree/reference directory when present."""
+    return _first_existing_path(
+        Path.cwd() / "tree",
+        _repo_root() / "tree",
+    )
+
+
 def _is_bundled_tps_hmms(path: PathLike) -> bool:
+    """Check whether a path points at Ariadne's bundled placeholder HMMs."""
     return Path(path).resolve() == _default_tps_hmms().resolve()
 
 
 def _warn_legacy_tps_hmms(path: PathLike) -> None:
+    """Warn users that bundled HMMs are only placeholders."""
     if not _is_bundled_tps_hmms(path):
         return
     logger.warning(
@@ -102,37 +127,87 @@ def _warn_legacy_tps_hmms(path: PathLike) -> None:
     )
 
 
-def _default_alignment_reference() -> Optional[Path]:
-    candidates = [
-        Path.cwd() / "Alignment.fasta",
-        _repo_root() / "Alignment.fasta",
-    ]
-    for candidate in candidates:
-        if candidate.exists():
-            return candidate
-    return None
+def _default_reference_alignment(reference_dir: Optional[PathLike] = None) -> Optional[Path]:
+    """Locate the default motif/reference FASTA, preferring coral data under ``tree/``."""
+    candidates: list[Path] = []
+    if reference_dir is not None:
+        directory = Path(reference_dir)
+        candidates.extend(
+            [
+                directory / "coral.fasta",
+                directory / "coral.fa",
+                directory / "coral.faa",
+            ]
+        )
+    default_reference_dir = _default_reference_dir()
+    if default_reference_dir is not None:
+        candidates.extend(
+            [
+                default_reference_dir / "coral.fasta",
+                default_reference_dir / "coral.fa",
+                default_reference_dir / "coral.faa",
+            ]
+        )
+    return _first_existing_path(*candidates)
 
 
 def _find_reference_alignment(reference_dir: PathLike) -> Path:
-    default_alignment = _default_alignment_reference()
+    """Infer a usable motif/reference FASTA from the reference directory."""
+    default_alignment = _default_reference_alignment(reference_dir)
     if default_alignment is not None and default_alignment.exists():
         return default_alignment
     directory = Path(reference_dir)
-    for filename in ("Alignment.fasta", "alignment.fasta", "coral.fasta"):
+    for filename in ("coral.fasta", "coral.fa", "coral.faa"):
         direct = directory / filename
         if direct.exists():
             return direct
     for fasta_path in sorted(directory.glob("*.fa*")):
         lowered = fasta_path.name.lower()
-        if "alignment" in lowered or "coral" in lowered:
+        if "coral" in lowered:
             return fasta_path
     raise FileNotFoundError(
-        f"Could not locate reference alignment FASTA. "
-        f"Checked current folder Alignment.fasta and {directory}."
+        f"Could not locate a reference FASTA for motif analysis under {directory}. "
+        "Expected something like coral.fasta."
     )
 
 
+def _reference_fasta_paths(reference_dir: PathLike) -> list[Path]:
+    """Collect FASTA files from a prepared reference directory."""
+    directory = Path(reference_dir)
+    fasta_paths = sorted(directory.glob("*.fa*"))
+    if not fasta_paths:
+        raise FileNotFoundError(f"No FASTA files were found in reference directory: {directory}")
+    return fasta_paths
+
+
+def _auto_build_query_hmm(reference_dir: PathLike, output_path: PathLike, *, name: str) -> Path:
+    """Build the discovery query HMM from the default reference FASTA in ``reference_dir``."""
+    from ariadne.discovery import build_hmm
+
+    source_fasta = _find_reference_alignment(reference_dir)
+    logger.info("No --query-hmm provided; building query HMM from %s", source_fasta)
+    return build_hmm(source_fasta, output_path, name=name)
+
+
+def _auto_build_tps_hmm_library(reference_dir: PathLike, output_dir: PathLike) -> Path:
+    """Build a TPS HMM library from all FASTA files in ``reference_dir``."""
+    from ariadne.discovery import build_hmm
+    from ariadne.fasta_utils import ensure_directory
+
+    destination = ensure_directory(output_dir)
+    built_any = False
+    for fasta_path in _reference_fasta_paths(reference_dir):
+        output_path = destination / f"{fasta_path.stem}.hmm"
+        build_hmm(fasta_path, output_path, name=fasta_path.stem)
+        built_any = True
+    if not built_any:
+        raise FileNotFoundError(f"Could not build any HMMs from reference directory: {reference_dir}")
+    logger.info("Built TPS HMM library from %s -> %s", reference_dir, destination)
+    return destination
+
+
 def _parse_extra_reference(spec: str) -> Tuple[str, str]:
+    """Parse ``SOURCE=PATH`` syntax used for extra references."""
     if "=" not in spec:
         raise ValueError(f"Expected SOURCE=PATH for extra references, got: {spec}")
     source, path = spec.split("=", 1)
@@ -140,6 +215,7 @@ def _parse_extra_reference(spec: str) -> Tuple[str, str]:
 
 
 def _existing_path_or_none(value: Optional[PathLike], *, label: str) -> Optional[Path]:
+    """Return an existing path or log a warning when the file is missing."""
     if value is None:
         return None
     path = Path(value).expanduser()
@@ -150,6 +226,7 @@ def _existing_path_or_none(value: Optional[PathLike], *, label: str) -> Optional
 
 
 def cmd_prepare_references(args: argparse.Namespace) -> int:
+    """Prepare reference FASTA files and metadata tables."""
     from ariadne.fasta_utils import ensure_directory
     from ariadne.references import (
         prepare_coral_reference,
@@ -200,6 +277,7 @@ def cmd_prepare_references(args: argparse.Namespace) -> int:
 
 
 def cmd_prepare_demo(args: argparse.Namespace) -> int:
+    """Create a compact demo workspace with synthetic inputs and prepared refs."""
     from ariadne.demo import prepare_demo_workspace
 
     if args.coral is None or not Path(args.coral).exists():
@@ -224,6 +302,7 @@ def cmd_prepare_demo(args: argparse.Namespace) -> int:
 
 
 def cmd_build_hmm(args: argparse.Namespace) -> int:
+    """Build one query HMM from an aligned FASTA/MSA."""
     from ariadne.discovery import build_hmm
 
     hmm_path = build_hmm(args.alignment, args.output, name=args.name)
@@ -232,6 +311,7 @@ def cmd_build_hmm(args: argparse.Namespace) -> int:
 
 
 def cmd_build_tps_hmm_library(args: argparse.Namespace) -> int:
+    """Build a directory of TPS HMM profiles from one or more alignments."""
     from ariadne.discovery import build_hmm
     from ariadne.fasta_utils import ensure_directory
 
@@ -254,6 +334,7 @@ def cmd_build_tps_hmm_library(args: argparse.Namespace) -> int:
 
 
 def cmd_discover(args: argparse.Namespace) -> int:
+    """Run stage 1 candidate discovery from proteins or transcriptomes."""
     from ariadne.discovery import collect_protein_files, discover_candidates, discover_candidates_from_proteins
 
     if args.protein_folder:
@@ -286,6 +367,7 @@ def cmd_discover(args: argparse.Namespace) -> int:
 
 
 def cmd_filter(args: argparse.Namespace) -> int:
+    """Run stage 2 candidate filtering and deduplication."""
     from ariadne.filtering import filter_candidates
 
     outputs = filter_candidates(
@@ -302,14 +384,19 @@ def cmd_filter(args: argparse.Namespace) -> int:
 
 
 def cmd_classify(args: argparse.Namespace) -> int:
+    """Run stage 3 feature-space classification."""
     from ariadne.classification import classify_candidates
 
-    _warn_legacy_tps_hmms(args.tps_hmm_dir)
+    hmm_dir = Path(args.tps_hmm_dir) if args.tps_hmm_dir is not None else _auto_build_tps_hmm_library(
+        args.reference_dir,
+        Path(args.output_dir) / "_auto_tps_hmms",
+    )
+    _warn_legacy_tps_hmms(hmm_dir)
     outputs = classify_candidates(
         args.candidates,
         args.reference_dir,
         args.output_dir,
-        hmm_dir=args.tps_hmm_dir,
+        hmm_dir=hmm_dir,
         candidate_annotations=args.candidate_annotations,
         top_k=args.top_k,
         tree_neighbors=args.tree_neighbors,
@@ -320,6 +407,7 @@ def cmd_classify(args: argparse.Namespace) -> int:
 
 
 def cmd_motif(args: argparse.Namespace) -> int:
+    """Run stage 4 motif-based TPS and cembrene analysis."""
     from ariadne.motif import analyze_motifs
 
     if args.reference_alignment is None:
@@ -328,6 +416,7 @@ def cmd_motif(args: argparse.Namespace) -> int:
         args.candidates,
         args.reference_alignment,
         args.output_dir,
+        validated_cess_fasta=args.validated_cess_fasta,
         tps_anchor_pattern=args.tps_pattern,
         tps_center_position=args.tps_center_position,
         tps_search_radius=args.tps_search_radius,
@@ -335,6 +424,9 @@ def cmd_motif(args: argparse.Namespace) -> int:
         flank=args.flank,
         center_position=args.center_position,
         allow_center_fallback=args.allow_center_fallback,
+        validated_cess_identity_threshold=args.validated_cess_identity_threshold,
+        cembrene_identity_threshold=args.cembrene_identity_threshold,
+        cembrene_margin_threshold=args.cembrene_margin_threshold,
     )
     for key, value in outputs.items():
         logger.info("  %-28s %s", key + ":", value)
@@ -342,25 +434,27 @@ def cmd_motif(args: argparse.Namespace) -> int:
 
 
 def cmd_run(args: argparse.Namespace) -> int:
+    """Execute the full Ariadne workflow end to end."""
     from ariadne.benchmark import compare_fasta_sets
     from ariadne.classification import classify_candidates
-    from ariadne.discovery import build_hmm, collect_protein_files, discover_candidates, discover_candidates_from_proteins
+    from ariadne.discovery import collect_protein_files, discover_candidates, discover_candidates_from_proteins
     from ariadne.fasta_utils import ensure_directory, write_tsv
     from ariadne.filtering import filter_candidates
     from ariadne.motif import analyze_motifs
+    from ariadne.phylogeny import build_phylogeny
 
     root = ensure_directory(args.output_dir)
     discovery_dir = ensure_directory(root / "01_discovery")
     filtering_dir = ensure_directory(root / "02_filtering")
     classification_dir = ensure_directory(root / "03_classification")
     motif_dir = ensure_directory(root / "04_motif")
+    if args.enable_benchmark and args.expected_fasta is None:
+        raise ValueError("Benchmark mode requires --expected-fasta. Pass --enable-benchmark together with a benchmark FASTA.")
 
     if args.query_hmm:
         hmm_path = Path(args.query_hmm)
-    elif args.seed_alignment:
-        hmm_path = build_hmm(args.seed_alignment, discovery_dir / "query.hmm", name=args.hmm_name)
     else:
-        raise ValueError("Please provide --query-hmm or --seed-alignment.")
+        hmm_path = _auto_build_query_hmm(args.reference_dir, discovery_dir / "query.hmm", name=args.hmm_name)
 
     if args.protein_folder:
         protein_paths = collect_protein_files(args.protein_folder, protein_glob=args.protein_glob)
@@ -399,6 +493,7 @@ def cmd_run(args: argparse.Namespace) -> int:
         filtering_outputs["filtered_fasta"],
         reference_alignment,
         motif_dir,
+        validated_cess_fasta=args.validated_cess_fasta if args.validated_cess_fasta is not None else args.expected_fasta,
         tps_anchor_pattern=args.tps_pattern,
         tps_center_position=args.tps_center_position,
         tps_search_radius=args.tps_search_radius,
@@ -406,19 +501,46 @@ def cmd_run(args: argparse.Namespace) -> int:
         flank=args.flank,
         center_position=args.center_position,
         allow_center_fallback=args.allow_center_fallback,
+        validated_cess_identity_threshold=args.validated_cess_identity_threshold,
+        cembrene_identity_threshold=args.cembrene_identity_threshold,
+        cembrene_margin_threshold=args.cembrene_margin_threshold,
     )
-    _warn_legacy_tps_hmms(args.tps_hmm_dir)
+    tps_hmm_dir = Path(args.tps_hmm_dir) if args.tps_hmm_dir is not None else _auto_build_tps_hmm_library(
+        args.reference_dir,
+        classification_dir / "_auto_tps_hmms",
+    )
+    _warn_legacy_tps_hmms(tps_hmm_dir)
     classification_outputs = classify_candidates(
         filtering_outputs["filtered_fasta"],
         args.reference_dir,
         classification_dir,
-        hmm_dir=args.tps_hmm_dir,
+        hmm_dir=tps_hmm_dir,
         candidate_annotations=motif_outputs["motif_summary"],
         top_k=args.top_k,
         tree_neighbors=args.tree_neighbors,
     )
+    phylogeny_outputs = {}
+    if not args.skip_phylogeny:
+        phylogeny_dir = ensure_directory(root / "06_phylogeny")
+        phylogeny_candidates = (
+            filtering_outputs["filtered_fasta"]
+            if args.phylogeny_candidates == "filtered"
+            else motif_outputs["cembrene_fasta"]
+        )
+        phylogeny_outputs = build_phylogeny(
+            phylogeny_candidates,
+            args.reference_dir,
+            phylogeny_dir,
+            mafft_bin=args.mafft_bin,
+            mafft_mode=args.mafft_mode,
+            iqtree_bin=args.iqtree_bin,
+            iqtree_model=args.iqtree_model,
+            iqtree_threads=args.iqtree_threads,
+            iqtree_bootstrap=args.iqtree_bootstrap,
+            iqtree_fast=not args.no_iqtree_fast,
+    )
     benchmark_outputs = {}
-    if args.expected_fasta:
+    if args.enable_benchmark and args.expected_fasta:
         benchmark_dir = ensure_directory(root / "05_benchmark")
         benchmark_outputs = compare_fasta_sets(
             motif_outputs["cembrene_fasta"],
@@ -432,6 +554,7 @@ def cmd_run(args: argparse.Namespace) -> int:
         ("motif", motif_outputs),
         ("classification", classification_outputs),
         ("benchmark", benchmark_outputs),
+        ("phylogeny", phylogeny_outputs),
     ):
         for key, value in outputs.items():
             summary_rows.append({"stage": label, "artifact": key, "path": value})
@@ -441,6 +564,7 @@ def cmd_run(args: argparse.Namespace) -> int:
 
 
 def cmd_compare_fasta(args: argparse.Namespace) -> int:
+    """Benchmark one predicted FASTA against an expected FASTA set."""
     from ariadne.benchmark import compare_fasta_sets
 
     outputs = compare_fasta_sets(args.predicted_fasta, args.expected_fasta, args.output_dir)
@@ -450,6 +574,7 @@ def cmd_compare_fasta(args: argparse.Namespace) -> int:
 
 
 def cmd_visualize(args: argparse.Namespace) -> int:
+    """Generate legacy t-SNE style visualisations from feature tables."""
     from ariadne.visualization import visualize_profiles
 
     outputs = visualize_profiles(
@@ -463,7 +588,29 @@ def cmd_visualize(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_phylogeny(args: argparse.Namespace) -> int:
+    """Build a MAFFT alignment and IQ-TREE phylogeny from candidates plus references."""
+    from ariadne.phylogeny import build_phylogeny
+
+    outputs = build_phylogeny(
+        args.candidates,
+        args.reference_dir,
+        args.output_dir,
+        mafft_bin=args.mafft_bin,
+        mafft_mode=args.mafft_mode,
+        iqtree_bin=args.iqtree_bin,
+        iqtree_model=args.iqtree_model,
+        iqtree_threads=args.iqtree_threads,
+        iqtree_bootstrap=args.iqtree_bootstrap,
+        iqtree_fast=not args.no_iqtree_fast,
+    )
+    for key, value in outputs.items():
+        logger.info("  %-28s %s", key + ":", value)
+    return 0
+
+
 def cmd_filter_coverage_only(args: argparse.Namespace) -> int:
+    """Compatibility wrapper for coverage-only filtering."""
     from ariadne.fasta_utils import read_fasta, write_fasta
     from ariadne.filtering import filter_by_coverage
 
@@ -474,6 +621,7 @@ def cmd_filter_coverage_only(args: argparse.Namespace) -> int:
 
 
 def cmd_filter_length_only(args: argparse.Namespace) -> int:
+    """Compatibility wrapper for length-only filtering."""
     from ariadne.fasta_utils import read_fasta, write_fasta
     from ariadne.filtering import filter_by_length
 
@@ -484,6 +632,7 @@ def cmd_filter_length_only(args: argparse.Namespace) -> int:
 
 
 def cmd_dedupe_exact(args: argparse.Namespace) -> int:
+    """Compatibility wrapper for exact-sequence deduplication."""
     from ariadne.fasta_utils import read_fasta, write_fasta
     from ariadne.filtering import deduplicate_exact
 
@@ -494,6 +643,7 @@ def cmd_dedupe_exact(args: argparse.Namespace) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
+    """Create the top-level parser and all Ariadne subcommands."""
     parser = argparse.ArgumentParser(
         prog="ariadne",
         description="Ariadne — Terpene Synthase Discovery & Annotation Pipeline.",
@@ -530,7 +680,7 @@ def build_parser() -> argparse.ArgumentParser:
     prepare_demo.add_argument("--insect-xlsx", default=_default_insect(), type=Path)
     prepare_demo.set_defaults(func=cmd_prepare_demo)
 
-    build_hmm_parser = subparsers.add_parser("build-hmm", help="Build a HMM from an aligned protein FASTA/MSA.")
+    build_hmm_parser = subparsers.add_parser("build-hmm", help="Build a HMM from a reference FASTA/MSA source.")
     build_hmm_parser.add_argument("--alignment", required=True, type=Path)
     build_hmm_parser.add_argument("--output", required=True, type=Path)
     build_hmm_parser.add_argument("--name", default=None)
@@ -538,13 +688,13 @@ def build_parser() -> argparse.ArgumentParser:
 
     build_tps_lib = subparsers.add_parser(
         "build-tps-hmm-library",
-        help="Build a TPS HMM library directory from one or more aligned FASTA/MSA files.",
+        help="Build a TPS HMM library directory from reference FASTA/MSA files.",
     )
     build_tps_lib.add_argument(
         "--alignment",
         nargs="+",
         required=True,
-        help="Alignment file path or NAME=PATH. Example: --alignment clade1=align1.fasta clade2=align2.fasta",
+        help="Reference FASTA/MSA path or NAME=PATH. Example: --alignment coral=tree/coral.fasta insect=tree/insect.fasta",
     )
     build_tps_lib.add_argument("--output-dir", required=True, type=Path)
     build_tps_lib.set_defaults(func=cmd_build_tps_hmm_library)
@@ -577,7 +727,7 @@ def build_parser() -> argparse.ArgumentParser:
     classify.add_argument("--candidates", required=True, type=Path)
     classify.add_argument("--reference-dir", required=True, type=Path)
     classify.add_argument("--output-dir", required=True, type=Path)
-    classify.add_argument("--tps-hmm-dir", default=_default_tps_hmms(), type=Path, help="Directory containing TPS HMM profiles (*.hmm).")
+    classify.add_argument("--tps-hmm-dir", default=None, type=Path, help="Optional directory containing TPS HMM profiles (*.hmm). When omitted, Ariadne builds them from --reference-dir.")
     classify.add_argument("--candidate-annotations", type=Path, default=None, help="Optional motif/benchmark annotation TSV keyed by sequence_id.")
     classify.add_argument("--top-k", type=int, default=5)
     classify.add_argument("--tree-neighbors", type=int, default=12)
@@ -585,15 +735,16 @@ def build_parser() -> argparse.ArgumentParser:
 
     motif = subparsers.add_parser(
         "motif",
-        help="Two-stage motif gate: first confirm TPS by DDXXD/E near 125 aa, then cembrene motif judgment (strict by default, optional center fallback).",
+        help="Two-stage motif gate: first confirm TPS by DDXXD/E near 125 aa, then CeSS-oriented cembrene judgement (center fallback enabled by default).",
     )
     motif.add_argument("--candidates", required=True, type=Path)
     motif.add_argument(
         "--reference-alignment",
-        default=_default_alignment_reference(),
+        default=_default_reference_alignment(),
         type=Path,
-        help="Reference alignment FASTA (defaults to ./Alignment.fasta when available).",
+        help="Reference FASTA for motif analysis (defaults to tree/coral.fasta when available).",
     )
+    motif.add_argument("--validated-cess-fasta", type=Path, default=None, help="Optional validated CeSS FASTA used to calibrate fallback calling and candidate ranking.")
     motif.add_argument("--output-dir", required=True, type=Path)
     motif.add_argument("--tps-pattern", default=r"DD..[DE]")
     motif.add_argument("--tps-center-position", type=int, default=125)
@@ -601,14 +752,25 @@ def build_parser() -> argparse.ArgumentParser:
     motif.add_argument("--anchor-pattern", default=r"CFDVL.")
     motif.add_argument("--flank", type=int, default=10)
     motif.add_argument("--center-position", type=int, default=210)
+    motif.add_argument("--validated-cess-identity-threshold", type=float, default=0.95, help="Minimum motif-window identity to a validated CeSS reference required for high-confidence CeSS calls.")
+    motif.add_argument("--cembrene-identity-threshold", type=float, default=0.75, help="Minimum motif-window identity to a cembrene-family reference for family-level support.")
+    motif.add_argument("--cembrene-margin-threshold", type=float, default=0.1, help="Minimum identity margin over non-cembrene references for family-level support.")
+    motif.set_defaults(allow_center_fallback=True)
     motif.add_argument(
         "--allow-center-fallback",
+        dest="allow_center_fallback",
         action="store_true",
-        help="Enable lenient mode: if anchor motif is absent, fall back to center-position window for cembrene comparison.",
+        help="Enable center-position fallback for cembrene comparison. This is the default.",
+    )
+    motif.add_argument(
+        "--disable-center-fallback",
+        dest="allow_center_fallback",
+        action="store_false",
+        help="Disable center-position fallback and require a direct anchor match.",
     )
     motif.set_defaults(func=cmd_motif)
 
-    run = subparsers.add_parser("run", help="Execute the four Ariadne modules end-to-end.")
+    run = subparsers.add_parser("run", help="Execute Ariadne end-to-end, including optional phylogeny.")
     run.add_argument("--transcriptomes", nargs="+", default=None, type=Path)
     run.add_argument("--protein-folder", type=Path, default=None, help="Preferred input mode: folder of predicted protein FASTA files.")
     run.add_argument(
@@ -617,17 +779,17 @@ def build_parser() -> argparse.ArgumentParser:
         default=["*.faa", "*.fa", "*.fasta", "*.pep", "*.prot"],
         help="Glob pattern(s) used to find protein FASTA files under --protein-folder.",
     )
-    run.add_argument("--seed-alignment", type=Path, default=None)
-    run.add_argument("--query-hmm", type=Path, default=None, help="Use an existing query HMM instead of building from --seed-alignment.")
+    run.add_argument("--query-hmm", type=Path, default=None, help="Optional prebuilt query HMM. When omitted, Ariadne builds one from the reference-dir FASTA set.")
     run.add_argument("--reference-dir", required=True, type=Path)
     run.add_argument("--output-dir", required=True, type=Path)
-    run.add_argument("--expected-fasta", type=Path, default=None, help="Optional benchmark FASTA used to compare against the final cembrene candidate FASTA.")
+    run.add_argument("--expected-fasta", type=Path, default=None, help="Optional benchmark FASTA. Ariadne only runs benchmark when --enable-benchmark is set.")
     run.add_argument(
         "--reference-alignment",
         type=Path,
-        default=_default_alignment_reference(),
-        help="Reference alignment FASTA for module 4 (defaults to ./Alignment.fasta when available).",
+        default=None,
+        help="Reference FASTA for module 4. Defaults to coral.fasta under --reference-dir when available.",
     )
+    run.add_argument("--validated-cess-fasta", type=Path, default=None, help="Optional validated CeSS FASTA for calibrated fallback calling. When omitted, --expected-fasta is reused if present.")
     run.add_argument("--hmm-name", default="ariadne_query")
     run.add_argument("--discovery-min-score", type=float, default=None)
     run.add_argument("--discovery-max-evalue", type=float, default=None)
@@ -641,15 +803,57 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--anchor-pattern", default=r"CFDVL.")
     run.add_argument("--flank", type=int, default=10)
     run.add_argument("--center-position", type=int, default=210)
+    run.add_argument("--validated-cess-identity-threshold", type=float, default=0.95)
+    run.add_argument("--cembrene-identity-threshold", type=float, default=0.75)
+    run.add_argument("--cembrene-margin-threshold", type=float, default=0.1)
+    run.add_argument("--enable-benchmark", action="store_true", help="Opt in to benchmark output generation under 05_benchmark/. Disabled by default for routine mining runs.")
+    run.set_defaults(allow_center_fallback=True)
     run.add_argument(
         "--allow-center-fallback",
+        dest="allow_center_fallback",
         action="store_true",
-        help="Enable lenient motif mode for module 4 when anchor motif is absent.",
+        help="Enable center-position fallback when anchor motif is absent. This is the default.",
     )
-    run.add_argument("--tps-hmm-dir", default=_default_tps_hmms(), type=Path, help="Directory containing TPS HMM profiles (*.hmm).")
+    run.add_argument(
+        "--disable-center-fallback",
+        dest="allow_center_fallback",
+        action="store_false",
+        help="Disable center-position fallback and require a direct anchor match.",
+    )
+    run.add_argument("--tps-hmm-dir", default=None, type=Path, help="Optional directory containing TPS HMM profiles (*.hmm). When omitted, Ariadne builds them from --reference-dir.")
     run.add_argument("--top-k", type=int, default=5)
     run.add_argument("--tree-neighbors", type=int, default=12)
+    run.add_argument("--skip-phylogeny", action="store_true", help="Skip the MAFFT + IQ-TREE phylogeny step.")
+    run.add_argument("--phylogeny-candidates", choices=["filtered", "cembrene"], default="filtered", help="Which candidate FASTA to use for MAFFT/IQ-TREE phylogeny.")
+    run.add_argument("--mafft-bin", default=None, help="Path or executable name for MAFFT.")
+    run.add_argument("--mafft-mode", default="--auto", help="MAFFT mode flag, for example --auto or --localpair.")
+    run.add_argument("--iqtree-bin", default=None, help="Path or executable name for IQ-TREE.")
+    run.add_argument("--iqtree-model", default="LG", help="IQ-TREE substitution model setting.")
+    run.add_argument("--iqtree-threads", default="AUTO", help="IQ-TREE thread setting, for example AUTO or 8.")
+    run.add_argument("--iqtree-bootstrap", type=int, default=None, help="Optional IQ-TREE ultrafast bootstrap replicates.")
+    run.add_argument(
+        "--no-iqtree-fast",
+        action="store_true",
+        help="Disable IQ-TREE fast mode. By default Ariadne uses --fast for practical end-to-end runs.",
+    )
     run.set_defaults(func=cmd_run)
+
+    phylogeny = subparsers.add_parser("phylogeny", help="Build a MAFFT alignment and IQ-TREE phylogeny from candidates plus references.")
+    phylogeny.add_argument("--candidates", required=True, type=Path)
+    phylogeny.add_argument("--reference-dir", required=True, type=Path)
+    phylogeny.add_argument("--output-dir", required=True, type=Path)
+    phylogeny.add_argument("--mafft-bin", default=None, help="Path or executable name for MAFFT.")
+    phylogeny.add_argument("--mafft-mode", default="--auto", help="MAFFT mode flag, for example --auto or --localpair.")
+    phylogeny.add_argument("--iqtree-bin", default=None, help="Path or executable name for IQ-TREE.")
+    phylogeny.add_argument("--iqtree-model", default="LG", help="IQ-TREE substitution model setting.")
+    phylogeny.add_argument("--iqtree-threads", default="AUTO", help="IQ-TREE thread setting, for example AUTO or 8.")
+    phylogeny.add_argument("--iqtree-bootstrap", type=int, default=None, help="Optional IQ-TREE ultrafast bootstrap replicates.")
+    phylogeny.add_argument(
+        "--no-iqtree-fast",
+        action="store_true",
+        help="Disable IQ-TREE fast mode. By default Ariadne uses --fast for practical end-to-end runs.",
+    )
+    phylogeny.set_defaults(func=cmd_phylogeny)
 
     compare_fasta = subparsers.add_parser("compare-fasta", help="Compare a predicted FASTA against an expected FASTA benchmark.")
     compare_fasta.add_argument("--predicted-fasta", required=True, type=Path)
@@ -692,6 +896,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: Optional[list[str]] = None) -> int:
+    """Entry point shared by ``python -m ariadne`` and the console script."""
     parser = build_parser()
     args = parser.parse_args(argv)
 

@@ -1,190 +1,409 @@
 # Ariadne
 
-<p align="center">
-  <img src="fig/logo.png" alt="Ariadne logo" width="280"/>
+<p align="right">
+  <a href="./README_EN.md">English</a>
 </p>
 
 <p align="center">
-  <strong>A protein-first pipeline for TPS discovery, motif-aware clade assignment, and cembrene benchmarking</strong>
+  <img src="fig/ariadne_cvpr_logo.svg" alt="Ariadne CVPR-style logo" width="980">
 </p>
 
 <p align="center">
-  <code>discover -> filter -> motif -> classify -> benchmark</code>
+  <img src="fig/ariadne_icon_minimal.svg" alt="Ariadne minimal icon" width="92">
 </p>
 
 <p align="center">
-  <a href="https://www.python.org/">
-    <img src="https://img.shields.io/badge/Python-3.9%2B-3776AB?logo=python&logoColor=white" alt="Python >= 3.9"/>
-  </a>
-  <a href="LICENSE">
-    <img src="https://img.shields.io/badge/License-MIT-16a34a.svg" alt="License MIT"/>
-  </a>
-  <img src="https://img.shields.io/badge/Version-0.1.0-0f766e.svg" alt="Version 0.1.0"/>
-  <a href="https://doi.org/10.1038/s41467-023-44497-0">
-    <img src="https://img.shields.io/badge/DOI-10.1038%2Fs41467--023--44497--0-0ea5e9.svg" alt="DOI"/>
-  </a>
+  🧬 <strong>珊瑚 TPS / CeSS 定向挖掘平台</strong><br>
+  🔬 HMM 引导挖掘 · 🧠 motif 校准 · 🌊 珊瑚感知 embedding · 🌳 系统发育分析
 </p>
 
-## 1. Software Overview
+<p align="center">
+  <img alt="Python" src="https://img.shields.io/badge/Python-3.11%2B-0F172A?style=flat-square&logo=python&logoColor=white">
+  <img alt="MAFFT" src="https://img.shields.io/badge/MAFFT-required-0F766E?style=flat-square">
+  <img alt="IQ-TREE" src="https://img.shields.io/badge/IQ--TREE-required-1D4ED8?style=flat-square">
+  <img alt="CeSS" src="https://img.shields.io/badge/Target-CeSS%20Mining-F59E0B?style=flat-square">
+  <img alt="Benchmark" src="https://img.shields.io/badge/Benchmark-Opt--in-7C3AED?style=flat-square">
+</p>
 
-Ariadne 面向 TPS（terpene synthase）候选发现与解释，核心思路是：
+> 🧵 Ariadne 的目标不是只找到“一般 TPS candidate”，而是把 coral 相关数据中的 **CeSS-like / cembrene synthase** 候选收敛成一个更适合实验验证的小集合。
 
-- 用查询 HMM 从蛋白 FASTA 中抓出候选。
-- 用两阶段 motif 逻辑先判断是否为 TPS，再判断是否更像 cembrene synthase。
-- 用多类群参考库把候选投影到低维空间，输出带有 `TPS+ / TPS- / cembrene-like` 标记的 3D cluster context。
-- 用 benchmark 模块把最终 FASTA 和理想 FASTA 做精确比对与近似比对。
+## ✨ 软件功能概览
 
-这一步的 3D 可视化参考了 [AFPK_finder](https://github.com/linzhenjian/AFPK_finder/tree/v1.0) 的高层思路：先构建 profile-score feature space，再做低维投影，观察目标序列是否落入目标类群的聚类区域。
+Ariadne 是一个面向 coral-centered terpene synthase discovery 的命令行平台，当前流程包括：
 
-![Ariadne framework](fig/ariadne_framework_nature.svg)
+1. `discovery`
+   用 `tree/` 参考自动建 HMM，并从蛋白或 transcriptome 中发现候选 TPS
+2. `filtering`
+   做 coverage、长度和去冗余过滤
+3. `motif`
+   做 TPS motif gate，并结合 cembrene family 与 validated CeSS 参考判断 `CeSS-like`
+4. `classification`
+   在 TPS HMM feature space 中做最近邻分类、clade-aware embedding 和 context tree
+5. `phylogeny`
+   用 MAFFT + IQ-TREE 构建系统发育树
+6. `benchmark`
+   与 expected FASTA 对比
 
-### Key Modules
+## 🚀 当前默认行为
 
-| Module              | Role                                     | Main outputs                                                                                         |
-| ------------------- | ---------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `discovery.py`      | HMM 命中候选蛋白                         | `01_discovery/candidates.protein.faa`, `candidates.hits.tsv`                                         |
-| `filtering.py`      | 覆盖度、长度、去冗余过滤                 | `02_filtering/candidates.filtered.faa`, `filter_report.tsv`                                          |
-| `motif.py`          | `DDXXD/E` TPS gate + cembrene motif gate | `04_motif/motif_summary.tsv`, `cembrene_candidates.tsv`, `cembrene_candidates.fasta`                 |
-| `classification.py` | 参考类群判定与 3D cluster context        | `03_classification/classification.tsv`, `embedding_3d_sections.svg`, `candidate_cluster_context.tsv` |
-| `benchmark.py`      | 预测 FASTA vs 理想 FASTA 对比            | `05_benchmark/benchmark_summary.tsv`, `benchmark_comparison.tsv`                                     |
+当前版本默认行为已经调整成更适合日常使用：
 
-## 2. Installation
+- ✅ 默认 **不打开 benchmark**
+- ✅ 默认 **开启 center fallback**
+- ✅ 默认从 `tree/` 自动构建：
+  - `query.hmm`
+  - TPS HMM library
+  - motif 参考
+  - phylogeny 参考
+- ✅ 默认保留 CeSS 定向挖掘的 calibrated motif 参数
+- ✅ benchmark 改成 **显式 opt-in**
 
-### Quick install
+这意味着一般情况下你只需要跑：
 
 ```bash
-bash install.sh
-ariadne --help
+ariadne run \
+  --protein-folder input/ \
+  --reference-dir tree/ \
+  --output-dir results/
 ```
 
-### Manual install
+而不是一上来就进入 benchmark 模式。
+
+## 🗂️ 仓库结构
+
+```text
+Ariadne/
+├── ariadne/                # 核心代码
+├── input/                  # 待分析输入
+├── output/                 # 预期输出 / benchmark 示例
+├── tree/                   # 多物种 TPS 参考，同时也是默认 HMM 来源
+├── fig/                    # logo / figures
+├── environment.yml         # conda 环境
+├── install.sh
+└── pyproject.toml
+```
+
+### 📁 数据约定
+
+- `input/`
+  日常分析输入目录。当前仓库示例是 `input/all_tps.fasta`
+- `tree/`
+  当前最关键的参考目录，既用于 HMM 构建，也用于 motif / classification / phylogeny
+- `output/`
+  预期输出示例目录。当前仓库保留文件名 `output/outpu.fasta`
+
+## 🧩 核心模块
+
+| 模块                        | 作用                                                                                |
+| --------------------------- | ----------------------------------------------------------------------------------- |
+| `ariadne/cli.py`            | CLI 入口，定义 `run`、`discover`、`motif`、`classify`、`phylogeny`、`compare-fasta` |
+| `ariadne/discovery.py`      | HMM 构建、候选发现、ORF 预测                                                        |
+| `ariadne/filtering.py`      | coverage、长度、去冗余过滤                                                          |
+| `ariadne/motif.py`          | TPS motif gate、CeSS 判断、priority ranking                                         |
+| `ariadne/classification.py` | feature matrix、embedding、最近邻分类、context tree                                 |
+| `ariadne/phylogeny.py`      | MAFFT + IQ-TREE                                                                     |
+| `ariadne/benchmark.py`      | FASTA benchmark 对比                                                                |
+| `ariadne/fasta_utils.py`    | FASTA / TSV 读写与清洗                                                              |
+
+## 🛠️ 安装
+
+### 1. 推荐：conda
 
 ```bash
-python3 -m venv .venv
+git clone https://github.com/zhaoruijiang26/Ariadne.git
+cd Ariadne
+conda env create -f environment.yml
+conda activate ariadne
+```
+
+### 2. venv
+
+```bash
+git clone https://github.com/zhaoruijiang26/Ariadne.git
+cd Ariadne
+bash install.sh
+```
+
+### 3. 手动安装
+
+```bash
+git clone https://github.com/zhaoruijiang26/Ariadne.git
+cd Ariadne
+python -m venv .venv
 source .venv/bin/activate
+python -m pip install -U pip
 python -m pip install -e .
 ```
 
-## 3. Usage
+### 📦 运行依赖
 
-### 3.1 One-command benchmark on this repository
+- Python `>= 3.9`
+- `mafft`
+- `iqtree`
+- `numpy >= 1.24`
+- `openpyxl >= 3.1`
+- `pyhmmer >= 0.12.0`
+- `pyrodigal >= 3.7.0`
+- `scikit-learn >= 1.4`
 
-下面这组命令就是当前仓库 `input/` 和 `output/` 的推荐复现实验流程。
+推荐 Python `3.11`。
 
-```bash
-ariadne prepare-references \
-  --output-dir benchmark_refs_20260319
-```
+## ⚙️ 默认参数画像
+
+下面这些是当前更适合日常 coral / CeSS mining 的默认设置：
+
+| 参数                                | 当前默认值 | 含义                                                    |
+| ----------------------------------- | ---------- | ------------------------------------------------------- |
+| Benchmark                           | `off`      | 只有显式传 `--enable-benchmark` 才生成 `05_benchmark/`  |
+| Center fallback                     | `on`       | 缺失 direct anchor 时，默认回退到中心窗口继续 CeSS 判断 |
+| `validated_cess_identity_threshold` | `0.95`     | 高置信 validated CeSS 支持阈值                          |
+| `cembrene_identity_threshold`       | `0.75`     | cembrene family 级支持阈值                              |
+| `cembrene_margin_threshold`         | `0.10`     | 相对 non-cembrene 的最小 identity margin                |
+| IQ-TREE fast mode                   | `on`       | 默认使用 `LG + --fast` 跑完整流程                       |
+
+## 🧪 快速开始
+
+### 1. 日常挖掘模式
+
+这是最推荐的日常入口。✅ 不 benchmark，✅ 默认 center fallback，✅ 自动从 `tree/` 建模：
 
 ```bash
 ariadne run \
-  --protein-folder input \
-  --seed-alignment Alignment.fasta \
-  --reference-dir benchmark_refs_20260319 \
-  --reference-alignment "coralTPS (modified)-cembrene.fasta" \
-  --allow-center-fallback \
-  --expected-fasta output/output.fasta \
-  --output-dir benchmark_run_current_v2b
+  --protein-folder input/ \
+  --reference-dir tree/ \
+  --output-dir results/
 ```
 
-如果你只想单独比较两个 FASTA：
+### 2. CeSS 校准模式
+
+如果你手头有已验证 CeSS FASTA，建议打开校准：
+
+```bash
+ariadne run \
+  --protein-folder input/ \
+  --reference-dir tree/ \
+  --reference-alignment tree/coral.fasta \
+  --validated-cess-fasta output/outpu.fasta \
+  --output-dir results_calibrated/
+```
+
+### 3. Benchmark 模式
+
+只有需要做方法对照时再打开 benchmark：
+
+```bash
+ariadne run \
+  --protein-folder input/ \
+  --reference-dir tree/ \
+  --reference-alignment tree/coral.fasta \
+  --validated-cess-fasta output/outpu.fasta \
+  --expected-fasta output/outpu.fasta \
+  --enable-benchmark \
+  --output-dir results_benchmark/
+```
+
+### 4. 转录组输入
+
+```bash
+ariadne run \
+  --transcriptomes sample1.fasta sample2.fasta \
+  --reference-dir tree/ \
+  --output-dir results_from_transcriptome/
+```
+
+## 🔍 分阶段使用
+
+### `discover`
+
+```bash
+ariadne discover \
+  --protein-folder input/ \
+  --hmm query.hmm \
+  --output-dir 01_discovery/
+```
+
+### `filter`
+
+```bash
+ariadne filter \
+  --input-fasta 01_discovery/candidates.protein.faa \
+  --output-dir 02_filtering/
+```
+
+### `motif`
+
+```bash
+ariadne motif \
+  --candidates 02_filtering/candidates.filtered.faa \
+  --reference-alignment tree/coral.fasta \
+  --validated-cess-fasta output/outpu.fasta \
+  --output-dir 04_motif/
+```
+
+常用可调参数：
+
+- `--disable-center-fallback`
+  关闭默认的 center fallback，切回更严格模式
+- `--validated-cess-identity-threshold`
+  调整 validated CeSS 支持强度
+- `--cembrene-identity-threshold`
+  调整 family-level identity 下限
+- `--cembrene-margin-threshold`
+  调整与 non-cembrene 的分离 margin
+
+### `classify`
+
+```bash
+ariadne classify \
+  --candidates 02_filtering/candidates.filtered.faa \
+  --reference-dir tree/ \
+  --output-dir 03_classification/
+```
+
+### `phylogeny`
+
+```bash
+ariadne phylogeny \
+  --candidates 02_filtering/candidates.filtered.faa \
+  --reference-dir tree/ \
+  --output-dir 06_phylogeny/
+```
+
+### `compare-fasta`
 
 ```bash
 ariadne compare-fasta \
-  --predicted-fasta benchmark_run_current_v2b/04_motif/cembrene_candidates.fasta \
-  --expected-fasta output/output.fasta \
-  --output-dir benchmark_run_current_v2b/manual_compare
+  --predicted-fasta 04_motif/cess_candidates.fasta \
+  --expected-fasta output/outpu.fasta \
+  --output-dir 05_benchmark/
 ```
 
-### 3.2 Strict vs lenient motif mode
-
-默认是严格模式，不启用中心回退：
-
-```bash
-ariadne run \
-  --protein-folder input \
-  --seed-alignment Alignment.fasta \
-  --reference-dir benchmark_refs_20260319 \
-  --reference-alignment "coralTPS (modified)-cembrene.fasta" \
-  --output-dir benchmark_run_strict
-```
-
-宽松模式会打开 `--allow-center-fallback`：
-
-```bash
-ariadne run \
-  --protein-folder input \
-  --seed-alignment Alignment.fasta \
-  --reference-dir benchmark_refs_20260319 \
-  --reference-alignment "coralTPS (modified)-cembrene.fasta" \
-  --allow-center-fallback \
-  --output-dir benchmark_run_lenient
-```
-
-### 3.3 How to read the outputs
-
-最重要的结果文件：
-
-| Path                                              | Meaning                                                                      |
-| ------------------------------------------------- | ---------------------------------------------------------------------------- |
-| `03_classification/embedding_3d_sections.svg`     | 3D PCA 切面图。背景是参考类群，前景高亮 `TPS+ / TPS- / cembrene-like` 候选。 |
-| `03_classification/candidate_cluster_context.tsv` | 每个候选的 `pc1/pc2/pc3`、候选分组、最近参考类群。                           |
-| `03_classification/classification.tsv`            | 每个候选的预测来源、最近邻、置信度。                                         |
-| `04_motif/motif_summary.tsv`                      | `DDXXD/E` 是否命中、anchor 是否命中、cembrene-like 是否成立。                |
-| `04_motif/cembrene_candidates.fasta`              | 最终导出的 cembrene-like FASTA，可直接与理想结果比较。                       |
-| `05_benchmark/benchmark_summary.tsv`              | 总体 benchmark 计数。                                                        |
-| `05_benchmark/benchmark_comparison.tsv`           | 逐条序列的 exact / best match 结果。                                         |
-
-### 3.4 Current benchmark result in this repository
-
-基于当前代码，在 `input/all_cn_tp.fasta` 上运行 `--allow-center-fallback` 得到：
-
-| Metric                    | Value |
-| ------------------------- | ----- |
-| discovery hits            | `100` |
-| filtered candidates       | `36`  |
-| final cembrene candidates | `7`   |
-| ideal sequences           | `13`  |
-| exact sequence recovery   | `2`   |
-| predicted-only sequences  | `5`   |
-| expected-only sequences   | `11`  |
-
-更细的 benchmark 结果来自 `benchmark_run_current_v2b/05_benchmark/benchmark_comparison.tsv`：
-
-- exact recovered: `S_TmTC-1-cembreneA`, `TmTC-1-Cembrene_A`
-- near-exact recovered: `S_AbTC-2` 的最佳匹配 identity 为 `0.9925`
-- 当前候选整体更偏向 `coral`，但仍有一部分落在 `insect` 近邻区域
-
-当前 3D 聚类上下文统计：
-
-- `candidate:cembrene_like -> coral`: `6`
-- `candidate:cembrene_like -> insect`: `1`
-- `candidate:tps_positive -> coral`: `20`
-- `candidate:tps_positive -> insect`: `5`
-- `candidate:tps_negative -> insect`: `4`
-
-这说明现在的流程已经能够：
-
-- 先用 `DDXXD/E` 把 `TPS+` 和 `TPS-` 分开。
-- 在 3D 投影里把 cembrene-like 候选作为单独前景标记。
-- 把最终导出的 FASTA 和理想结果做可追踪的序列级 benchmark。
-
-### 3.5 Notes
-
-- 当前 benchmark 使用的是仓库内置 `ariadne/tps_hmm`，CLI 会提示这是 legacy library。论文级分析建议传入你自己的 `--tps-hmm-dir`。
-- `output/output.fasta` 里存在带 gap 的对齐序列，benchmark 模块会先 ungap 再比较。
-- `classification` 现在在 `run` 中会读取 motif 结果，因此 3D 图不再只是“候选 vs 参考”，而是“`TPS+ / TPS- / cembrene-like` vs 多类群参考”。
-
-## 4. Citation
-
-### Software
+## 📤 输出目录地图
 
 ```text
-Ariadne TPS Pipeline (v0.1.0). Accessed YYYY-MM-DD.
+results/
+├── 01_discovery/
+├── 02_filtering/
+├── 03_classification/
+│   ├── classification.tsv
+│   ├── cess_priority_ranking.tsv
+│   ├── embedding.tsv
+│   ├── embedding.svg
+│   ├── embedding_3d_sections.svg
+│   ├── global_context_tree.nwk
+│   └── _auto_tps_hmms/
+├── 04_motif/
+│   ├── motif_summary.tsv
+│   ├── targeted_mining_summary.tsv
+│   ├── cess_candidates.tsv
+│   ├── cess_candidates.fasta
+│   ├── cess_priority_ranking.tsv
+│   └── motif_windows.svg
+├── 05_benchmark/          # 只有 --enable-benchmark 才会生成
+└── 06_phylogeny/
 ```
 
-### Related references
+### 🎯 最值得先看的结果
 
-- AFPK_finder repository: [https://github.com/linzhenjian/AFPK_finder/tree/v1.0](https://github.com/linzhenjian/AFPK_finder/tree/v1.0)
-- Nature Communications paper: [https://www.nature.com/articles/s41467-023-44497-0](https://www.nature.com/articles/s41467-023-44497-0)
-- DOI: `10.1038/s41467-023-44497-0`
+- `04_motif/targeted_mining_summary.tsv`
+  看整体候选数量、TPS+/TPS-、CeSS-like 数量
+- `04_motif/cess_candidates.fasta`
+  最终 CeSS-like 候选序列
+- `03_classification/cess_priority_ranking.tsv`
+  最适合做实验验证优先级筛选的表
+- `03_classification/embedding.svg`
+  当前的 clade-aware embedding 总览
+- `06_phylogeny/iqtree.treefile`
+  系统发育树结果
+
+## 🧠 Embedding 设计
+
+当前 `classification` 不是单纯画一个“拥挤的 PCA 点图”，而是优先使用：
+
+- `lda_coral_subclade_spread`
+  先按 reference clades / candidate groups 做监督式分离
+- 对 `coral` 再进一步拆成：
+  - `cembrene_a`
+  - `cembrene_b`
+  - `cembrene_c`
+  - 多个 `tps_subclade_*`
+
+所以新版本的 `embedding.svg` 会更适合直接看：
+
+- reference clades 是否分开
+- coral 内部 CeSS/TPS 子簇是否分开
+- candidate TPS+/TPS-/CeSS-like 分布在哪里
+
+## 🧵 CeSS 判定逻辑
+
+当前 CeSS 判定逻辑如下：
+
+- 如果与 validated CeSS motif window identity `>= 0.95`
+  直接支持 `CeSS-like`
+- 如果 direct anchor 命中，同时：
+  - 对 cembrene 参考 identity `>= 0.75`
+  - 且相对 non-cembrene 的 margin `>= 0.10`
+    也支持 `CeSS-like`
+- 如果只是 center fallback 命中但缺乏 validated CeSS 支持
+  不直接判成 CeSS-like，但会进入 `cess_priority_ranking.tsv`
+
+## 📊 仓库内实跑结果
+
+当前仓库已经实跑出一套更完整的默认结果：
+
+- 📂 [tmp_run_calibrated_v3/](tmp_run_calibrated_v3)
+- 🖼️ [tmp_run_calibrated_v3/03_classification/embedding.svg](tmp_run_calibrated_v3/03_classification/embedding.svg)
+- 🏁 [tmp_run_calibrated_v3/05_benchmark/benchmark_summary.tsv](tmp_run_calibrated_v3/05_benchmark/benchmark_summary.tsv)
+
+关键摘要：
+
+- `36` input candidates
+- `32` TPS-positive
+- `4` TPS-negative
+- `4` CeSS-like
+- benchmark 模式下 `3` exact matches
+- 另有 `1` 条高相似近似命中
+
+## 🌳 HMM 与系统树说明
+
+- `tree/` 现在是默认参考入口，不再以 `Alignment.fasta` 为主入口
+- 如果 `tree/*.fasta` 不是 MSA，Ariadne 会先自动调用 MAFFT，再做 `hmmbuild`
+- `run` 与 `phylogeny` 默认使用 IQ-TREE 的 `LG + --fast`
+- 如果你只想挖掘，不想 benchmark，不需要提供 `--expected-fasta`
+
+## 🧰 旧脚本兼容性
+
+这些旧脚本还在仓库中保留，但新的主流程优先使用 CLI：
+
+- `ariadne/filter_contigs.py`
+- `ariadne/filter_contigs_long.py`
+- `ariadne/filter_coverage.py`
+- `ariadne/DupRemover.py`
+- `ariadne/visualization.py`
+
+推荐优先使用：
+
+- `ariadne run`
+- `ariadne discover`
+- `ariadne filter`
+- `ariadne motif`
+- `ariadne classify`
+- `ariadne phylogeny`
+- `ariadne compare-fasta`
+
+## 📎 软件定位
+
+如果你把 Ariadne 当成论文中的平台来理解，可以把它看成：
+
+> 🪸 一个以 coral TPS / CeSS 为中心、偏实验筛选友好的 discovery + prioritization + phylogeny workflow。
+
+## 🎨 Logo 资产
+
+- `fig/ariadne_cvpr_logo.svg`
+  横版展示 logo，适合 README banner、项目介绍页、幻灯片封面
+- `fig/ariadne_icon_minimal.svg`
+  极简 icon，适合论文图角标、GitHub avatar、favicon 风格展示
+
+## License
+
+MIT License

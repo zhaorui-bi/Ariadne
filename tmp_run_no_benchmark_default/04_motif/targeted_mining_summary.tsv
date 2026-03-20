@@ -1,0 +1,7 @@
+metric	value
+input_candidates	36
+tps_positive_candidates	32
+tps_negative_candidates	4
+anchor_matched_candidates	2
+validated_cess_reference_count	13
+cess_like_candidates	4

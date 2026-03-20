@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+"""Legacy command-line wrapper for header-based coverage filtering."""
+
 from __future__ import annotations
 
 import argparse
@@ -13,6 +15,7 @@ from ariadne.filtering import filter_by_coverage
 
 
 def main() -> int:
+    """Filter a FASTA file by ``cov_<value>`` metadata in headers."""
     parser = argparse.ArgumentParser(description="Legacy coverage filter wrapper for Ariadne.")
     parser.add_argument("min_coverage", type=float)
     parser.add_argument("input_fasta", type=Path)

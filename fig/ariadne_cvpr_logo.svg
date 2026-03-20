@@ -1,0 +1,78 @@
+<svg width="1600" height="520" viewBox="0 0 1600 520" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="120" y1="60" x2="1480" y2="460" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F8FBFF"/>
+      <stop offset="0.55" stop-color="#EEF5FF"/>
+      <stop offset="1" stop-color="#F7FAFC"/>
+    </linearGradient>
+    <linearGradient id="ink" x1="232" y1="112" x2="520" y2="412" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2563EB"/>
+      <stop offset="0.55" stop-color="#0F4C81"/>
+      <stop offset="1" stop-color="#0B132B"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="206" y1="380" x2="562" y2="158" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#14B8A6"/>
+      <stop offset="1" stop-color="#38BDF8"/>
+    </linearGradient>
+    <linearGradient id="thread" x1="164" y1="405" x2="618" y2="122" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F59E0B"/>
+      <stop offset="0.6" stop-color="#F97316"/>
+      <stop offset="1" stop-color="#FB7185"/>
+    </linearGradient>
+    <filter id="shadow" x="88" y="40" width="1424" height="420" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="16" stdDeviation="22" flood-color="#93A8C5" flood-opacity="0.22"/>
+    </filter>
+  </defs>
+
+  <rect x="90" y="50" width="1420" height="420" rx="34" fill="url(#bg)"/>
+  <g opacity="0.35">
+    <path d="M176 116H1454" stroke="#C8D7EA" stroke-width="1.5" stroke-dasharray="6 10"/>
+    <path d="M176 188H1454" stroke="#D6E2F0" stroke-width="1.5" stroke-dasharray="6 10"/>
+    <path d="M176 260H1454" stroke="#C8D7EA" stroke-width="1.5" stroke-dasharray="6 10"/>
+    <path d="M176 332H1454" stroke="#D6E2F0" stroke-width="1.5" stroke-dasharray="6 10"/>
+    <path d="M176 404H1454" stroke="#C8D7EA" stroke-width="1.5" stroke-dasharray="6 10"/>
+    <path d="M236 104V416" stroke="#DAE5F2" stroke-width="1.5" stroke-dasharray="6 12"/>
+    <path d="M332 104V416" stroke="#DAE5F2" stroke-width="1.5" stroke-dasharray="6 12"/>
+    <path d="M428 104V416" stroke="#DAE5F2" stroke-width="1.5" stroke-dasharray="6 12"/>
+    <path d="M524 104V416" stroke="#DAE5F2" stroke-width="1.5" stroke-dasharray="6 12"/>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="128" y="88" width="470" height="344" rx="30" fill="#FFFFFF" opacity="0.94"/>
+  </g>
+
+  <path d="M218 372L360 128L508 372" stroke="url(#ink)" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M275 296H447" stroke="url(#accent)" stroke-width="28" stroke-linecap="round"/>
+  <path d="M208 372C256 340 296 322 340 310C388 296 434 272 478 232C514 198 544 172 590 158" stroke="url(#thread)" stroke-width="14" stroke-linecap="round"/>
+  <circle cx="209" cy="372" r="12" fill="#F59E0B"/>
+  <circle cx="340" cy="310" r="9" fill="#FB7185"/>
+  <circle cx="478" cy="232" r="10" fill="#F97316"/>
+  <circle cx="590" cy="158" r="13" fill="#38BDF8"/>
+
+  <g opacity="0.95">
+    <circle cx="516" cy="284" r="62" stroke="#C7D9EE" stroke-width="8"/>
+    <circle cx="516" cy="284" r="36" stroke="#9DB8D8" stroke-width="6"/>
+    <circle cx="516" cy="284" r="10" fill="#0F4C81"/>
+    <path d="M516 221V184" stroke="#7C9FC6" stroke-width="5" stroke-linecap="round"/>
+    <path d="M579 284H616" stroke="#7C9FC6" stroke-width="5" stroke-linecap="round"/>
+    <path d="M516 347V384" stroke="#7C9FC6" stroke-width="5" stroke-linecap="round"/>
+    <path d="M453 284H416" stroke="#7C9FC6" stroke-width="5" stroke-linecap="round"/>
+  </g>
+
+  <g>
+    <text x="676" y="214" fill="#0B132B" font-family="Helvetica, Arial, sans-serif" font-size="110" font-weight="700" letter-spacing="-2">Ariadne</text>
+    <text x="682" y="268" fill="#2563EB" font-family="Helvetica, Arial, sans-serif" font-size="26" font-weight="700" letter-spacing="4">CORAL TPS • CeSS DISCOVERY PLATFORM</text>
+    <text x="680" y="334" fill="#334155" font-family="Helvetica, Arial, sans-serif" font-size="31" font-weight="400">
+      HMM-guided mining, motif calibration, clade-aware embedding,
+    </text>
+    <text x="680" y="378" fill="#334155" font-family="Helvetica, Arial, sans-serif" font-size="31" font-weight="400">
+      and phylogeny for terpene synthase discovery in coral-centered datasets.
+    </text>
+    <rect x="680" y="404" width="164" height="38" rx="19" fill="#E0ECFF"/>
+    <text x="716" y="429" fill="#1D4ED8" font-family="Helvetica, Arial, sans-serif" font-size="18" font-weight="700">CeSS-first</text>
+    <rect x="858" y="404" width="228" height="38" rx="19" fill="#E8FBF7"/>
+    <text x="892" y="429" fill="#0F766E" font-family="Helvetica, Arial, sans-serif" font-size="18" font-weight="700">Benchmark optional</text>
+    <rect x="1100" y="404" width="218" height="38" rx="19" fill="#FFF4E5"/>
+    <text x="1136" y="429" fill="#C2410C" font-family="Helvetica, Arial, sans-serif" font-size="18" font-weight="700">Tree-native references</text>
+  </g>
+</svg>

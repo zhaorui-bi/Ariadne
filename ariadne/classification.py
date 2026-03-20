@@ -1,3 +1,10 @@
+"""Stage 3: classify candidates in TPS HMM feature space.
+
+Each sequence is converted into a vector of HMM scores, normalised, embedded,
+and compared against reference sequences to infer a likely source group such as
+coral, insect, plant, fungal, or bacterial TPS collections.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -9,6 +16,8 @@ from typing import Optional, Union
 
 import numpy as np
 import pyhmmer
+from sklearn.cluster import KMeans
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 
 from ariadne.fasta_utils import FastaRecord, ensure_directory, read_fasta, sanitize_newick_name, write_fasta, write_tsv
 from ariadne.references import load_reference_records
@@ -19,6 +28,7 @@ logger = logging.getLogger(__name__)
 
 
 def sorted_hmm_paths(hmm_dir: PathLike) -> list[Path]:
+    """Return HMM paths in a stable order for reproducible feature columns."""
     directory = Path(hmm_dir)
     hmm_paths = list(directory.glob("*.hmm"))
     if not hmm_paths:
@@ -30,6 +40,7 @@ def sorted_hmm_paths(hmm_dir: PathLike) -> list[Path]:
 
 
 def _score_records_against_hmms(records: list[FastaRecord], hmm_paths: list[Path], *, missing_score: float = 5.0) -> tuple[np.ndarray, list[str]]:
+    """Score all records against all HMMs and build the raw feature matrix."""
     if not records:
         return np.zeros((0, len(hmm_paths) + 1), dtype=float), [path.stem for path in hmm_paths] + ["length"]
     alphabet = pyhmmer.easel.Alphabet.amino()
@@ -58,6 +69,7 @@ def _score_records_against_hmms(records: list[FastaRecord], hmm_paths: list[Path
 
 
 def _normalize_matrix(matrix: np.ndarray) -> np.ndarray:
+    """Normalise each feature column by its mean value."""
     if matrix.size == 0:
         return matrix.copy()
     means = matrix.mean(axis=0)
@@ -65,7 +77,18 @@ def _normalize_matrix(matrix: np.ndarray) -> np.ndarray:
     return matrix / means
 
 
+def _zscore_matrix(matrix: np.ndarray) -> np.ndarray:
+    """Z-score each column so embedding axes are not dominated by one feature."""
+    if matrix.size == 0:
+        return matrix.copy()
+    means = matrix.mean(axis=0, keepdims=True)
+    stds = matrix.std(axis=0, keepdims=True)
+    stds[stds == 0] = 1.0
+    return (matrix - means) / stds
+
+
 def _pca_coordinates(matrix: np.ndarray, n_components: int = 3) -> tuple[np.ndarray, np.ndarray]:
+    """Compute PCA coordinates with NumPy's SVD implementation."""
     if matrix.size == 0:
         return np.zeros((0, n_components), dtype=float), np.zeros((n_components,), dtype=float)
     centered = matrix - matrix.mean(axis=0, keepdims=True)
@@ -85,7 +108,207 @@ def _pca_coordinates(matrix: np.ndarray, n_components: int = 3) -> tuple[np.ndar
     return coords, explained[:n_components]
 
 
+def _embedding_group_label(record: FastaRecord) -> str:
+    """Return the label used by supervised embedding to separate display groups."""
+    if record.metadata.get("source") == "candidate":
+        return record.metadata.get("candidate_group", _candidate_group(record))
+    return f"ref:{record.metadata.get('source', 'unknown')}"
+
+
+def _coral_cembrene_subtype(record: FastaRecord) -> Optional[str]:
+    """Infer a coarse cembrene subtype from one coral reference header."""
+    label = record.id.lower()
+    if "cembrene" not in label:
+        return None
+    if "cembreneb" in label or "cembrene_b" in label:
+        return "cembrene_b"
+    if "cembrenec" in label or "cembrene_c" in label:
+        return "cembrene_c"
+    if "cembrenea" in label or "cembrene_a" in label:
+        return "cembrene_a"
+    return "cembrene_other"
+
+
+def _cluster_label_count(size: int) -> int:
+    """Choose a conservative subcluster count for one large reference subset."""
+    if size >= 220:
+        return 5
+    if size >= 140:
+        return 4
+    if size >= 70:
+        return 3
+    if size >= 24:
+        return 2
+    return 1
+
+
+def _stable_kmeans_labels(matrix: np.ndarray, *, prefix: str) -> list[str]:
+    """Partition a subset into a small number of deterministic KMeans groups."""
+    if len(matrix) == 0:
+        return []
+    n_clusters = _cluster_label_count(len(matrix))
+    if n_clusters <= 1:
+        return [f"{prefix}_1"] * len(matrix)
+    kmeans = KMeans(n_clusters=n_clusters, random_state=0, n_init=20)
+    assignments = kmeans.fit_predict(matrix)
+    order = sorted(
+        range(n_clusters),
+        key=lambda cluster_index: tuple(np.round(kmeans.cluster_centers_[cluster_index][: min(3, matrix.shape[1])], 6)),
+    )
+    remap = {cluster_index: rank + 1 for rank, cluster_index in enumerate(order)}
+    return [f"{prefix}_{remap[int(cluster)]}" for cluster in assignments]
+
+
+def _embedding_group_labels(matrix: np.ndarray, records: list[FastaRecord]) -> list[str]:
+    """Build subclade-aware labels for the embedding stage.
+
+    The main goal is to stop the large coral reference collection from behaving
+    like one monolithic class. We therefore separate:
+    1. coral cembrene references by coarse product subtype;
+    2. the remaining coral TPS references by feature-space subclusters;
+    3. candidates by their screening group.
+    """
+    labels = [_embedding_group_label(record) for record in records]
+    coral_other_indices: list[int] = []
+    for index, record in enumerate(records):
+        if record.metadata.get("source") == "candidate":
+            continue
+        if record.metadata.get("source") != "coral":
+            continue
+        subtype = _coral_cembrene_subtype(record)
+        if subtype is not None:
+            labels[index] = f"ref:coral:{subtype}"
+        else:
+            coral_other_indices.append(index)
+    if coral_other_indices:
+        coral_matrix = matrix[coral_other_indices]
+        coral_labels = _stable_kmeans_labels(coral_matrix, prefix="ref:coral:tps_subclade")
+        for index, label in zip(coral_other_indices, coral_labels):
+            labels[index] = label
+    return labels
+
+
+def _deterministic_direction(index: int, dimensions: int) -> np.ndarray:
+    """Return a deterministic unit vector used when two centroids fully overlap."""
+    base = np.zeros((dimensions,), dtype=float)
+    base[index % dimensions] = 1.0
+    if dimensions > 1:
+        base[(index + 1) % dimensions] = 0.5
+    norm = np.linalg.norm(base)
+    return base if norm == 0 else base / norm
+
+
+def _spread_group_coords(coords: np.ndarray, labels: list[str], *, within_scale: float = 0.55) -> np.ndarray:
+    """Spread group centroids apart while preserving local within-group structure.
+
+    This post-processing step is used only for the visual embedding so that
+    major reference clades and candidate groups no longer collapse onto the
+    same centroid in the final SVG.
+    """
+    if len(coords) == 0:
+        return coords.copy()
+
+    dimensions = coords.shape[1]
+    group_to_indices: dict[str, list[int]] = {}
+    for index, label in enumerate(labels):
+        group_to_indices.setdefault(label, []).append(index)
+    if len(group_to_indices) < 2:
+        return coords.copy()
+
+    centroids = {
+        label: coords[indices].mean(axis=0)
+        for label, indices in group_to_indices.items()
+    }
+    radii = {}
+    for label, indices in group_to_indices.items():
+        residuals = coords[indices] - centroids[label]
+        norms = np.linalg.norm(residuals, axis=1) if len(indices) else np.zeros((0,), dtype=float)
+        radii[label] = float(np.percentile(norms, 75)) if len(norms) else 0.0
+    median_radius = float(np.median(list(radii.values()))) if radii else 0.0
+    target_gap = max(median_radius * 4.0, 1.5)
+
+    shifted = {label: centroid.copy() for label, centroid in centroids.items()}
+    labels_sorted = sorted(group_to_indices)
+    for _ in range(48):
+        moved = False
+        for pair_index, label_a in enumerate(labels_sorted):
+            for label_b in labels_sorted[pair_index + 1 :]:
+                delta = shifted[label_a] - shifted[label_b]
+                distance = float(np.linalg.norm(delta))
+                min_distance = max(target_gap, radii[label_a] + radii[label_b] + (median_radius * 1.5))
+                if distance >= min_distance:
+                    continue
+                if distance < 1e-9:
+                    direction = _deterministic_direction(pair_index, dimensions)
+                else:
+                    direction = delta / distance
+                push = (min_distance - distance) * 0.5
+                shifted[label_a] = shifted[label_a] + (direction * push)
+                shifted[label_b] = shifted[label_b] - (direction * push)
+                moved = True
+        for label in labels_sorted:
+            shifted[label] = shifted[label] * 0.98 + centroids[label] * 0.02
+        if not moved:
+            break
+
+    adjusted = np.zeros_like(coords)
+    for label, indices in group_to_indices.items():
+        residuals = coords[indices] - centroids[label]
+        adjusted[indices] = shifted[label] + (residuals * within_scale)
+    return adjusted
+
+
+def _embedding_coordinates(
+    matrix: np.ndarray,
+    records: list[FastaRecord],
+    *,
+    n_components: int = 3,
+) -> tuple[np.ndarray, np.ndarray, list[str], str]:
+    """Compute embedding coordinates, preferring class-aware LDA over PCA.
+
+    LDA is used to better separate reference clades and candidate groups in the
+    visual embedding. When the label configuration is too small or unstable for
+    LDA, the function falls back to PCA.
+    """
+    if matrix.size == 0:
+        return (
+            np.zeros((0, n_components), dtype=float),
+            np.zeros((n_components,), dtype=float),
+            [f"Axis{i + 1}" for i in range(n_components)],
+            "empty",
+        )
+
+    scaled_matrix = _zscore_matrix(matrix)
+    embedding_labels = _embedding_group_labels(scaled_matrix, records)
+    unique_labels = sorted(set(embedding_labels))
+    if len(unique_labels) >= 2:
+        max_components = min(n_components, len(unique_labels) - 1, scaled_matrix.shape[1])
+        if max_components >= 2:
+            try:
+                lda = LinearDiscriminantAnalysis(
+                    solver="eigen",
+                    shrinkage="auto",
+                    n_components=max_components,
+                )
+                coords = lda.fit_transform(scaled_matrix, embedding_labels)
+                explained = np.asarray(getattr(lda, "explained_variance_ratio_", np.zeros((coords.shape[1],), dtype=float)))
+                if coords.shape[1] < n_components:
+                    coords = np.pad(coords, ((0, 0), (0, n_components - coords.shape[1])))
+                if explained.shape[0] < n_components:
+                    explained = np.pad(explained, (0, n_components - explained.shape[0]))
+                labels = [f"LD{i + 1}" for i in range(n_components)]
+                spread_coords = _spread_group_coords(coords, embedding_labels)
+                return spread_coords, explained[:n_components], labels, "lda_coral_subclade_spread"
+            except Exception as error:
+                logger.warning("LDA embedding failed, falling back to PCA: %s", error)
+
+    coords, explained = _pca_coordinates(scaled_matrix, n_components=n_components)
+    spread_coords = _spread_group_coords(coords, embedding_labels)
+    return spread_coords, explained, [f"PC{i + 1}" for i in range(n_components)], "pca_coral_subclade_spread"
+
+
 def _distance_matrix(features: np.ndarray) -> np.ndarray:
+    """Compute Euclidean distances between all rows in the feature matrix."""
     if len(features) == 0:
         return np.zeros((0, 0), dtype=float)
     squared = np.sum(features**2, axis=1, keepdims=True)
@@ -95,6 +318,7 @@ def _distance_matrix(features: np.ndarray) -> np.ndarray:
 
 
 def _upgma_newick(names: list[str], distances: np.ndarray) -> str:
+    """Build a simple UPGMA tree from a pairwise distance matrix."""
     if len(names) == 1:
         return f"{sanitize_newick_name(names[0])};"
 
@@ -146,6 +370,7 @@ def _upgma_newick(names: list[str], distances: np.ndarray) -> str:
 
 
 def _color_map(sources: list[str]) -> dict[str, str]:
+    """Assign deterministic colours to reference sources for plotting."""
     palette = [
         "#1f77b4",
         "#ff7f0e",
@@ -164,6 +389,7 @@ def _color_map(sources: list[str]) -> dict[str, str]:
 
 
 def _load_candidate_annotations(path: Optional[PathLike]) -> dict[str, dict[str, str]]:
+    """Load optional TSV annotations keyed by ``sequence_id``."""
     if path is None:
         return {}
     annotation_path = Path(path)
@@ -182,8 +408,11 @@ def _load_candidate_annotations(path: Optional[PathLike]) -> dict[str, dict[str,
 
 
 def _candidate_group(record: FastaRecord) -> str:
+    """Map a record to a candidate/reference display category."""
     if record.metadata.get("source") != "candidate":
         return f"ref:{record.metadata.get('source', 'unknown')}"
+    if record.metadata.get("predicted_cess_like") == "yes":
+        return "candidate:cembrene_like"
     if record.metadata.get("predicted_cembrene_like") == "yes":
         return "candidate:cembrene_like"
     if record.metadata.get("is_tps") == "yes":
@@ -194,6 +423,7 @@ def _candidate_group(record: FastaRecord) -> str:
 
 
 def _display_styles(records: list[FastaRecord]) -> dict[str, dict[str, str]]:
+    """Define SVG styling for each display category."""
     reference_sources = sorted({record.metadata.get("source", "unknown") for record in records if record.metadata.get("source") != "candidate"})
     reference_colors = _color_map(reference_sources)
     styles: dict[str, dict[str, str]] = {}
@@ -231,7 +461,7 @@ def _display_styles(records: list[FastaRecord]) -> dict[str, dict[str, str]]:
         "stroke": "#7f1d1d",
     }
     styles["candidate:cembrene_like"] = {
-        "label": "candidate cembrene-like",
+        "label": "candidate CeSS-like",
         "fill": "#f59e0b",
         "shape": "triangle",
         "opacity": "0.96",
@@ -242,6 +472,7 @@ def _display_styles(records: list[FastaRecord]) -> dict[str, dict[str, str]]:
 
 
 def _marker_svg(x: float, y: float, *, shape: str, radius: float, fill: str, stroke: str, opacity: float, stroke_width: float = 1.0) -> str:
+    """Render one SVG marker in the requested geometric style."""
     if shape == "square":
         size = radius * 2
         return (
@@ -275,192 +506,538 @@ def _marker_svg(x: float, y: float, *, shape: str, radius: float, fill: str, str
     )
 
 
-def _render_scatter(records: list[FastaRecord], coords: np.ndarray, output_path: PathLike) -> Path:
+def _render_scatter(
+    records: list[FastaRecord],
+    coords: np.ndarray,
+    output_path: PathLike,
+    *,
+    explained: Optional[np.ndarray] = None,
+    component_labels: Optional[list[str]] = None,
+    method: str = "embedding",
+) -> Path:
+    """Render a readable 2D embedding scatter plot for coral TPS/CeSS screening."""
+    target = Path(output_path)
     if len(records) == 0:
-        return Path(output_path)
-    styles = _display_styles(records)
-    groups = [_candidate_group(record) for record in records]
+        target.write_text("<svg xmlns='http://www.w3.org/2000/svg' width='1200' height='820'></svg>")
+        return target
+    if coords.shape[1] < 2:
+        coords = np.pad(coords, ((0, 0), (0, 2 - coords.shape[1])))
+
     width = 1200
-    height = 800
-    margin = 80
-    xs = coords[:, 0] if len(coords) else np.zeros((len(records),))
-    ys = coords[:, 1] if coords.shape[1] > 1 else np.zeros((len(records),))
+    height = 820
+    outer_left = 78
+    outer_top = 42
+    outer_right = 46
+    outer_bottom = 124
+    plot_left = outer_left
+    plot_top = outer_top + 64
+    plot_width = width - plot_left - outer_right - 250
+    plot_height = height - plot_top - outer_bottom
+    plot_right = plot_left + plot_width
+    plot_bottom = plot_top + plot_height
+    font = "Arial, Helvetica, sans-serif"
+    axis_color = "#374151"
+    grid_color = "#E5E7EB"
+    xs = coords[:, 0]
+    ys = coords[:, 1]
     min_x, max_x = float(xs.min()), float(xs.max())
     min_y, max_y = float(ys.min()), float(ys.max())
-    span_x = max(max_x - min_x, 1e-9)
-    span_y = max(max_y - min_y, 1e-9)
+    pad_x = (max_x - min_x) * 0.05 or 0.5
+    pad_y = (max_y - min_y) * 0.05 or 0.5
+    min_x -= pad_x
+    max_x += pad_x
+    min_y -= pad_y
+    max_y += pad_y
+    scale_x, scale_y = _make_scalers(min_x, max_x, min_y, max_y, plot_left, plot_top, plot_bottom, plot_width, plot_height)
 
-    def scale_x(value: float) -> float:
-        return margin + ((value - min_x) / span_x) * (width - (2 * margin))
+    ref_sources: list[str] = []
+    for record in records:
+        if record.metadata.get("source") != "candidate":
+            source = record.metadata.get("source", "unknown")
+            if source not in ref_sources:
+                ref_sources.append(source)
+    ref_colour = {source: _ref_source_fill(source, index) for index, source in enumerate(ref_sources)}
+    candidate_groups = [
+        group for group in _CANDIDATE_CFG
+        if any(_candidate_group(record) == group for record in records if record.metadata.get("source") == "candidate")
+    ]
 
-    def scale_y(value: float) -> float:
-        return height - margin - ((value - min_y) / span_y) * (height - (2 * margin))
+    axis_names = component_labels or [f"Axis{i + 1}" for i in range(max(2, coords.shape[1]))]
 
-    legend_entries = []
-    ordered_groups = [group for group in styles if group in groups]
-    for legend_index, group in enumerate(ordered_groups):
-        y = margin + (legend_index * 24)
-        style = styles[group]
-        legend_entries.append(
-            _marker_svg(
-                width - 220,
-                y,
-                shape=style["shape"],
-                radius=7,
-                fill=style["fill"],
-                stroke=style["stroke"],
-                opacity=float(style["opacity"]),
-                stroke_width=1.0,
-            )
-            + f'<text x="{width - 205}" y="{y + 5}" font-size="14">{style["label"]}</text>'
-        )
+    def axis_label(dim: int) -> str:
+        name = axis_names[dim] if dim < len(axis_names) else f"Axis{dim + 1}"
+        if explained is not None and len(explained) > dim:
+            return f"{name} ({100.0 * float(explained[dim]):.1f}%)"
+        return name
 
-    points = []
-    for record, coordinate in zip(records, coords):
-        x = scale_x(float(coordinate[0]))
-        y = scale_y(float(coordinate[1] if len(coordinate) > 1 else 0.0))
-        group = _candidate_group(record)
-        style = styles[group]
-        is_candidate = record.metadata.get("source") == "candidate"
-        points.append(
+    svg: list[str] = [
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}" font-family="{font}">',
+        f'<rect width="{width}" height="{height}" fill="white" />',
+        f'<text x="{outer_left}" y="{outer_top + 24}" font-size="22" font-weight="700" fill="#111827">Ariadne Coral TPS / CeSS Embedding</text>',
+        f'<text x="{outer_left}" y="{outer_top + 46}" font-size="11" fill="#6B7280" font-style="italic">Reference clades define the background feature space; candidate markers encode TPS screening and CeSS targeting states. Projection: {method.upper()}.</text>',
+        f'<rect x="{plot_left}" y="{plot_top}" width="{plot_width}" height="{plot_height}" fill="white" stroke="{grid_color}" stroke-width="1"/>',
+    ]
+
+    for tick in _nice_ticks(min_x, max_x):
+        tx = scale_x(tick)
+        svg.append(f'<line x1="{tx:.2f}" y1="{plot_top}" x2="{tx:.2f}" y2="{plot_bottom}" stroke="{grid_color}" stroke-width="0.7" stroke-dasharray="3,3"/>')
+        svg.append(f'<line x1="{tx:.2f}" y1="{plot_bottom}" x2="{tx:.2f}" y2="{plot_bottom + 5}" stroke="{axis_color}" stroke-width="1.2"/>')
+        svg.append(f'<text x="{tx:.2f}" y="{plot_bottom + 18}" text-anchor="middle" font-size="10" fill="#6B7280">{_fmt_tick(tick)}</text>')
+    for tick in _nice_ticks(min_y, max_y):
+        ty = scale_y(tick)
+        svg.append(f'<line x1="{plot_left}" y1="{ty:.2f}" x2="{plot_right}" y2="{ty:.2f}" stroke="{grid_color}" stroke-width="0.7" stroke-dasharray="3,3"/>')
+        svg.append(f'<line x1="{plot_left - 5}" y1="{ty:.2f}" x2="{plot_left}" y2="{ty:.2f}" stroke="{axis_color}" stroke-width="1.2"/>')
+        svg.append(f'<text x="{plot_left - 10}" y="{ty + 4:.2f}" text-anchor="end" font-size="10" fill="#6B7280">{_fmt_tick(tick)}</text>')
+
+    svg.append(f'<line x1="{plot_left}" y1="{plot_bottom}" x2="{plot_right}" y2="{plot_bottom}" stroke="{axis_color}" stroke-width="1.5"/>')
+    svg.append(f'<line x1="{plot_left}" y1="{plot_top}" x2="{plot_left}" y2="{plot_bottom}" stroke="{axis_color}" stroke-width="1.5"/>')
+    svg.append(f'<text x="{plot_left + (plot_width / 2):.2f}" y="{plot_bottom + 40}" text-anchor="middle" font-size="13" font-weight="600" fill="{axis_color}">{axis_label(0)}</text>')
+    y_label_x = outer_left - 54
+    y_label_y = plot_top + (plot_height / 2)
+    svg.append(
+        f'<text transform="rotate(-90,{y_label_x:.2f},{y_label_y:.2f})" x="{y_label_x:.2f}" y="{y_label_y:.2f}" text-anchor="middle" font-size="13" font-weight="600" fill="{axis_color}">{axis_label(1)}</text>'
+    )
+
+    for record, x_value, y_value in zip(records, xs, ys):
+        x = max(plot_left, min(plot_right, scale_x(float(x_value))))
+        y = max(plot_top, min(plot_bottom, scale_y(float(y_value))))
+        if record.metadata.get("source") != "candidate":
+            source = record.metadata.get("source", "unknown")
+            svg.append(f'<circle cx="{x:.2f}" cy="{y:.2f}" r="3.6" fill="{ref_colour.get(source, "#9CA3AF")}" fill-opacity="0.58" stroke="none"/>')
+            continue
+        cfg = _CANDIDATE_CFG.get(_candidate_group(record), _CANDIDATE_CFG["candidate:unlabeled"])
+        svg.append(
             _marker_svg(
                 x,
                 y,
-                shape=style["shape"],
-                radius=float(style["radius"]),
-                fill=style["fill"],
-                stroke=style["stroke"],
-                opacity=float(style["opacity"]),
-                stroke_width=1.2 if is_candidate else 0.8,
+                shape=cfg["shape"],
+                radius=cfg["r"],
+                fill=cfg["fill"],
+                stroke=cfg["stroke"],
+                opacity=cfg["op"],
+                stroke_width=1.3,
             )
         )
-        if is_candidate:
-            points.append(
-                f'<text x="{x + 10:.2f}" y="{y - 10:.2f}" font-size="14" '
-                f'font-family="monospace">{record.id}</text>'
-            )
 
-    svg = (
-        f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" '
-        f'viewBox="0 0 {width} {height}">'
-        f'<rect width="{width}" height="{height}" fill="white" />'
-        f'<text x="{margin}" y="40" font-size="24" font-weight="bold">Ariadne TPS feature embedding</text>'
-        f'<line x1="{margin}" y1="{height - margin}" x2="{width - margin}" y2="{height - margin}" stroke="#999999" />'
-        f'<line x1="{margin}" y1="{margin}" x2="{margin}" y2="{height - margin}" stroke="#999999" />'
-        + "".join(points)
-        + "".join(legend_entries)
-        + "</svg>"
-    )
-    target = Path(output_path)
-    target.write_text(svg)
+    legend_x = plot_right + 36
+    legend_y = plot_top + 24
+    svg.append(f'<text x="{legend_x}" y="{legend_y}" font-size="12" font-weight="600" fill="#374151">Reference clades</text>')
+    current_y = legend_y + 22
+    for source in ref_sources:
+        svg.append(f'<circle cx="{legend_x + 6}" cy="{current_y - 4}" r="5.5" fill="{ref_colour[source]}" fill-opacity="0.7" stroke="none"/>')
+        svg.append(f'<text x="{legend_x + 18}" y="{current_y}" font-size="12" fill="#374151">{source}</text>')
+        current_y += 24
+    current_y += 10
+    svg.append(f'<text x="{legend_x}" y="{current_y}" font-size="12" font-weight="600" fill="#374151">Candidate groups</text>')
+    current_y += 22
+    for group in candidate_groups:
+        cfg = _CANDIDATE_CFG[group]
+        svg.append(_marker_svg(legend_x + 7, current_y - 5, shape=cfg["shape"], radius=7, fill=cfg["fill"], stroke=cfg["stroke"], opacity=cfg["op"], stroke_width=1.0))
+        svg.append(f'<text x="{legend_x + 20}" y="{current_y}" font-size="12" fill="#374151">{cfg["label"]}</text>')
+        current_y += 24
+    svg.append(f'<text x="{outer_left}" y="{height - 24}" font-size="10" fill="#9CA3AF" font-style="italic">Candidate IDs are omitted from embedding.svg on purpose so the SVG stays readable. Use classification.tsv and embedding.tsv for per-sequence details.</text>')
+    svg.append("</svg>")
+    target.write_text("".join(svg))
     return target
 
 
-def _render_3d_sections(records: list[FastaRecord], coords: np.ndarray, output_path: PathLike) -> Path:
+# ---------------------------------------------------------------------------
+# Publication-quality palette — AFPK_finder colour scheme
+# (script.r: scale_color_manual + theme_bw + no grid lines)
+# ---------------------------------------------------------------------------
+
+# Named source → fill colour (mirrors AFPK_finder 12-colour palette)
+_SOURCE_FILL: dict[str, str] = {
+    "coral":    "#EE6A50",   # coral-red
+    "insect":   "#7B68EE",   # medium-slate-blue
+    "bacteria": "#9ACD32",   # yellow-green
+    "fungal":   "#49C3C3",   # teal
+    "plant":    "#3A7D44",   # dark-green
+}
+# Fallback colours for unlisted sources (remaining AFPK palette entries)
+_FILL_EXTRA = ["#87CEFA", "#FFC0CB", "#800080", "#191970", "#FF7F50", "#808080", "#FFD700"]
+
+# Candidate-group display configuration (shape + colour, NO text labels)
+_CANDIDATE_CFG: dict[str, dict] = {
+    "candidate:cembrene_like": {
+        "label": "CeSS-like",
+        "fill": "#F59E0B", "stroke": "#78350F", "shape": "triangle", "r": 9.5, "op": 0.96,
+    },
+    "candidate:tps_positive": {
+        "label": "TPS\u207a",
+        "fill": "#0F766E", "stroke": "#134E4A", "shape": "diamond",  "r": 8.5, "op": 0.93,
+    },
+    "candidate:tps_negative": {
+        "label": "TPS\u207b",
+        "fill": "#DC2626", "stroke": "#7F1D1D", "shape": "square",   "r": 8.0, "op": 0.93,
+    },
+    "candidate:unlabeled": {
+        "label": "Candidate",
+        "fill": "#374151", "stroke": "#111827", "shape": "circle",   "r": 7.5, "op": 0.88,
+    },
+}
+
+
+def _ref_source_fill(source: str, index: int) -> str:
+    """Return a fallback fill colour for one reference source."""
+    return _SOURCE_FILL.get(source, _FILL_EXTRA[index % len(_FILL_EXTRA)])
+
+
+def _nice_ticks(lo: float, hi: float, target_n: int = 5) -> list[float]:
+    """Return ≈ *target_n* human-readable tick values spanning [lo, hi]."""
+    span = hi - lo
+    if span < 1e-12:
+        return [round(lo, 4)]
+    raw = span / target_n
+    mag = 10 ** math.floor(math.log10(abs(raw)))
+    step = mag
+    for c in (1, 2, 2.5, 5, 10):
+        if c * mag >= raw:
+            step = c * mag
+            break
+    start = math.ceil(lo / step - 1e-9) * step
+    ticks: list[float] = []
+    v = start
+    while v <= hi + step * 1e-6:
+        ticks.append(round(v, 10))
+        v += step
+    return ticks
+
+
+def _fmt_tick(v: float) -> str:
+    """Format an axis tick label with compact precision."""
+    if abs(v) < 1e-12:
+        return "0"
+    if v == int(v):
+        return str(int(v))
+    return f"{v:.2g}"
+
+
+def _make_scalers(
+    dxlo: float, dxhi: float,
+    dylo: float, dyhi: float,
+    plot_x0: float, plot_y0: float, plot_y1: float,
+    plot_w: float, plot_h: float,
+):
+    """Return (svgx, svgy) callables that map data coordinates to SVG pixels."""
+    span_x = max(dxhi - dxlo, 1e-9)
+    span_y = max(dyhi - dylo, 1e-9)
+
+    def svgx(v: float) -> float:
+        return plot_x0 + (v - dxlo) / span_x * plot_w
+
+    def svgy(v: float) -> float:
+        return plot_y1 - (v - dylo) / span_y * plot_h
+
+    return svgx, svgy
+
+
+def _render_3d_sections(
+    records: list[FastaRecord],
+    coords: np.ndarray,
+    output_path: PathLike,
+    *,
+    explained: Optional[np.ndarray] = None,
+    component_labels: Optional[list[str]] = None,
+    method: str = "embedding",
+) -> Path:
+    """Render a publication-quality embedding-section figure (3 orthogonal projections).
+
+    Visual style mirrors AFPK_finder (Lin *et al.*, Nat. Commun. 2024):
+
+    * Reference sequences coloured by clade (``theme_bw`` analogue — white
+      background, no grid, light axis lines).
+    * Candidate markers rendered as distinct shapes **without text labels**,
+      eliminating the visual clutter reported when sequence IDs overlap.
+    * Axis labels include the fraction of separation/variance explained by each axis.
+    * A two-row legend (reference clades / candidate groups) is placed below
+      the panels.
+    """
     target = Path(output_path)
     if len(records) == 0:
-        target.write_text("<svg xmlns='http://www.w3.org/2000/svg' width='1200' height='500'></svg>")
+        target.write_text(
+            "<svg xmlns='http://www.w3.org/2000/svg' width='1580' height='680'></svg>"
+        )
         return target
     if coords.shape[1] < 3:
         coords = np.pad(coords, ((0, 0), (0, 3 - coords.shape[1])))
 
-    styles = _display_styles(records)
-    ordered_groups = [group for group in styles if group in {_candidate_group(record) for record in records}]
+    # ── reference sources in appearance order ─────────────────────────────
+    ref_sources: list[str] = []
+    for rec in records:
+        if rec.metadata.get("source") != "candidate":
+            src = rec.metadata.get("source", "unknown")
+            if src not in ref_sources:
+                ref_sources.append(src)
+    ref_colour = {src: _ref_source_fill(src, i) for i, src in enumerate(ref_sources)}
+
+    # candidate groups actually present in this dataset
+    cand_groups_present = [
+        g for g in _CANDIDATE_CFG
+        if any(
+            _candidate_group(r) == g
+            for r in records
+            if r.metadata.get("source") == "candidate"
+        )
+    ]
+
+    # ── layout constants ──────────────────────────────────────────────────
+    PW, PH   = 460, 420          # panel width, height
+    PGAP     = 50                # gap between panels
+    OL, OT   = 45, 40            # outer left / top margin
+    OB       = 130               # outer bottom margin (legend area)
+    PAD_L    = 64                # within-panel left  (Y-axis labels)
+    PAD_R    = 18                # within-panel right (breathing room)
+    PAD_T    = 36                # within-panel top   (sub-label)
+    PAD_B    = 54                # within-panel bottom (X-axis label)
+    PLOT_W   = PW - PAD_L - PAD_R
+    PLOT_H   = PH - PAD_T - PAD_B
+    TICK_LEN = 5
+    FONT     = "Arial, Helvetica, sans-serif"
+    AX_COL   = "#374151"
+    GRID_COL = "#E5E7EB"
+
+    TOTAL_W  = OL + 3 * PW + 2 * PGAP + OL
+    TOTAL_H  = OT + 58 + PH + OB      # 58 = title block height
+    PANELS_Y = OT + 58                 # top edge of the panel row
+
+    axis_names = component_labels or [f"Axis{i + 1}" for i in range(max(3, coords.shape[1]))]
     projections = [
-        (0, 1, "PC1", "PC2"),
-        (0, 2, "PC1", "PC3"),
-        (1, 2, "PC2", "PC3"),
-    ]
-    panel_width = 500
-    panel_height = 400
-    panel_gap = 24
-    margin = 56
-    legend_height = 90
-    width = (panel_width * 3) + (panel_gap * 2) + (margin * 2)
-    height = panel_height + legend_height + (margin * 2)
-
-    def panel_scale(values_x: np.ndarray, values_y: np.ndarray):
-        min_x, max_x = float(values_x.min()), float(values_x.max())
-        min_y, max_y = float(values_y.min()), float(values_y.max())
-        span_x = max(max_x - min_x, 1e-9)
-        span_y = max(max_y - min_y, 1e-9)
-
-        def sx(value: float, x0: float) -> float:
-            return x0 + ((value - min_x) / span_x) * (panel_width - (2 * margin))
-
-        def sy(value: float, y0: float) -> float:
-            return y0 + panel_height - margin - ((value - min_y) / span_y) * (panel_height - (2 * margin))
-
-        return sx, sy
-
-    svg_lines = [
-        f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">',
-        f'<rect width="{width}" height="{height}" fill="white" />',
-        f'<text x="{margin}" y="34" font-size="24" font-weight="bold">Ariadne 3D cluster context (PCA sections)</text>',
-        f'<text x="{margin}" y="58" font-size="14" fill="#475569">Reference clades are shown as faint background points; motif-aware candidate states are highlighted as foreground markers.</text>',
+        (0, 1),
+        (0, 2),
+        (1, 2),
     ]
 
-    for panel_index, (dim_x, dim_y, label_x, label_y) in enumerate(projections):
-        panel_x = margin + (panel_index * (panel_width + panel_gap))
-        panel_y = margin
-        xs = coords[:, dim_x]
-        ys = coords[:, dim_y]
-        scale_x, scale_y = panel_scale(xs, ys)
-        svg_lines.append(
-            f'<rect x="{panel_x}" y="{panel_y}" width="{panel_width}" height="{panel_height}" fill="#fbfdff" stroke="#dbe3ee" />'
+    def axis_label(dim: int) -> str:
+        name = axis_names[dim] if dim < len(axis_names) else f"Axis{dim + 1}"
+        if explained is not None and len(explained) > dim:
+            return f"{name} ({100.0 * float(explained[dim]):.1f}%)"
+        return name
+
+    svg: list[str] = [
+        f'<svg xmlns="http://www.w3.org/2000/svg"'
+        f' width="{TOTAL_W}" height="{TOTAL_H}"'
+        f' viewBox="0 0 {TOTAL_W} {TOTAL_H}"'
+        f' font-family="{FONT}">',
+        f'<rect width="{TOTAL_W}" height="{TOTAL_H}" fill="white"/>',
+        # figure title
+        f'<text x="{OL}" y="{OT + 26}"'
+        f' font-size="19" font-weight="700" fill="#111827">'
+        f'Ariadne TPS Feature Space — {method.upper()} Embedding</text>',
+        f'<text x="{OL}" y="{OT + 48}"'
+        f' font-size="11" fill="#6B7280" font-style="italic">'
+        f'Background: reference clades.  Foreground: candidate motif states. '
+        f'Sequence labels omitted for visual clarity — see classification.tsv.</text>',
+    ]
+
+    for pi, (dx, dy) in enumerate(projections):
+        px0 = OL + pi * (PW + PGAP)     # panel left edge (SVG x)
+        py0 = PANELS_Y                   # panel top  edge (SVG y)
+
+        # plot-area corners
+        plot_x0 = px0 + PAD_L
+        plot_y0  = py0 + PAD_T
+        plot_x1  = plot_x0 + PLOT_W
+        plot_y1  = plot_y0 + PLOT_H
+        mid_x    = (plot_x0 + plot_x1) / 2
+        mid_y    = (plot_y0 + plot_y1) / 2
+
+        xs = coords[:, dx]
+        ys = coords[:, dy]
+        dxlo, dxhi = float(xs.min()), float(xs.max())
+        dylo, dyhi = float(ys.min()), float(ys.max())
+
+        # 5 % padding around data extent
+        xpad = (dxhi - dxlo) * 0.05 or 0.5
+        ypad = (dyhi - dylo) * 0.05 or 0.5
+        dxlo -= xpad;  dxhi += xpad
+        dylo -= ypad;  dyhi += ypad
+
+        svgx, svgy = _make_scalers(dxlo, dxhi, dylo, dyhi,
+                                   plot_x0, plot_y0, plot_y1, PLOT_W, PLOT_H)
+
+        # panel background (very light grey — theme_bw analogue)
+        svg.append(
+            f'<rect x="{px0}" y="{py0}" width="{PW}" height="{PH}"'
+            f' fill="#F9FAFB" rx="4"/>',
         )
-        svg_lines.append(
-            f'<line x1="{panel_x + margin}" y1="{panel_y + panel_height - margin}" x2="{panel_x + panel_width - margin}" y2="{panel_y + panel_height - margin}" stroke="#94a3b8" />'
+        # inner plot area (white, thin border)
+        svg.append(
+            f'<rect x="{plot_x0}" y="{plot_y0}" width="{PLOT_W}" height="{PLOT_H}"'
+            f' fill="white" stroke="{GRID_COL}" stroke-width="1"/>',
         )
-        svg_lines.append(
-            f'<line x1="{panel_x + margin}" y1="{panel_y + margin}" x2="{panel_x + margin}" y2="{panel_y + panel_height - margin}" stroke="#94a3b8" />'
-        )
-        svg_lines.append(
-            f'<text x="{panel_x + margin}" y="{panel_y + 24}" font-size="16" font-weight="600">{label_x} vs {label_y}</text>'
-        )
-        for record, x_val, y_val in zip(records, xs, ys):
-            group = _candidate_group(record)
-            style = styles[group]
-            is_candidate = record.metadata.get("source") == "candidate"
-            cx = scale_x(float(x_val), panel_x)
-            cy = scale_y(float(y_val), panel_y)
-            svg_lines.append(
-                _marker_svg(
-                    cx,
-                    cy,
-                    shape=style["shape"],
-                    radius=float(style["radius"]) if is_candidate else 3.6,
-                    fill=style["fill"],
-                    stroke=style["stroke"],
-                    opacity=float(style["opacity"]) if is_candidate else 0.38,
-                    stroke_width=1.0 if is_candidate else 0.6,
+
+        # faint dashed grid lines (panel.grid analogue — very subtle)
+        for tv in _nice_ticks(dxlo, dxhi):
+            if dxlo <= tv <= dxhi:
+                tx = svgx(tv)
+                svg.append(
+                    f'<line x1="{tx:.2f}" y1="{plot_y0}" x2="{tx:.2f}" y2="{plot_y1}"'
+                    f' stroke="{GRID_COL}" stroke-width="0.7" stroke-dasharray="3,3"/>',
                 )
-            )
-            if is_candidate:
-                svg_lines.append(
-                    f'<text x="{cx + 8:.2f}" y="{cy - 8:.2f}" font-size="9.5" font-family="monospace" fill="#111827">{record.id}</text>'
+        for tv in _nice_ticks(dylo, dyhi):
+            if dylo <= tv <= dyhi:
+                ty = svgy(tv)
+                svg.append(
+                    f'<line x1="{plot_x0}" y1="{ty:.2f}" x2="{plot_x1}" y2="{ty:.2f}"'
+                    f' stroke="{GRID_COL}" stroke-width="0.7" stroke-dasharray="3,3"/>',
                 )
 
-    legend_y = margin + panel_height + 30
-    legend_x = margin
-    for index, group in enumerate(ordered_groups):
-        x = legend_x + (index * 180)
-        style = styles[group]
-        svg_lines.append(
-            _marker_svg(
-                x,
-                legend_y,
-                shape=style["shape"],
-                radius=7,
-                fill=style["fill"],
-                stroke=style["stroke"],
-                opacity=float(style["opacity"]),
-                stroke_width=1.0,
-            )
+        # X-axis ticks + numeric labels
+        for tv in _nice_ticks(dxlo, dxhi):
+            if dxlo <= tv <= dxhi:
+                tx = svgx(tv)
+                svg.append(
+                    f'<line x1="{tx:.2f}" y1="{plot_y1}"'
+                    f' x2="{tx:.2f}" y2="{plot_y1 + TICK_LEN}"'
+                    f' stroke="{AX_COL}" stroke-width="1.2"/>',
+                )
+                svg.append(
+                    f'<text x="{tx:.2f}" y="{plot_y1 + TICK_LEN + 13}"'
+                    f' text-anchor="middle" font-size="10" fill="#6B7280">'
+                    f'{_fmt_tick(tv)}</text>',
+                )
+
+        # Y-axis ticks + numeric labels
+        for tv in _nice_ticks(dylo, dyhi):
+            if dylo <= tv <= dyhi:
+                ty = svgy(tv)
+                svg.append(
+                    f'<line x1="{plot_x0 - TICK_LEN}" y1="{ty:.2f}"'
+                    f' x2="{plot_x0}" y2="{ty:.2f}"'
+                    f' stroke="{AX_COL}" stroke-width="1.2"/>',
+                )
+                svg.append(
+                    f'<text x="{plot_x0 - TICK_LEN - 4}" y="{ty + 4:.2f}"'
+                    f' text-anchor="end" font-size="10" fill="#6B7280">'
+                    f'{_fmt_tick(tv)}</text>',
+                )
+
+        # solid axis lines (X bottom, Y left)
+        svg.append(
+            f'<line x1="{plot_x0}" y1="{plot_y1}" x2="{plot_x1}" y2="{plot_y1}"'
+            f' stroke="{AX_COL}" stroke-width="1.5"/>',
         )
-        svg_lines.append(f'<text x="{x + 12}" y="{legend_y + 5}" font-size="14">{style["label"]}</text>')
-    svg_lines.append("</svg>")
-    target.write_text("".join(svg_lines))
+        svg.append(
+            f'<line x1="{plot_x0}" y1="{plot_y0}" x2="{plot_x0}" y2="{plot_y1}"'
+            f' stroke="{AX_COL}" stroke-width="1.5"/>',
+        )
+
+        # axis labels with variance explained
+        svg.append(
+            f'<text x="{mid_x:.2f}" y="{plot_y1 + TICK_LEN + 30}"'
+            f' text-anchor="middle" font-size="13" font-weight="600" fill="{AX_COL}">'
+            f'{axis_label(dx)}</text>',
+        )
+        yl_x = px0 + 13
+        svg.append(
+            f'<text transform="rotate(-90,{yl_x:.2f},{mid_y:.2f})"'
+            f' x="{yl_x:.2f}" y="{mid_y:.2f}"'
+            f' text-anchor="middle" font-size="13" font-weight="600" fill="{AX_COL}">'
+            f'{axis_label(dy)}</text>',
+        )
+
+        # panel sub-label: a / b / c  (top-left, publication convention)
+        svg.append(
+            f'<text x="{px0 + 8}" y="{py0 + 24}"'
+            f' font-size="16" font-weight="700" fill="#111827">'
+            f'{chr(ord("a") + pi)}</text>',
+        )
+
+        # ── data points ─────────────────────────────────────────────────────
+        # paint references (background) before candidates (foreground)
+        ref_pts: list[str] = []
+        cand_pts: list[str] = []
+
+        for rec, xv, yv in zip(records, xs, ys):
+            cx = max(plot_x0, min(plot_x1, svgx(float(xv))))
+            cy = max(plot_y0, min(plot_y1, svgy(float(yv))))
+            src = rec.metadata.get("source", "unknown")
+
+            if src != "candidate":
+                # reference point: small filled circle, coloured by clade
+                col = ref_colour.get(src, "#9CA3AF")
+                ref_pts.append(
+                    f'<circle cx="{cx:.2f}" cy="{cy:.2f}" r="3.5"'
+                    f' fill="{col}" fill-opacity="0.55" stroke="none"/>',
+                )
+            else:
+                # candidate: larger shape marker, NO text label
+                grp = _candidate_group(rec)
+                cfg = _CANDIDATE_CFG.get(grp, _CANDIDATE_CFG["candidate:unlabeled"])
+                cand_pts.append(
+                    _marker_svg(
+                        cx, cy,
+                        shape=cfg["shape"],
+                        radius=cfg["r"],
+                        fill=cfg["fill"],
+                        stroke=cfg["stroke"],
+                        opacity=cfg["op"],
+                        stroke_width=1.3,
+                    )
+                )
+
+        svg.extend(ref_pts)
+        svg.extend(cand_pts)
+
+    # ── two-row legend ────────────────────────────────────────────────────
+    leg_y = PANELS_Y + PH + 24
+
+    # row 1 — reference clades
+    svg.append(
+        f'<text x="{OL}" y="{leg_y}"'
+        f' font-size="12" font-weight="600" fill="#374151">'
+        f'Reference clades:</text>',
+    )
+    ix = OL + 128
+    for src in ref_sources:
+        col = ref_colour[src]
+        svg.append(
+            f'<circle cx="{ix + 6}" cy="{leg_y - 5}" r="5.5"'
+            f' fill="{col}" fill-opacity="0.7" stroke="none"/>',
+        )
+        svg.append(
+            f'<text x="{ix + 16}" y="{leg_y}"'
+            f' font-size="12" fill="#374151">{src}</text>',
+        )
+        ix += max(66, 9 * len(src) + 28)
+
+    # row 2 — candidate groups
+    leg_y2 = leg_y + 30
+    svg.append(
+        f'<text x="{OL}" y="{leg_y2}"'
+        f' font-size="12" font-weight="600" fill="#374151">'
+        f'Candidate groups:</text>',
+    )
+    ix2 = OL + 128
+    for grp in ["candidate:cembrene_like", "candidate:tps_positive",
+                "candidate:tps_negative", "candidate:unlabeled"]:
+        if grp not in cand_groups_present:
+            continue
+        cfg = _CANDIDATE_CFG[grp]
+        svg.append(
+            _marker_svg(ix2 + 7, leg_y2 - 5,
+                        shape=cfg["shape"], radius=7,
+                        fill=cfg["fill"], stroke=cfg["stroke"],
+                        opacity=cfg["op"], stroke_width=1.0)
+        )
+        svg.append(
+            f'<text x="{ix2 + 19}" y="{leg_y2}"'
+            f' font-size="12" fill="#374151">{cfg["label"]}</text>',
+        )
+        ix2 += max(82, 9 * len(cfg["label"]) + 32)
+
+    # footnote
+    fn_y = leg_y2 + 30
+    svg.append(
+        f'<text x="{OL}" y="{fn_y}"'
+        f' font-size="10" fill="#9CA3AF" font-style="italic">'
+        f'{method.upper()} embedding computed from HMM-score feature matrix (column-mean normalised, z-scored for display). '
+        f'Candidate IDs omitted from plot; see classification.tsv for per-sequence assignments.</text>',
+    )
+
+    svg.append("</svg>")
+    target.write_text("".join(svg))
     return target
 
 
@@ -474,6 +1051,7 @@ def classify_candidates(
     top_k: int = 5,
     tree_neighbors: int = 12,
 ) -> dict[str, Path]:
+    """Assign each candidate to the dominant source of its nearest references."""
     references = load_reference_records(reference_dir)
     if not references:
         raise ValueError(f"No reference sequences were found in {reference_dir}.")
@@ -488,7 +1066,12 @@ def classify_candidates(
     hmm_paths = sorted_hmm_paths(hmm_dir)
     raw_matrix, column_names = _score_records_against_hmms(all_records, hmm_paths)
     normalized_matrix = _normalize_matrix(raw_matrix)
-    coords, explained = _pca_coordinates(normalized_matrix, n_components=3)
+    coords, explained, component_labels, embedding_method = _embedding_coordinates(
+        normalized_matrix,
+        all_records,
+        n_components=3,
+    )
+    embedding_groups = _embedding_group_labels(_zscore_matrix(normalized_matrix), all_records)
     distances = _distance_matrix(normalized_matrix)
 
     output_root = ensure_directory(output_dir)
@@ -514,6 +1097,14 @@ def classify_candidates(
                 "sequence_id": record.id,
                 "source": record.metadata.get("source", "unknown"),
                 "candidate_group": record.metadata.get("candidate_group", ""),
+                "embedding_group": embedding_groups[index],
+                "embedding_method": embedding_method,
+                "axis1_label": component_labels[0] if len(component_labels) > 0 else "Axis1",
+                "axis2_label": component_labels[1] if len(component_labels) > 1 else "Axis2",
+                "axis3_label": component_labels[2] if len(component_labels) > 2 else "Axis3",
+                "axis1": round(float(coords[index, 0]), 6),
+                "axis2": round(float(coords[index, 1]), 6),
+                "axis3": round(float(coords[index, 2]), 6),
                 "pc1": round(float(coords[index, 0]), 6),
                 "pc2": round(float(coords[index, 1]), 6),
                 "pc3": round(float(coords[index, 2]), 6),
@@ -522,7 +1113,11 @@ def classify_candidates(
     embedding_path = write_tsv(embedding_rows, output_root / "embedding.tsv")
     variance_path = write_tsv(
         [
-            {"component": f"PC{component_index + 1}", "explained_variance": round(float(value), 6)}
+            {
+                "embedding_method": embedding_method,
+                "component": component_labels[component_index] if component_index < len(component_labels) else f"Axis{component_index + 1}",
+                "explained_variance": round(float(value), 6),
+            }
             for component_index, value in enumerate(explained, start=0)
         ],
         output_root / "embedding_variance.tsv",
@@ -552,8 +1147,14 @@ def classify_candidates(
             {
                 "sequence_id": candidate.id,
                 "candidate_group": candidate.metadata.get("candidate_group", "candidate:unlabeled"),
+                "candidate_state": candidate.metadata.get("candidate_state", ""),
                 "is_tps": candidate.metadata.get("is_tps", ""),
+                "predicted_cess_like": candidate.metadata.get("predicted_cess_like", ""),
                 "predicted_cembrene_like": candidate.metadata.get("predicted_cembrene_like", ""),
+                "best_validated_cess_match": candidate.metadata.get("best_validated_cess_match", ""),
+                "best_validated_cess_identity": candidate.metadata.get("best_validated_cess_identity", ""),
+                "cess_priority_tier": candidate.metadata.get("cess_priority_tier", ""),
+                "cess_priority_score": candidate.metadata.get("cess_priority_score", ""),
                 "predicted_source": predicted_source,
                 "confidence": round(confidence, 4),
                 "nearest_reference": nearest_reference.id,
@@ -580,6 +1181,11 @@ def classify_candidates(
                 "predicted_source": predicted_source,
                 "nearest_reference_source": nearest_reference.metadata.get("source", "unknown"),
                 "nearest_distance": round(nearest_distance, 6),
+                "embedding_group": embedding_groups[candidate_index],
+                "embedding_method": embedding_method,
+                "axis1": round(float(coords[candidate_index, 0]), 6),
+                "axis2": round(float(coords[candidate_index, 1]), 6),
+                "axis3": round(float(coords[candidate_index, 2]), 6),
                 "pc1": round(float(coords[candidate_index, 0]), 6),
                 "pc2": round(float(coords[candidate_index, 1]), 6),
                 "pc3": round(float(coords[candidate_index, 2]), 6),
@@ -594,10 +1200,36 @@ def classify_candidates(
         tree_path.write_text(_upgma_newick(subset_names, subset_distances) + "\n")
 
     classification_path = write_tsv(candidate_rows, output_root / "classification.tsv")
+    cess_ranking_path = write_tsv(
+        sorted(
+            candidate_rows,
+            key=lambda row: (
+                float(row.get("cess_priority_score") or 0.0),
+                float(row.get("best_validated_cess_identity") or 0.0),
+                float(row.get("confidence") or 0.0),
+            ),
+            reverse=True,
+        ),
+        output_root / "cess_priority_ranking.tsv",
+    )
     neighbors_path = write_tsv(neighbor_rows, output_root / "nearest_neighbors.tsv")
     cluster_context_path = write_tsv(cluster_context_rows, output_root / "candidate_cluster_context.tsv")
-    scatter_path = _render_scatter(all_records, coords, output_root / "embedding.svg")
-    sections_path = _render_3d_sections(all_records, coords, output_root / "embedding_3d_sections.svg")
+    scatter_path = _render_scatter(
+        all_records,
+        coords,
+        output_root / "embedding.svg",
+        explained=explained,
+        component_labels=component_labels,
+        method=embedding_method,
+    )
+    sections_path = _render_3d_sections(
+        all_records,
+        coords,
+        output_root / "embedding_3d_sections.svg",
+        explained=explained,
+        component_labels=component_labels,
+        method=embedding_method,
+    )
     global_tree_path = output_root / "global_context_tree.nwk"
     global_tree_path.write_text(_upgma_newick([record.id for record in all_records], distances) + "\n")
     assignment_summary_rows = []
@@ -620,6 +1252,7 @@ def classify_candidates(
         "embedding": embedding_path,
         "variance": variance_path,
         "classification": classification_path,
+        "cess_priority_ranking": cess_ranking_path,
         "neighbors": neighbors_path,
         "candidate_cluster_context": cluster_context_path,
         "embedding_svg": scatter_path,

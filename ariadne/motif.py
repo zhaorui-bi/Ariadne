@@ -1,3 +1,12 @@
+"""Stage 4: motif-centric TPS validation and CeSS-targeted assignment.
+
+The motif stage uses a two-step heuristic:
+1. verify that a candidate looks like a TPS by searching for a DDXXD/E motif
+   near the expected catalytic region;
+2. compare the local cembrene anchor window against curated cembrene and
+   non-cembrene reference windows to prioritize CeSS-like candidates.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -12,6 +21,15 @@ PathLike = Union[str, Path]
 logger = logging.getLogger(__name__)
 
 
+def _candidate_state(*, is_tps: str, predicted_cess_like: str) -> str:
+    """Collapse motif decisions into one human-readable candidate state."""
+    if predicted_cess_like == "yes":
+        return "CeSS-like"
+    if is_tps == "yes":
+        return "TPS-positive"
+    return "TPS-negative"
+
+
 def _match_pattern_near_position(
     sequence: str,
     pattern: str,
@@ -19,6 +37,7 @@ def _match_pattern_near_position(
     center_position: int,
     search_radius: int,
 ) -> Optional[Tuple[int, str]]:
+    """Find the pattern closest to the expected centre position."""
     if not sequence:
         return None
     search_start = max(0, center_position - search_radius)
@@ -44,6 +63,7 @@ def _anchor_window(
     fallback_span: int = 6,
     allow_center_fallback: bool = True,
 ) -> Optional[Tuple[str, int, str, str]]:
+    """Extract the motif comparison window around the anchor or fallback centre."""
     match = re.search(anchor_pattern, sequence)
     if match is not None:
         start = match.start()
@@ -65,6 +85,7 @@ def _anchor_window(
 
 
 def _aa_color(amino_acid: str) -> str:
+    """Assign simple residue-category colours for SVG rendering."""
     amino_acid = amino_acid.upper()
     if amino_acid in {"D", "E"}:
         return "#d62728"
@@ -84,6 +105,7 @@ def _aa_color(amino_acid: str) -> str:
 
 
 def _render_motif_svg(rows: list[tuple[str, str, str]], flank: int, output_path: PathLike) -> Path:
+    """Render a compact SVG view of candidate and reference motif windows."""
     cell_width = 16
     cell_height = 24
     label_width = 320
@@ -121,11 +143,37 @@ def _render_motif_svg(rows: list[tuple[str, str, str]], flank: int, output_path:
     return target
 
 
+def _best_window_match(
+    motif_window: str,
+    windows: list[tuple[FastaRecord, str, int, str]],
+) -> tuple[Optional[FastaRecord], float]:
+    """Return the best-matching reference window and its identity score."""
+    return max(
+        ((record, pairwise_identity(motif_window, window)) for record, window, _, _ in windows),
+        key=lambda item: item[1],
+        default=(None, 0.0),
+    )
+
+
+def _priority_score(
+    *,
+    best_validated_identity: float,
+    best_cembrene_identity: float,
+    best_non_cembrene_identity: float,
+    anchor_method: str,
+) -> float:
+    """Combine validated and family-level support into one ranking score."""
+    margin = max(best_cembrene_identity - best_non_cembrene_identity, 0.0)
+    anchor_bonus = 0.5 if anchor_method == "anchor_match" else 0.0
+    return round((best_validated_identity * 100.0) + (best_cembrene_identity * 10.0) + margin + anchor_bonus, 6)
+
+
 def analyze_motifs(
     candidate_fasta: PathLike,
     reference_alignment_fasta: PathLike,
     output_dir: PathLike,
     *,
+    validated_cess_fasta: Optional[PathLike] = None,
     tps_anchor_pattern: str = r"DD..[DE]",
     tps_center_position: int = 125,
     tps_search_radius: int = 40,
@@ -133,7 +181,11 @@ def analyze_motifs(
     flank: int = 10,
     center_position: int = 210,
     allow_center_fallback: bool = False,
+    validated_cess_identity_threshold: float = 0.95,
+    cembrene_identity_threshold: float = 0.75,
+    cembrene_margin_threshold: float = 0.1,
 ) -> dict[str, Path]:
+    """Run Ariadne's motif gate and export summary tables plus motif visualisations."""
     candidates = read_fasta(candidate_fasta)
     reference_records = read_fasta(reference_alignment_fasta)
     cembrene_refs = [
@@ -184,6 +236,19 @@ def analyze_motifs(
         if anchor is not None:
             non_cembrene_windows.append((record, anchor[0], anchor[1], anchor[2]))
 
+    validated_cess_windows: list[tuple[FastaRecord, str, int, str]] = []
+    if validated_cess_fasta is not None:
+        for record in read_fasta(validated_cess_fasta):
+            anchor = _anchor_window(
+                record.sequence,
+                anchor_pattern,
+                flank,
+                center_position=center_position,
+                allow_center_fallback=True,
+            )
+            if anchor is not None:
+                validated_cess_windows.append((record, anchor[0], anchor[1], anchor[2]))
+
     summary_rows = []
     motif_records: list[FastaRecord] = []
     cembrene_candidate_records: list[FastaRecord] = []
@@ -201,6 +266,7 @@ def analyze_motifs(
                 {
                     "sequence_id": candidate.id,
                     "is_tps": "no",
+                    "candidate_state": _candidate_state(is_tps="no", predicted_cess_like="no"),
                     "tps_motif_found": "no",
                     "tps_motif_position": "",
                     "tps_motif_variant": "",
@@ -216,6 +282,11 @@ def analyze_motifs(
                     "best_cembrene_identity": 0.0,
                     "best_non_cembrene_match": "",
                     "best_non_cembrene_identity": 0.0,
+                    "best_validated_cess_match": "",
+                    "best_validated_cess_identity": 0.0,
+                    "cess_priority_tier": "tps_negative",
+                    "cess_priority_score": 0.0,
+                    "predicted_cess_like": "no",
                     "predicted_cembrene_like": "no",
                 }
             )
@@ -234,6 +305,7 @@ def analyze_motifs(
                 {
                     "sequence_id": candidate.id,
                     "is_tps": "yes",
+                    "candidate_state": _candidate_state(is_tps="yes", predicted_cess_like="no"),
                     "tps_motif_found": "yes",
                     "tps_motif_position": tps_position,
                     "tps_motif_variant": tps_variant,
@@ -249,34 +321,58 @@ def analyze_motifs(
                     "best_cembrene_identity": 0.0,
                     "best_non_cembrene_match": "",
                     "best_non_cembrene_identity": 0.0,
+                    "best_validated_cess_match": "",
+                    "best_validated_cess_identity": 0.0,
+                    "cess_priority_tier": "tps_positive_no_cess_window",
+                    "cess_priority_score": 0.0,
+                    "predicted_cess_like": "no",
                     "predicted_cembrene_like": "no",
                 }
             )
             continue
 
         motif_window, motif_position, anchor_variant, anchor_method = anchor
-        best_cembrene = max(
-            ((record, pairwise_identity(motif_window, window)) for record, window, _, _ in cembrene_windows),
-            key=lambda item: item[1],
-            default=(None, 0.0),
+        best_cembrene = _best_window_match(motif_window, cembrene_windows)
+        best_non_cembrene = _best_window_match(motif_window, non_cembrene_windows)
+        best_validated_cess = _best_window_match(motif_window, validated_cess_windows)
+        best_cembrene_identity = float(best_cembrene[1])
+        best_non_cembrene_identity = float(best_non_cembrene[1])
+        best_validated_cess_identity = float(best_validated_cess[1])
+        cembrene_margin = best_cembrene_identity - best_non_cembrene_identity
+        validated_supported = best_validated_cess_identity >= validated_cess_identity_threshold
+        cembrene_supported = (
+            best_cembrene_identity >= cembrene_identity_threshold
+            and cembrene_margin >= cembrene_margin_threshold
         )
-        best_non_cembrene = max(
-            ((record, pairwise_identity(motif_window, window)) for record, window, _, _ in non_cembrene_windows),
-            key=lambda item: item[1],
-            default=(None, 0.0),
-        )
-        if best_cembrene[0] is None and best_non_cembrene[0] is None:
-            predicted = "undetermined"
-        elif best_cembrene[0] is None:
-            predicted = "no"
-        elif best_non_cembrene[0] is None:
+        if validated_supported:
             predicted = "yes"
+            tier = "validated_cess_supported"
+        elif anchor_method == "anchor_match" and cembrene_supported:
+            predicted = "yes"
+            tier = "anchor_supported_cembrene_family"
+        elif anchor_method == "center_fallback" and cembrene_supported:
+            predicted = "no"
+            tier = "fallback_family_supported_only"
+        elif best_cembrene[0] is None and best_non_cembrene[0] is None:
+            predicted = "undetermined"
+            tier = "unresolved"
+        elif anchor_method == "center_fallback":
+            predicted = "no"
+            tier = "fallback_no_validated_support"
         else:
-            predicted = "yes" if best_cembrene[1] >= best_non_cembrene[1] else "no"
+            predicted = "no"
+            tier = "non_cess"
+        priority_score = _priority_score(
+            best_validated_identity=best_validated_cess_identity,
+            best_cembrene_identity=best_cembrene_identity,
+            best_non_cembrene_identity=best_non_cembrene_identity,
+            anchor_method=anchor_method,
+        )
         summary_rows.append(
             {
                 "sequence_id": candidate.id,
                 "is_tps": "yes",
+                "candidate_state": _candidate_state(is_tps="yes", predicted_cess_like=predicted),
                 "tps_motif_found": "yes",
                 "tps_motif_position": tps_position,
                 "tps_motif_variant": tps_variant,
@@ -289,9 +385,14 @@ def analyze_motifs(
                 "cembrene_anchor_variant": anchor_variant,
                 "motif_window": motif_window,
                 "best_cembrene_match": best_cembrene[0].id if best_cembrene[0] else "",
-                "best_cembrene_identity": round(best_cembrene[1], 4),
+                "best_cembrene_identity": round(best_cembrene_identity, 4),
                 "best_non_cembrene_match": best_non_cembrene[0].id if best_non_cembrene[0] else "",
-                "best_non_cembrene_identity": round(best_non_cembrene[1], 4),
+                "best_non_cembrene_identity": round(best_non_cembrene_identity, 4),
+                "best_validated_cess_match": best_validated_cess[0].id if best_validated_cess[0] else "",
+                "best_validated_cess_identity": round(best_validated_cess_identity, 4),
+                "cess_priority_tier": tier,
+                "cess_priority_score": priority_score,
+                "predicted_cess_like": predicted,
                 "predicted_cembrene_like": predicted,
             }
         )
@@ -311,8 +412,32 @@ def analyze_motifs(
     summary_path = write_tsv(summary_rows, output_root / "motif_summary.tsv")
     motif_fasta_path = write_fasta(motif_records, output_root / "motif_windows.fasta")
     motif_svg_path = _render_motif_svg(display_rows, flank, output_root / "motif_windows.svg")
+    cess_candidate_rows = [row for row in summary_rows if row.get("predicted_cess_like") == "yes"]
+    cess_priority_rows = sorted(
+        summary_rows,
+        key=lambda row: (
+            float(row.get("cess_priority_score", 0.0)),
+            float(row.get("best_validated_cess_identity", 0.0)),
+            float(row.get("best_cembrene_identity", 0.0)),
+        ),
+        reverse=True,
+    )
+    targeted_summary_path = write_tsv(
+        [
+            {"metric": "input_candidates", "value": len(candidates)},
+            {"metric": "tps_positive_candidates", "value": sum(1 for row in summary_rows if row.get("is_tps") == "yes")},
+            {"metric": "tps_negative_candidates", "value": sum(1 for row in summary_rows if row.get("is_tps") == "no")},
+            {"metric": "anchor_matched_candidates", "value": sum(1 for row in summary_rows if row.get("cembrene_anchor_found") == "yes")},
+            {"metric": "validated_cess_reference_count", "value": len(validated_cess_windows)},
+            {"metric": "cess_like_candidates", "value": len(cess_candidate_rows)},
+        ],
+        output_root / "targeted_mining_summary.tsv",
+    )
+    cess_candidates_path = write_tsv(cess_candidate_rows, output_root / "cess_candidates.tsv")
+    cess_fasta_path = write_fasta(cembrene_candidate_records, output_root / "cess_candidates.fasta")
+    cess_priority_path = write_tsv(cess_priority_rows, output_root / "cess_priority_ranking.tsv")
     cembrene_candidates_path = write_tsv(
-        [row for row in summary_rows if row.get("predicted_cembrene_like") == "yes"],
+        cess_candidate_rows,
         output_root / "cembrene_candidates.tsv",
     )
     cembrene_fasta_path = write_fasta(cembrene_candidate_records, output_root / "cembrene_candidates.fasta")
@@ -320,6 +445,10 @@ def analyze_motifs(
         "motif_summary": summary_path,
         "motif_windows": motif_fasta_path,
         "motif_svg": motif_svg_path,
+        "targeted_mining_summary": targeted_summary_path,
+        "cess_candidates": cess_candidates_path,
+        "cess_fasta": cess_fasta_path,
+        "cess_priority_ranking": cess_priority_path,
         "cembrene_candidates": cembrene_candidates_path,
         "cembrene_fasta": cembrene_fasta_path,
     }

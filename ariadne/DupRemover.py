@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+"""Legacy exact-duplicate FASTA remover maintained for compatibility."""
+
 from __future__ import annotations
 
 import argparse
@@ -13,6 +15,7 @@ from ariadne.filtering import deduplicate_exact
 
 
 def main() -> int:
+    """Remove exact duplicate sequences from a FASTA file."""
     parser = argparse.ArgumentParser(description="Exact duplicate remover for Ariadne FASTA files.")
     parser.add_argument("-i", "--input", required=True, type=Path, dest="input_fasta")
     parser.add_argument("-o", "--output", type=Path, default=None)

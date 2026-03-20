@@ -1,6 +1,17 @@
+"""Stage 1: build query HMMs and discover candidate TPS proteins.
+
+This module supports two discovery modes:
+1. start from transcript FASTA files, predict ORFs with ``pyrodigal``, then
+   search translated proteins with a profile HMM;
+2. start from precomputed protein FASTA files and search them directly.
+"""
+
 from __future__ import annotations
 
 import logging
+import shutil
+import subprocess
+import tempfile
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Tuple, Union
 
@@ -13,14 +24,54 @@ logger = logging.getLogger(__name__)
 
 PathLike = Union[str, Path]
 
+
+def _resolve_mafft_binary(preferred: Optional[str] = None) -> str:
+    """Locate a MAFFT executable for temporary alignment generation."""
+    for candidate in [preferred, "mafft"]:
+        if not candidate:
+            continue
+        resolved = shutil.which(candidate)
+        if resolved:
+            return resolved
+    raise FileNotFoundError("Could not find MAFFT executable. Please install `mafft` or pass a prebuilt HMM.")
+
+
+def _run_mafft_alignment(input_fasta: PathLike, output_fasta: PathLike, *, mafft_bin: Optional[str] = None) -> Path:
+    """Align an unaligned protein FASTA with MAFFT."""
+    mafft = _resolve_mafft_binary(mafft_bin)
+    output_path = Path(output_fasta)
+    command = [mafft, "--auto", str(input_fasta)]
+    logger.info("Input FASTA is not aligned; running MAFFT before hmmbuild: %s", " ".join(command))
+    with output_path.open("w") as handle:
+        subprocess.run(command, check=True, stdout=handle, stderr=subprocess.PIPE, text=True)
+    return output_path
+
+
 def build_hmm(alignment_fasta: PathLike, output_hmm: PathLike, *, name: Optional[str] = None) -> Path:
+    """Build a profile HMM from an aligned FASTA/MSA file.
+
+    If the input FASTA is not a valid multiple sequence alignment, Ariadne
+    temporarily aligns it with MAFFT before running ``hmmbuild``.
+    """
     alignment_path = Path(alignment_fasta)
     alphabet = pyhmmer.easel.Alphabet.amino()
     format_name = None
     if alignment_path.suffix.lower() in {".fa", ".faa", ".fasta", ".afa"}:
         format_name = "afa"
-    with pyhmmer.easel.MSAFile(str(alignment_path), digital=True, alphabet=alphabet, format=format_name) as msa_file:
-        msa = msa_file.read()
+    temp_alignment_path: Optional[Path] = None
+    try:
+        try:
+            with pyhmmer.easel.MSAFile(str(alignment_path), digital=True, alphabet=alphabet, format=format_name) as msa_file:
+                msa = msa_file.read()
+        except ValueError:
+            with tempfile.NamedTemporaryFile("w", suffix=".afa", delete=False) as handle:
+                temp_alignment_path = Path(handle.name)
+            _run_mafft_alignment(alignment_path, temp_alignment_path)
+            with pyhmmer.easel.MSAFile(str(temp_alignment_path), digital=True, alphabet=alphabet, format="afa") as msa_file:
+                msa = msa_file.read()
+    finally:
+        if temp_alignment_path is not None and temp_alignment_path.exists():
+            temp_alignment_path.unlink(missing_ok=True)
     if not msa.name:
         msa.name = name or Path(output_hmm).stem
     builder = pyhmmer.plan7.Builder(alphabet)
@@ -36,6 +87,7 @@ def _protein_and_nt_records(
     transcriptome_path: PathLike,
     sample_name: Optional[str] = None,
 ) -> Tuple[List[FastaRecord], Dict[str, FastaRecord]]:
+    """Predict ORFs from one transcriptome and return protein/ORF records."""
     transcript_records = read_fasta(transcriptome_path)
     sample = sample_name or Path(transcriptome_path).stem
     finder = pyrodigal.GeneFinder(meta=True)
@@ -70,6 +122,7 @@ def search_proteins_with_hmm(
     min_score: Optional[float] = None,
     max_evalue: Optional[float] = None,
 ) -> list[dict[str, object]]:
+    """Search proteins against one or more HMMs and keep the best hit per ID."""
     alphabet = pyhmmer.easel.Alphabet.amino()
     background = pyhmmer.plan7.Background(alphabet)
     pipeline = pyhmmer.plan7.Pipeline(alphabet, background=background)
@@ -112,6 +165,7 @@ def discover_candidates(
     min_score: Optional[float] = None,
     max_evalue: Optional[float] = None,
 ) -> dict[str, Path]:
+    """Run discovery from transcript FASTA files all the way to candidate hits."""
     root = ensure_directory(output_dir)
     combined_proteins: list[FastaRecord] = []
     combined_hits_proteins: list[FastaRecord] = []
@@ -159,6 +213,7 @@ def collect_protein_files(
     *,
     protein_glob: Sequence[str] = ("*.faa", "*.fa", "*.fasta", "*.pep", "*.prot"),
 ) -> list[Path]:
+    """Recursively collect protein FASTA files from a directory."""
     root = Path(protein_dir)
     if not root.exists():
         raise FileNotFoundError(f"Protein directory does not exist: {root}")
@@ -171,6 +226,7 @@ def collect_protein_files(
 
 
 def _protein_records_with_sample_prefix(records: Sequence[FastaRecord], sample_name: str) -> list[FastaRecord]:
+    """Prefix record IDs with the sample name to avoid cross-file collisions."""
     normalized: list[FastaRecord] = []
     seen_ids: set[str] = set()
     for index, record in enumerate(records, start=1):
@@ -195,6 +251,7 @@ def discover_candidates_from_proteins(
     min_score: Optional[float] = None,
     max_evalue: Optional[float] = None,
 ) -> dict[str, Path]:
+    """Run discovery directly from protein FASTA files."""
     root = ensure_directory(output_dir)
     combined_proteins: list[FastaRecord] = []
     combined_hits_proteins: list[FastaRecord] = []

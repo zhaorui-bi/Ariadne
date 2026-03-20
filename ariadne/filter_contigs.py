@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+"""Legacy command-line wrapper for minimum-length FASTA filtering."""
+
 from __future__ import annotations
 
 import argparse
@@ -13,6 +15,7 @@ from ariadne.filtering import filter_by_length
 
 
 def main() -> int:
+    """Filter a FASTA file by minimum amino-acid length."""
     parser = argparse.ArgumentParser(description="Legacy minimum-length filter wrapper for Ariadne.")
     parser.add_argument("min_length", type=int)
     parser.add_argument("input_fasta", type=Path)
