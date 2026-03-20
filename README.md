@@ -1,15 +1,14 @@
 # Ariadne
 
-<p align="right">
-  <a href="./README_EN.md">English</a>
-</p>
-
 <p align="center">
   <img src="fig/ariadne_cvpr_logo.svg" alt="Ariadne CVPR-style logo" width="980">
 </p>
 
-<p align="center">
+<!-- <p align="center">
   <img src="fig/ariadne_icon_minimal.svg" alt="Ariadne minimal icon" width="92">
+</p> -->
+<p align="center">
+  <a href="./README_EN.md">English</a>
 </p>
 
 <p align="center">

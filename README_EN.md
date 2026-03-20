@@ -1,4 +1,4 @@
-# Ariadne
+<!-- # Ariadne -->
 
 <p align="center">
   <img src="fig/ariadne_cvpr_logo.svg" alt="Ariadne CVPR-style logo" width="980">
