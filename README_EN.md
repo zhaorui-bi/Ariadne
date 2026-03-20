@@ -345,62 +345,11 @@ The current CeSS calling logic is:
 - If only center fallback is available without validated CeSS support
   the sequence is not directly called CeSS-like, but it is retained in `cess_priority_ranking.tsv`
 
-## 📊 Real Data Run in This Repository
-
-This repository already includes a full real-data run:
-
-- 📂 [tmp_run_calibrated_v3/](tmp_run_calibrated_v3)
-- 🖼️ [tmp_run_calibrated_v3/03_classification/embedding.svg](tmp_run_calibrated_v3/03_classification/embedding.svg)
-- 🏁 [tmp_run_calibrated_v3/05_benchmark/benchmark_summary.tsv](tmp_run_calibrated_v3/05_benchmark/benchmark_summary.tsv)
-
-Key summary:
-
-- `36` input candidates
-- `32` TPS-positive
-- `4` TPS-negative
-- `4` CeSS-like
-- `3` exact matches in benchmark mode
-- plus `1` high-similarity near hit
-
-## 🌳 HMM / Tree Notes
-
-- `tree/` is now the default reference entrypoint instead of `Alignment.fasta`
-- If `tree/*.fasta` are not MSAs, Ariadne automatically runs MAFFT before `hmmbuild`
-- `run` and `phylogeny` default to IQ-TREE with `LG + --fast`
-- If you only want mining and not benchmarking, you do not need `--expected-fasta`
-
-## 🧰 Legacy Compatibility
-
-These legacy scripts are still present, but the main workflow should now use the CLI:
-
-- `ariadne/filter_contigs.py`
-- `ariadne/filter_contigs_long.py`
-- `ariadne/filter_coverage.py`
-- `ariadne/DupRemover.py`
-- `ariadne/visualization.py`
-
-Preferred entrypoints:
-
-- `ariadne run`
-- `ariadne discover`
-- `ariadne filter`
-- `ariadne motif`
-- `ariadne classify`
-- `ariadne phylogeny`
-- `ariadne compare-fasta`
-
 ## 📎 Citation / Positioning
 
 If you position Ariadne as a paper-style platform, it is best understood as:
 
 > 🪸 A coral TPS / CeSS-centered workflow for discovery, prioritization, and phylogeny that is especially friendly for experimental screening.
-
-## 🎨 Logo Assets
-
-- `fig/ariadne_cvpr_logo.svg`
-  Horizontal banner logo for README headers, slides, and project pages
-- `fig/ariadne_icon_minimal.svg`
-  Minimal icon for paper figure corners, GitHub avatars, and favicon-style usage
 
 ## License
 

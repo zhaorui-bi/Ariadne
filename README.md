@@ -1,4 +1,4 @@
-# Ariadne
+<!-- # Ariadne -->
 
 <p align="center">
   <img src="fig/ariadne_cvpr_logo.svg" alt="Ariadne CVPR-style logo" width="980">
@@ -346,62 +346,11 @@ results/
 - 如果只是 center fallback 命中但缺乏 validated CeSS 支持
   不直接判成 CeSS-like，但会进入 `cess_priority_ranking.tsv`
 
-## 📊 仓库内实跑结果
-
-当前仓库已经实跑出一套更完整的默认结果：
-
-- 📂 [tmp_run_calibrated_v3/](tmp_run_calibrated_v3)
-- 🖼️ [tmp_run_calibrated_v3/03_classification/embedding.svg](tmp_run_calibrated_v3/03_classification/embedding.svg)
-- 🏁 [tmp_run_calibrated_v3/05_benchmark/benchmark_summary.tsv](tmp_run_calibrated_v3/05_benchmark/benchmark_summary.tsv)
-
-关键摘要：
-
-- `36` input candidates
-- `32` TPS-positive
-- `4` TPS-negative
-- `4` CeSS-like
-- benchmark 模式下 `3` exact matches
-- 另有 `1` 条高相似近似命中
-
-## 🌳 HMM 与系统树说明
-
-- `tree/` 现在是默认参考入口，不再以 `Alignment.fasta` 为主入口
-- 如果 `tree/*.fasta` 不是 MSA，Ariadne 会先自动调用 MAFFT，再做 `hmmbuild`
-- `run` 与 `phylogeny` 默认使用 IQ-TREE 的 `LG + --fast`
-- 如果你只想挖掘，不想 benchmark，不需要提供 `--expected-fasta`
-
-## 🧰 旧脚本兼容性
-
-这些旧脚本还在仓库中保留，但新的主流程优先使用 CLI：
-
-- `ariadne/filter_contigs.py`
-- `ariadne/filter_contigs_long.py`
-- `ariadne/filter_coverage.py`
-- `ariadne/DupRemover.py`
-- `ariadne/visualization.py`
-
-推荐优先使用：
-
-- `ariadne run`
-- `ariadne discover`
-- `ariadne filter`
-- `ariadne motif`
-- `ariadne classify`
-- `ariadne phylogeny`
-- `ariadne compare-fasta`
-
 ## 📎 软件定位
 
 如果你把 Ariadne 当成论文中的平台来理解，可以把它看成：
 
 > 🪸 一个以 coral TPS / CeSS 为中心、偏实验筛选友好的 discovery + prioritization + phylogeny workflow。
-
-## 🎨 Logo 资产
-
-- `fig/ariadne_cvpr_logo.svg`
-  横版展示 logo，适合 README banner、项目介绍页、幻灯片封面
-- `fig/ariadne_icon_minimal.svg`
-  极简 icon，适合论文图角标、GitHub avatar、favicon 风格展示
 
 ## License
 
