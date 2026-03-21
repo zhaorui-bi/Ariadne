@@ -1,121 +1,90 @@
-<!-- # Ariadne -->
-
 <p align="center">
-  <img src="fig/ariadne_cvpr_logo.svg" alt="Ariadne CVPR-style logo" width="980">
-</p>
-
-<!-- <p align="center">
-  <img src="fig/ariadne_icon_minimal.svg" alt="Ariadne minimal icon" width="92">
-</p> -->
-<p align="center">
-  <a href="./README_EN.md">English</a>
+  <img src="fig/ariadne_cvpr_logo.svg" alt="Ariadne logo" width="980">
 </p>
 
 <p align="center">
-  🧬 <strong>珊瑚 TPS / CeSS 定向挖掘平台</strong><br>
-  🔬 HMM 引导挖掘 · 🧠 motif 校准 · 🌊 珊瑚感知 embedding · 🌳 系统发育分析
+  <a href="./README_ZH.md"><strong>中文</strong></a>
+</p>
+
+<p align="center">
+  🧬 <strong>Ariadne</strong><br>
+  A tree-native terpene synthase discovery and phylogeny platform for coral-centered and cross-clade TPS mining
 </p>
 
 <p align="center">
   <img alt="Python" src="https://img.shields.io/badge/Python-3.11%2B-0F172A?style=flat-square&logo=python&logoColor=white">
-  <img alt="MAFFT" src="https://img.shields.io/badge/MAFFT-required-0F766E?style=flat-square">
+  <img alt="Workflow" src="https://img.shields.io/badge/Workflow-4%20Stages-0F766E?style=flat-square">
+  <img alt="References" src="https://img.shields.io/badge/Default%20Reference-tree%2F-C2410C?style=flat-square">
+  <img alt="MAFFT" src="https://img.shields.io/badge/MAFFT-required-14532D?style=flat-square">
   <img alt="IQ-TREE" src="https://img.shields.io/badge/IQ--TREE-required-1D4ED8?style=flat-square">
-  <img alt="CeSS" src="https://img.shields.io/badge/Target-CeSS%20Mining-F59E0B?style=flat-square">
-  <img alt="Benchmark" src="https://img.shields.io/badge/Benchmark-Opt--in-7C3AED?style=flat-square">
 </p>
 
-> 🧵 Ariadne 的目标不是只找到“一般 TPS candidate”，而是把 coral 相关数据中的 **CeSS-like / cembrene synthase** 候选收敛成一个更适合实验验证的小集合。
+> Ariadne is a research-oriented command-line platform for terpene synthase discovery, feature-space classification, multiple sequence alignment, and phylogenetic reconstruction.  
+> The current release uses a streamlined `discovery -> filtering -> classification -> phylogeny` workflow with `tree/` as the default reference source.
 
-## ✨ 软件功能概览
+## 📢 News
 
-Ariadne 是一个面向 coral-centered terpene synthase discovery 的命令行平台，当前流程包括：
+- `2026-03-21`: GitHub landing page switched to English by default, with a dedicated Chinese documentation page at [README_ZH.md](./README_ZH.md).
+- `2026-03-21`: The pipeline was simplified to a cleaner four-stage workflow. All `motif` and `benchmark` functionality was removed.
+- `2026-03-21`: `tree/` is now the default source for query-HMM construction, TPS HMM library generation, classification background, and phylogeny references.
+
+## ✨ Highlights
+
+- 🌊 Tree-native workflow: one curated `tree/` directory drives discovery, classification, and phylogeny.
+- 🧭 Feature-space screening: candidates are projected into a TPS HMM embedding for nearest-reference assignment and visual inspection.
+- 🌳 Phylogeny-ready by default: after classification, Ariadne directly builds a MAFFT alignment and IQ-TREE phylogeny.
+- 🧪 Practical CLI design: full end-to-end `run`, plus modular `discover`, `filter`, `classify`, and `phylogeny` commands.
+- 📄 Figure-friendly outputs: the pipeline exports `embedding.svg`, `embedding_3d_sections.svg`, local context trees, and final Newick trees.
+
+## 🧠 Overview
+
+The current Ariadne workflow is intentionally compact:
 
 1. `discovery`
-   用 `tree/` 参考自动建 HMM，并从蛋白或 transcriptome 中发现候选 TPS
+   Build a query HMM from the reference FASTA files in `tree/`, then search protein FASTA files or transcriptome-derived ORFs for candidate TPS sequences.
 2. `filtering`
-   做 coverage、长度和去冗余过滤
-3. `motif`
-   做 TPS motif gate，并结合 cembrene family 与 validated CeSS 参考判断 `CeSS-like`
-4. `classification`
-   在 TPS HMM feature space 中做最近邻分类、clade-aware embedding 和 context tree
-5. `phylogeny`
-   用 MAFFT + IQ-TREE 构建系统发育树
-6. `benchmark`
-   与 expected FASTA 对比
+   Remove low-coverage, too-short, and near-duplicate candidates.
+3. `classification`
+   Score all references and candidates against a TPS HMM library, embed them in feature space, and assign each candidate to its nearest reference source.
+4. `phylogeny`
+   Merge filtered candidates with the reference collection, run MAFFT, and reconstruct a phylogeny with IQ-TREE.
 
-## 🚀 当前默认行为
-
-当前版本默认行为已经调整成更适合日常使用：
-
-- ✅ 默认 **不打开 benchmark**
-- ✅ 默认 **开启 center fallback**
-- ✅ 默认从 `tree/` 自动构建：
-  - `query.hmm`
-  - TPS HMM library
-  - motif 参考
-  - phylogeny 参考
-- ✅ 默认保留 CeSS 定向挖掘的 calibrated motif 参数
-- ✅ benchmark 改成 **显式 opt-in**
-
-这意味着一般情况下你只需要跑：
-
-```bash
-ariadne run \
-  --protein-folder input/ \
-  --reference-dir tree/ \
-  --output-dir results/
-```
-
-而不是一上来就进入 benchmark 模式。
-
-## 🗂️ 仓库结构
+## 🗂️ Repository Layout
 
 ```text
 Ariadne/
-├── ariadne/                # 核心代码
-├── input/                  # 待分析输入
-├── output/                 # 预期输出 / benchmark 示例
-├── tree/                   # 多物种 TPS 参考，同时也是默认 HMM 来源
-├── fig/                    # logo / figures
-├── environment.yml         # conda 环境
+├── ariadne/                # core package
+├── input/                  # example protein inputs
+├── tree/                   # default reference FASTA collection
+├── output/                 # historical example outputs, kept only for reference
+├── fig/                    # logos and figures
+├── environment.yml         # conda environment
 ├── install.sh
 └── pyproject.toml
 ```
 
-### 📁 数据约定
+## 📁 Data Convention
 
 - `input/`
-  日常分析输入目录。当前仓库示例是 `input/all_tps.fasta`
+  Example input folder for candidate mining. This is the standard source for `--protein-folder`.
 - `tree/`
-  当前最关键的参考目录，既用于 HMM 构建，也用于 motif / classification / phylogeny
+  The primary reference directory. Ariadne reads all multi-clade TPS FASTA files here and uses them to build the query HMM, TPS HMM library, classification background, and phylogeny background.
 - `output/`
-  预期输出示例目录。当前仓库保留文件名 `output/outpu.fasta`
+  A legacy example-output folder. It is no longer part of the default pipeline logic.
 
-## 🧩 核心模块
+## 🛠️ Installation
 
-| 模块                        | 作用                                                                                |
-| --------------------------- | ----------------------------------------------------------------------------------- |
-| `ariadne/cli.py`            | CLI 入口，定义 `run`、`discover`、`motif`、`classify`、`phylogeny`、`compare-fasta` |
-| `ariadne/discovery.py`      | HMM 构建、候选发现、ORF 预测                                                        |
-| `ariadne/filtering.py`      | coverage、长度、去冗余过滤                                                          |
-| `ariadne/motif.py`          | TPS motif gate、CeSS 判断、priority ranking                                         |
-| `ariadne/classification.py` | feature matrix、embedding、最近邻分类、context tree                                 |
-| `ariadne/phylogeny.py`      | MAFFT + IQ-TREE                                                                     |
-| `ariadne/benchmark.py`      | FASTA benchmark 对比                                                                |
-| `ariadne/fasta_utils.py`    | FASTA / TSV 读写与清洗                                                              |
-
-## 🛠️ 安装
-
-### 1. 推荐：conda
+### Conda
 
 ```bash
 git clone https://github.com/zhaoruijiang26/Ariadne.git
 cd Ariadne
 conda env create -f environment.yml
 conda activate ariadne
+pip install -e .
 ```
 
-### 2. venv
+### venv
 
 ```bash
 git clone https://github.com/zhaoruijiang26/Ariadne.git
@@ -123,7 +92,7 @@ cd Ariadne
 bash install.sh
 ```
 
-### 3. 手动安装
+### Manual
 
 ```bash
 git clone https://github.com/zhaoruijiang26/Ariadne.git
@@ -134,37 +103,22 @@ python -m pip install -U pip
 python -m pip install -e .
 ```
 
-### 📦 运行依赖
+## 📦 Dependencies
 
 - Python `>= 3.9`
 - `mafft`
-- `iqtree`
+- `iqtree` or `iqtree2`
 - `numpy >= 1.24`
 - `openpyxl >= 3.1`
 - `pyhmmer >= 0.12.0`
 - `pyrodigal >= 3.7.0`
 - `scikit-learn >= 1.4`
 
-推荐 Python `3.11`。
+Recommended environment: Python `3.11` via [environment.yml](./environment.yml).
 
-## ⚙️ 默认参数画像
+## 🚀 Quick Start
 
-下面这些是当前更适合日常 coral / CeSS mining 的默认设置：
-
-| 参数                                | 当前默认值 | 含义                                                    |
-| ----------------------------------- | ---------- | ------------------------------------------------------- |
-| Benchmark                           | `off`      | 只有显式传 `--enable-benchmark` 才生成 `05_benchmark/`  |
-| Center fallback                     | `on`       | 缺失 direct anchor 时，默认回退到中心窗口继续 CeSS 判断 |
-| `validated_cess_identity_threshold` | `0.95`     | 高置信 validated CeSS 支持阈值                          |
-| `cembrene_identity_threshold`       | `0.75`     | cembrene family 级支持阈值                              |
-| `cembrene_margin_threshold`         | `0.10`     | 相对 non-cembrene 的最小 identity margin                |
-| IQ-TREE fast mode                   | `on`       | 默认使用 `LG + --fast` 跑完整流程                       |
-
-## 🧪 快速开始
-
-### 1. 日常挖掘模式
-
-这是最推荐的日常入口。✅ 不 benchmark，✅ 默认 center fallback，✅ 自动从 `tree/` 建模：
+### End-to-end run
 
 ```bash
 ariadne run \
@@ -173,185 +127,229 @@ ariadne run \
   --output-dir results/
 ```
 
-### 2. CeSS 校准模式
+This command will automatically:
 
-如果你手头有已验证 CeSS FASTA，建议打开校准：
+- build the discovery query HMM from `tree/`
+- build the TPS HMM library from `tree/`
+- discover candidate proteins
+- filter and deduplicate candidates
+- classify them in TPS feature space
+- generate the final alignment and phylogeny
 
-```bash
-ariadne run \
-  --protein-folder input/ \
-  --reference-dir tree/ \
-  --reference-alignment tree/coral.fasta \
-  --validated-cess-fasta output/outpu.fasta \
-  --output-dir results_calibrated/
-```
-
-### 3. Benchmark 模式
-
-只有需要做方法对照时再打开 benchmark：
-
-```bash
-ariadne run \
-  --protein-folder input/ \
-  --reference-dir tree/ \
-  --reference-alignment tree/coral.fasta \
-  --validated-cess-fasta output/outpu.fasta \
-  --expected-fasta output/outpu.fasta \
-  --enable-benchmark \
-  --output-dir results_benchmark/
-```
-
-### 4. 转录组输入
+### Transcriptome mode
 
 ```bash
 ariadne run \
   --transcriptomes sample1.fasta sample2.fasta \
   --reference-dir tree/ \
-  --output-dir results_from_transcriptome/
+  --output-dir results_from_transcriptomes/
 ```
 
-## 🔍 分阶段使用
-
-### `discover`
-
-```bash
-ariadne discover \
-  --protein-folder input/ \
-  --hmm query.hmm \
-  --output-dir 01_discovery/
-```
-
-### `filter`
-
-```bash
-ariadne filter \
-  --input-fasta 01_discovery/candidates.protein.faa \
-  --output-dir 02_filtering/
-```
-
-### `motif`
-
-```bash
-ariadne motif \
-  --candidates 02_filtering/candidates.filtered.faa \
-  --reference-alignment tree/coral.fasta \
-  --validated-cess-fasta output/outpu.fasta \
-  --output-dir 04_motif/
-```
-
-常用可调参数：
-
-- `--disable-center-fallback`
-  关闭默认的 center fallback，切回更严格模式
-- `--validated-cess-identity-threshold`
-  调整 validated CeSS 支持强度
-- `--cembrene-identity-threshold`
-  调整 family-level identity 下限
-- `--cembrene-margin-threshold`
-  调整与 non-cembrene 的分离 margin
-
-### `classify`
+### Classification only
 
 ```bash
 ariadne classify \
-  --candidates 02_filtering/candidates.filtered.faa \
+  --candidates results/02_filtering/candidates.filtered.faa \
   --reference-dir tree/ \
-  --output-dir 03_classification/
+  --output-dir results_classification/
 ```
 
-### `phylogeny`
+### Alignment and phylogeny only
 
 ```bash
 ariadne phylogeny \
-  --candidates 02_filtering/candidates.filtered.faa \
+  --candidates results/02_filtering/candidates.filtered.faa \
   --reference-dir tree/ \
-  --output-dir 06_phylogeny/
+  --output-dir results_phylogeny/
 ```
 
-### `compare-fasta`
+## 🎓 Tutorial
+
+### Tutorial 1. Run the repository example
+
+Use the included `input/` and `tree/` folders:
 
 ```bash
-ariadne compare-fasta \
-  --predicted-fasta 04_motif/cess_candidates.fasta \
-  --expected-fasta output/outpu.fasta \
-  --output-dir 05_benchmark/
+.venv/bin/python -m ariadne run \
+  --protein-folder input \
+  --reference-dir tree \
+  --output-dir tmp_run_example
 ```
 
-## 📤 输出目录地图
+Expected outputs:
+
+- `tmp_run_example/01_discovery/`
+- `tmp_run_example/02_filtering/`
+- `tmp_run_example/03_classification/`
+- `tmp_run_example/04_phylogeny/`
+- `tmp_run_example/pipeline_summary.tsv`
+
+### Tutorial 2. Inspect classification outputs
+
+Start with:
+
+- `03_classification/classification.tsv`
+- `03_classification/nearest_neighbors.tsv`
+- `03_classification/embedding.svg`
+- `03_classification/embedding_3d_sections.svg`
+
+These files tell you which reference source each candidate is closest to, how confident that assignment is, and where the candidate lies in TPS feature space.
+
+### Tutorial 3. Inspect phylogeny outputs
+
+Start with:
+
+- `04_phylogeny/phylogeny_input.fasta`
+- `04_phylogeny/phylogeny_alignment.fasta`
+- `04_phylogeny/iqtree.treefile`
+- `04_phylogeny/iqtree.iqtree`
+
+These files give you the exact alignment and tree used for downstream interpretation, figure generation, or manual curation.
+
+## 🧪 CLI Reference
+
+### Main commands
+
+| Command | Purpose |
+| --- | --- |
+| `ariadne run` | full end-to-end workflow |
+| `ariadne discover` | HMM-based candidate discovery from proteins or transcriptomes |
+| `ariadne filter` | coverage, length, and near-duplicate filtering |
+| `ariadne classify` | TPS feature-space classification |
+| `ariadne phylogeny` | MAFFT alignment plus IQ-TREE reconstruction |
+| `ariadne build-hmm` | build a single query HMM from a FASTA/MSA source |
+| `ariadne build-tps-hmm-library` | build a TPS HMM library directory from reference FASTA/MSA files |
+
+### `ariadne run`
+
+| Parameter | Default | Description |
+| --- | --- | --- |
+| `--protein-folder` | `None` | folder of protein FASTA files |
+| `--transcriptomes` | `None` | transcriptome FASTA files for ORF prediction mode |
+| `--reference-dir` | required | tree-native reference directory |
+| `--output-dir` | required | output root |
+| `--query-hmm` | auto | use a prebuilt discovery HMM instead of auto-building from `tree/` |
+| `--tps-hmm-dir` | auto | use a prebuilt TPS HMM library instead of auto-building from `tree/` |
+| `--min-coverage` | `10.0` | filtering coverage threshold |
+| `--min-length` | `300` | filtering minimum amino-acid length |
+| `--identity-threshold` | `0.95` | near-duplicate collapse threshold |
+| `--top-k` | `5` | nearest-reference voting size |
+| `--tree-neighbors` | `12` | reference neighbors per local context tree |
+| `--skip-phylogeny` | `False` | skip MAFFT + IQ-TREE |
+| `--mafft-mode` | `--auto` | MAFFT mode |
+| `--iqtree-model` | `LG` | IQ-TREE model |
+| `--iqtree-threads` | `AUTO` | IQ-TREE threads |
+| `--iqtree-bootstrap` | `None` | optional ultrafast bootstrap replicates |
+| `--no-iqtree-fast` | `False` | disable default `--fast` mode |
+
+### `ariadne discover`
+
+| Parameter | Default | Description |
+| --- | --- | --- |
+| `--protein-folder` | `None` | folder of predicted protein FASTA files |
+| `--transcriptomes` | `None` | transcript FASTA inputs |
+| `--protein-glob` | common FASTA patterns | file globs under `--protein-folder` |
+| `--hmm` | required | discovery HMM |
+| `--output-dir` | required | discovery output directory |
+| `--min-score` | `None` | optional minimum HMM score |
+| `--max-evalue` | `None` | optional maximum E-value |
+
+### `ariadne filter`
+
+| Parameter | Default | Description |
+| --- | --- | --- |
+| `--input-fasta` | required | candidate protein FASTA |
+| `--output-dir` | required | filter output directory |
+| `--min-coverage` | `10.0` | remove low-coverage records |
+| `--min-length` | `300` | remove short proteins |
+| `--identity-threshold` | `0.95` | near-duplicate threshold |
+
+### `ariadne classify`
+
+| Parameter | Default | Description |
+| --- | --- | --- |
+| `--candidates` | required | filtered candidate FASTA |
+| `--reference-dir` | required | reference FASTA directory |
+| `--output-dir` | required | classification output directory |
+| `--tps-hmm-dir` | auto | TPS HMM library directory |
+| `--top-k` | `5` | nearest-reference voting size |
+| `--tree-neighbors` | `12` | neighbors used for local context trees |
+
+### `ariadne phylogeny`
+
+| Parameter | Default | Description |
+| --- | --- | --- |
+| `--candidates` | required | filtered candidate FASTA |
+| `--reference-dir` | required | reference FASTA directory |
+| `--output-dir` | required | phylogeny output directory |
+| `--mafft-bin` | auto | explicit MAFFT binary |
+| `--mafft-mode` | `--auto` | MAFFT mode |
+| `--iqtree-bin` | auto | explicit IQ-TREE binary |
+| `--iqtree-model` | `LG` | substitution model |
+| `--iqtree-threads` | `AUTO` | thread setting |
+| `--iqtree-bootstrap` | `None` | optional bootstrap |
+| `--no-iqtree-fast` | `False` | disable default fast mode |
+
+## 📤 Output Structure
 
 ```text
 results/
 ├── 01_discovery/
+│   ├── candidates.protein.faa
+│   ├── candidates.orf.fna
+│   └── candidates.hits.tsv
 ├── 02_filtering/
+│   ├── candidates.filtered.faa
+│   ├── filter_report.tsv
+│   ├── dedupe_clusters.tsv
+│   └── manual_review.tsv
 ├── 03_classification/
-│   ├── classification.tsv
-│   ├── cess_priority_ranking.tsv
+│   ├── tps_features.tsv
 │   ├── embedding.tsv
 │   ├── embedding.svg
 │   ├── embedding_3d_sections.svg
+│   ├── classification.tsv
+│   ├── nearest_neighbors.tsv
+│   ├── candidate_cluster_context.tsv
 │   ├── global_context_tree.nwk
-│   └── _auto_tps_hmms/
-├── 04_motif/
-│   ├── motif_summary.tsv
-│   ├── targeted_mining_summary.tsv
-│   ├── cess_candidates.tsv
-│   ├── cess_candidates.fasta
-│   ├── cess_priority_ranking.tsv
-│   └── motif_windows.svg
-├── 05_benchmark/          # 只有 --enable-benchmark 才会生成
-└── 06_phylogeny/
+│   └── trees/
+├── 04_phylogeny/
+│   ├── phylogeny_input.fasta
+│   ├── phylogeny_alignment.fasta
+│   ├── phylogeny_sequence_map.tsv
+│   ├── iqtree.treefile
+│   └── iqtree.iqtree
+└── pipeline_summary.tsv
 ```
 
-### 🎯 最值得先看的结果
+## 🔬 Recommended Reading Order for Results
 
-- `04_motif/targeted_mining_summary.tsv`
-  看整体候选数量、TPS+/TPS-、CeSS-like 数量
-- `04_motif/cess_candidates.fasta`
-  最终 CeSS-like 候选序列
-- `03_classification/cess_priority_ranking.tsv`
-  最适合做实验验证优先级筛选的表
-- `03_classification/embedding.svg`
-  当前的 clade-aware embedding 总览
-- `06_phylogeny/iqtree.treefile`
-  系统发育树结果
+1. Open `pipeline_summary.tsv` to verify all stages completed.
+2. Read `03_classification/classification.tsv` for per-candidate assignments.
+3. Inspect `03_classification/embedding.svg` for global candidate placement.
+4. Read `04_phylogeny/iqtree.treefile` and `04_phylogeny/iqtree.iqtree` for phylogenetic interpretation.
 
-## 🧠 Embedding 设计
+## ⚠️ Notes
 
-当前 `classification` 不是单纯画一个“拥挤的 PCA 点图”，而是优先使用：
+- `tree/` is now the canonical source of reference FASTA files.
+- `Alignment.fasta`-based entrypoints are no longer part of the main workflow.
+- `motif` and `benchmark` functionality were intentionally removed to keep the current release focused and stable.
+- The repository still contains historical example outputs under `output/`, but they are not required for the current pipeline.
 
-- `lda_coral_subclade_spread`
-  先按 reference clades / candidate groups 做监督式分离
-- 对 `coral` 再进一步拆成：
-  - `cembrene_a`
-  - `cembrene_b`
-  - `cembrene_c`
-  - 多个 `tps_subclade_*`
+## 📚 Citation
 
-所以新版本的 `embedding.svg` 会更适合直接看：
+If Ariadne is useful in your work, please cite the software entry below and update it with your preferred version tag or DOI when available.
 
-- reference clades 是否分开
-- coral 内部 CeSS/TPS 子簇是否分开
-- candidate TPS+/TPS-/CeSS-like 分布在哪里
+```bibtex
+@software{jiang2026ariadne,
+  author       = {Jiang, Zhaorui},
+  title        = {Ariadne: A Tree-Native Terpene Synthase Discovery and Phylogeny Platform},
+  year         = {2026},
+  url          = {https://github.com/zhaoruijiang26/Ariadne},
+  version      = {0.1.0}
+}
+```
 
-## 🧵 CeSS 判定逻辑
+## 🤝 Acknowledgement
 
-当前 CeSS 判定逻辑如下：
-
-- 如果与 validated CeSS motif window identity `>= 0.95`
-  直接支持 `CeSS-like`
-- 如果 direct anchor 命中，同时：
-  - 对 cembrene 参考 identity `>= 0.75`
-  - 且相对 non-cembrene 的 margin `>= 0.10`
-    也支持 `CeSS-like`
-- 如果只是 center fallback 命中但缺乏 validated CeSS 支持
-  不直接判成 CeSS-like，但会进入 `cess_priority_ranking.tsv`
-
-## 📎 软件定位
-
-如果你把 Ariadne 当成论文中的平台来理解，可以把它看成：
-
-> 🪸 一个以 coral TPS / CeSS 为中心、偏实验筛选友好的 discovery + prioritization + phylogeny workflow。
-
-## License
-
-MIT License
+Ariadne is designed as a practical bridge between TPS candidate mining and downstream phylogenetic interpretation, especially for coral-centered discovery settings where curated cross-clade references matter.

@@ -115,20 +115,6 @@ def _embedding_group_label(record: FastaRecord) -> str:
     return f"ref:{record.metadata.get('source', 'unknown')}"
 
 
-def _coral_cembrene_subtype(record: FastaRecord) -> Optional[str]:
-    """Infer a coarse cembrene subtype from one coral reference header."""
-    label = record.id.lower()
-    if "cembrene" not in label:
-        return None
-    if "cembreneb" in label or "cembrene_b" in label:
-        return "cembrene_b"
-    if "cembrenec" in label or "cembrene_c" in label:
-        return "cembrene_c"
-    if "cembrenea" in label or "cembrene_a" in label:
-        return "cembrene_a"
-    return "cembrene_other"
-
-
 def _cluster_label_count(size: int) -> int:
     """Choose a conservative subcluster count for one large reference subset."""
     if size >= 220:
@@ -163,27 +149,22 @@ def _embedding_group_labels(matrix: np.ndarray, records: list[FastaRecord]) -> l
     """Build subclade-aware labels for the embedding stage.
 
     The main goal is to stop the large coral reference collection from behaving
-    like one monolithic class. We therefore separate:
-    1. coral cembrene references by coarse product subtype;
-    2. the remaining coral TPS references by feature-space subclusters;
-    3. candidates by their screening group.
+    like one monolithic class. We therefore split coral references into small,
+    deterministic feature-space subclusters while keeping candidates grouped
+    together as one foreground layer.
     """
     labels = [_embedding_group_label(record) for record in records]
-    coral_other_indices: list[int] = []
+    coral_indices: list[int] = []
     for index, record in enumerate(records):
         if record.metadata.get("source") == "candidate":
             continue
         if record.metadata.get("source") != "coral":
             continue
-        subtype = _coral_cembrene_subtype(record)
-        if subtype is not None:
-            labels[index] = f"ref:coral:{subtype}"
-        else:
-            coral_other_indices.append(index)
-    if coral_other_indices:
-        coral_matrix = matrix[coral_other_indices]
+        coral_indices.append(index)
+    if coral_indices:
+        coral_matrix = matrix[coral_indices]
         coral_labels = _stable_kmeans_labels(coral_matrix, prefix="ref:coral:tps_subclade")
-        for index, label in zip(coral_other_indices, coral_labels):
+        for index, label in zip(coral_indices, coral_labels):
             labels[index] = label
     return labels
 
@@ -298,13 +279,13 @@ def _embedding_coordinates(
                     explained = np.pad(explained, (0, n_components - explained.shape[0]))
                 labels = [f"LD{i + 1}" for i in range(n_components)]
                 spread_coords = _spread_group_coords(coords, embedding_labels)
-                return spread_coords, explained[:n_components], labels, "lda_coral_subclade_spread"
+                return spread_coords, explained[:n_components], labels, "lda_reference_subclade_spread"
             except Exception as error:
                 logger.warning("LDA embedding failed, falling back to PCA: %s", error)
 
     coords, explained = _pca_coordinates(scaled_matrix, n_components=n_components)
     spread_coords = _spread_group_coords(coords, embedding_labels)
-    return spread_coords, explained, [f"PC{i + 1}" for i in range(n_components)], "pca_coral_subclade_spread"
+    return spread_coords, explained, [f"PC{i + 1}" for i in range(n_components)], "pca_reference_subclade_spread"
 
 
 def _distance_matrix(features: np.ndarray) -> np.ndarray:
@@ -388,87 +369,11 @@ def _color_map(sources: list[str]) -> dict[str, str]:
     return mapping
 
 
-def _load_candidate_annotations(path: Optional[PathLike]) -> dict[str, dict[str, str]]:
-    """Load optional TSV annotations keyed by ``sequence_id``."""
-    if path is None:
-        return {}
-    annotation_path = Path(path)
-    if not annotation_path.exists():
-        return {}
-    import csv
-
-    annotations: dict[str, dict[str, str]] = {}
-    with annotation_path.open() as handle:
-        reader = csv.DictReader(handle, delimiter="\t")
-        for row in reader:
-            sequence_id = (row.get("sequence_id") or "").strip()
-            if sequence_id:
-                annotations[sequence_id] = {key: value for key, value in row.items() if value}
-    return annotations
-
-
 def _candidate_group(record: FastaRecord) -> str:
     """Map a record to a candidate/reference display category."""
     if record.metadata.get("source") != "candidate":
         return f"ref:{record.metadata.get('source', 'unknown')}"
-    if record.metadata.get("predicted_cess_like") == "yes":
-        return "candidate:cembrene_like"
-    if record.metadata.get("predicted_cembrene_like") == "yes":
-        return "candidate:cembrene_like"
-    if record.metadata.get("is_tps") == "yes":
-        return "candidate:tps_positive"
-    if record.metadata.get("is_tps") == "no":
-        return "candidate:tps_negative"
-    return "candidate:unlabeled"
-
-
-def _display_styles(records: list[FastaRecord]) -> dict[str, dict[str, str]]:
-    """Define SVG styling for each display category."""
-    reference_sources = sorted({record.metadata.get("source", "unknown") for record in records if record.metadata.get("source") != "candidate"})
-    reference_colors = _color_map(reference_sources)
-    styles: dict[str, dict[str, str]] = {}
-    for source in reference_sources:
-        styles[f"ref:{source}"] = {
-            "label": f"reference:{source}",
-            "fill": reference_colors[source],
-            "shape": "circle",
-            "opacity": "0.42",
-            "radius": "3.8",
-            "stroke": "none",
-        }
-    styles["candidate:unlabeled"] = {
-        "label": "candidate",
-        "fill": "#111827",
-        "shape": "circle",
-        "opacity": "0.88",
-        "radius": "6.0",
-        "stroke": "#111827",
-    }
-    styles["candidate:tps_positive"] = {
-        "label": "candidate TPS+",
-        "fill": "#0f766e",
-        "shape": "diamond",
-        "opacity": "0.92",
-        "radius": "7.4",
-        "stroke": "#134e4a",
-    }
-    styles["candidate:tps_negative"] = {
-        "label": "candidate TPS-",
-        "fill": "#dc2626",
-        "shape": "square",
-        "opacity": "0.92",
-        "radius": "7.0",
-        "stroke": "#7f1d1d",
-    }
-    styles["candidate:cembrene_like"] = {
-        "label": "candidate CeSS-like",
-        "fill": "#f59e0b",
-        "shape": "triangle",
-        "opacity": "0.96",
-        "radius": "8.2",
-        "stroke": "#92400e",
-    }
-    return styles
+    return "candidate"
 
 
 def _marker_svg(x: float, y: float, *, shape: str, radius: float, fill: str, stroke: str, opacity: float, stroke_width: float = 1.0) -> str:
@@ -515,7 +420,7 @@ def _render_scatter(
     component_labels: Optional[list[str]] = None,
     method: str = "embedding",
 ) -> Path:
-    """Render a readable 2D embedding scatter plot for coral TPS/CeSS screening."""
+    """Render a readable 2D embedding scatter plot for candidate classification."""
     target = Path(output_path)
     if len(records) == 0:
         target.write_text("<svg xmlns='http://www.w3.org/2000/svg' width='1200' height='820'></svg>")
@@ -573,8 +478,8 @@ def _render_scatter(
     svg: list[str] = [
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}" font-family="{font}">',
         f'<rect width="{width}" height="{height}" fill="white" />',
-        f'<text x="{outer_left}" y="{outer_top + 24}" font-size="22" font-weight="700" fill="#111827">Ariadne Coral TPS / CeSS Embedding</text>',
-        f'<text x="{outer_left}" y="{outer_top + 46}" font-size="11" fill="#6B7280" font-style="italic">Reference clades define the background feature space; candidate markers encode TPS screening and CeSS targeting states. Projection: {method.upper()}.</text>',
+        f'<text x="{outer_left}" y="{outer_top + 24}" font-size="22" font-weight="700" fill="#111827">Ariadne TPS Feature Embedding</text>',
+        f'<text x="{outer_left}" y="{outer_top + 46}" font-size="11" fill="#6B7280" font-style="italic">Reference clades define the background feature space; candidate markers show discovered sequences. Projection: {method.upper()}.</text>',
         f'<rect x="{plot_left}" y="{plot_top}" width="{plot_width}" height="{plot_height}" fill="white" stroke="{grid_color}" stroke-width="1"/>',
     ]
 
@@ -605,7 +510,7 @@ def _render_scatter(
             source = record.metadata.get("source", "unknown")
             svg.append(f'<circle cx="{x:.2f}" cy="{y:.2f}" r="3.6" fill="{ref_colour.get(source, "#9CA3AF")}" fill-opacity="0.58" stroke="none"/>')
             continue
-        cfg = _CANDIDATE_CFG.get(_candidate_group(record), _CANDIDATE_CFG["candidate:unlabeled"])
+        cfg = _CANDIDATE_CFG.get(_candidate_group(record), _CANDIDATE_CFG["candidate"])
         svg.append(
             _marker_svg(
                 x,
@@ -659,19 +564,7 @@ _FILL_EXTRA = ["#87CEFA", "#FFC0CB", "#800080", "#191970", "#FF7F50", "#808080",
 
 # Candidate-group display configuration (shape + colour, NO text labels)
 _CANDIDATE_CFG: dict[str, dict] = {
-    "candidate:cembrene_like": {
-        "label": "CeSS-like",
-        "fill": "#F59E0B", "stroke": "#78350F", "shape": "triangle", "r": 9.5, "op": 0.96,
-    },
-    "candidate:tps_positive": {
-        "label": "TPS\u207a",
-        "fill": "#0F766E", "stroke": "#134E4A", "shape": "diamond",  "r": 8.5, "op": 0.93,
-    },
-    "candidate:tps_negative": {
-        "label": "TPS\u207b",
-        "fill": "#DC2626", "stroke": "#7F1D1D", "shape": "square",   "r": 8.0, "op": 0.93,
-    },
-    "candidate:unlabeled": {
+    "candidate": {
         "label": "Candidate",
         "fill": "#374151", "stroke": "#111827", "shape": "circle",   "r": 7.5, "op": 0.88,
     },
@@ -826,7 +719,7 @@ def _render_3d_sections(
         f'Ariadne TPS Feature Space — {method.upper()} Embedding</text>',
         f'<text x="{OL}" y="{OT + 48}"'
         f' font-size="11" fill="#6B7280" font-style="italic">'
-        f'Background: reference clades.  Foreground: candidate motif states. '
+        f'Background: reference clades.  Foreground: discovered candidates. '
         f'Sequence labels omitted for visual clarity — see classification.tsv.</text>',
     ]
 
@@ -964,7 +857,7 @@ def _render_3d_sections(
             else:
                 # candidate: larger shape marker, NO text label
                 grp = _candidate_group(rec)
-                cfg = _CANDIDATE_CFG.get(grp, _CANDIDATE_CFG["candidate:unlabeled"])
+                cfg = _CANDIDATE_CFG.get(grp, _CANDIDATE_CFG["candidate"])
                 cand_pts.append(
                     _marker_svg(
                         cx, cy,
@@ -1010,8 +903,7 @@ def _render_3d_sections(
         f'Candidate groups:</text>',
     )
     ix2 = OL + 128
-    for grp in ["candidate:cembrene_like", "candidate:tps_positive",
-                "candidate:tps_negative", "candidate:unlabeled"]:
+    for grp in ["candidate"]:
         if grp not in cand_groups_present:
             continue
         cfg = _CANDIDATE_CFG[grp]
@@ -1047,7 +939,6 @@ def classify_candidates(
     output_dir: PathLike,
     *,
     hmm_dir: PathLike,
-    candidate_annotations: Optional[PathLike] = None,
     top_k: int = 5,
     tree_neighbors: int = 12,
 ) -> dict[str, Path]:
@@ -1056,11 +947,9 @@ def classify_candidates(
     if not references:
         raise ValueError(f"No reference sequences were found in {reference_dir}.")
     candidates = read_fasta(candidate_fasta)
-    annotations = _load_candidate_annotations(candidate_annotations)
     for candidate in candidates:
         candidate.metadata["source"] = "candidate"
         candidate.metadata["label"] = "candidate"
-        candidate.metadata.update(annotations.get(candidate.id, {}))
         candidate.metadata["candidate_group"] = _candidate_group(candidate)
     all_records = references + candidates
     hmm_paths = sorted_hmm_paths(hmm_dir)
@@ -1146,15 +1035,7 @@ def classify_candidates(
         candidate_rows.append(
             {
                 "sequence_id": candidate.id,
-                "candidate_group": candidate.metadata.get("candidate_group", "candidate:unlabeled"),
-                "candidate_state": candidate.metadata.get("candidate_state", ""),
-                "is_tps": candidate.metadata.get("is_tps", ""),
-                "predicted_cess_like": candidate.metadata.get("predicted_cess_like", ""),
-                "predicted_cembrene_like": candidate.metadata.get("predicted_cembrene_like", ""),
-                "best_validated_cess_match": candidate.metadata.get("best_validated_cess_match", ""),
-                "best_validated_cess_identity": candidate.metadata.get("best_validated_cess_identity", ""),
-                "cess_priority_tier": candidate.metadata.get("cess_priority_tier", ""),
-                "cess_priority_score": candidate.metadata.get("cess_priority_score", ""),
+                "candidate_group": candidate.metadata.get("candidate_group", "candidate"),
                 "predicted_source": predicted_source,
                 "confidence": round(confidence, 4),
                 "nearest_reference": nearest_reference.id,
@@ -1177,7 +1058,7 @@ def classify_candidates(
         cluster_context_rows.append(
             {
                 "sequence_id": candidate.id,
-                "candidate_group": candidate.metadata.get("candidate_group", "candidate:unlabeled"),
+                "candidate_group": candidate.metadata.get("candidate_group", "candidate"),
                 "predicted_source": predicted_source,
                 "nearest_reference_source": nearest_reference.metadata.get("source", "unknown"),
                 "nearest_distance": round(nearest_distance, 6),
@@ -1200,18 +1081,6 @@ def classify_candidates(
         tree_path.write_text(_upgma_newick(subset_names, subset_distances) + "\n")
 
     classification_path = write_tsv(candidate_rows, output_root / "classification.tsv")
-    cess_ranking_path = write_tsv(
-        sorted(
-            candidate_rows,
-            key=lambda row: (
-                float(row.get("cess_priority_score") or 0.0),
-                float(row.get("best_validated_cess_identity") or 0.0),
-                float(row.get("confidence") or 0.0),
-            ),
-            reverse=True,
-        ),
-        output_root / "cess_priority_ranking.tsv",
-    )
     neighbors_path = write_tsv(neighbor_rows, output_root / "nearest_neighbors.tsv")
     cluster_context_path = write_tsv(cluster_context_rows, output_root / "candidate_cluster_context.tsv")
     scatter_path = _render_scatter(
@@ -1252,7 +1121,6 @@ def classify_candidates(
         "embedding": embedding_path,
         "variance": variance_path,
         "classification": classification_path,
-        "cess_priority_ranking": cess_ranking_path,
         "neighbors": neighbors_path,
         "candidate_cluster_context": cluster_context_path,
         "embedding_svg": scatter_path,

@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "ariadne-tps"
 version = "0.1.0"
-description = "Ariadne pipeline for animal terpene synthase discovery and cembrene-focused annotation."
+description = "Ariadne pipeline for tree-native terpene synthase discovery, classification, and phylogeny."
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [

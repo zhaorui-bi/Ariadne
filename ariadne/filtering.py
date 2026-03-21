@@ -88,7 +88,6 @@ def filter_candidates(
     min_coverage: float = 10.0,
     min_length: int = 300,
     identity_threshold: float = 0.95,
-    motif_anchor: str = "CFDVL",
 ) -> dict[str, Path]:
     """Apply basic QC, near-duplicate clustering, and manual-review summaries."""
     records = read_fasta(input_fasta)
@@ -169,7 +168,6 @@ def filter_candidates(
                 "length": len(record.sequence),
                 "coverage": parse_coverage(record.header) or "",
                 "starts_with_m": "yes" if record.sequence.startswith("M") else "no",
-                "anchor_found": "yes" if motif_anchor.upper() in record.sequence else "no",
                 "notes": "manual_visual_check_required",
             }
         )
