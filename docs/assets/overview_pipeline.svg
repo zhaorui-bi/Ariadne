@@ -1,0 +1,74 @@
+<svg width="1400" height="760" viewBox="0 0 1400 760" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="80" y1="60" x2="1320" y2="700" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F8FBFF"/>
+      <stop offset="0.55" stop-color="#EFF6FF"/>
+      <stop offset="1" stop-color="#F7FAFC"/>
+    </linearGradient>
+    <linearGradient id="boxA" x1="100" y1="120" x2="360" y2="300" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#DBEAFE"/>
+      <stop offset="1" stop-color="#EFF6FF"/>
+    </linearGradient>
+    <linearGradient id="boxB" x1="390" y1="120" x2="650" y2="300" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#DCFCE7"/>
+      <stop offset="1" stop-color="#F0FDF4"/>
+    </linearGradient>
+    <linearGradient id="boxC" x1="680" y1="120" x2="940" y2="300" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FEF3C7"/>
+      <stop offset="1" stop-color="#FFF7ED"/>
+    </linearGradient>
+    <linearGradient id="boxD" x1="970" y1="120" x2="1230" y2="300" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F3E8FF"/>
+      <stop offset="1" stop-color="#FAF5FF"/>
+    </linearGradient>
+  </defs>
+  <rect x="40" y="40" width="1320" height="680" rx="32" fill="url(#bg)"/>
+  <text x="86" y="105" fill="#0B132B" font-family="Helvetica, Arial, sans-serif" font-size="34" font-weight="700">Ariadne Overview Figure</text>
+  <text x="86" y="138" fill="#475569" font-family="Helvetica, Arial, sans-serif" font-size="18">A four-stage, tree-native workflow for terpene synthase discovery and downstream phylogeny.</text>
+
+  <rect x="86" y="180" width="270" height="182" rx="26" fill="url(#boxA)" stroke="#BFDBFE" stroke-width="2"/>
+  <rect x="378" y="180" width="270" height="182" rx="26" fill="url(#boxB)" stroke="#BBF7D0" stroke-width="2"/>
+  <rect x="670" y="180" width="270" height="182" rx="26" fill="url(#boxC)" stroke="#FDE68A" stroke-width="2"/>
+  <rect x="962" y="180" width="270" height="182" rx="26" fill="url(#boxD)" stroke="#E9D5FF" stroke-width="2"/>
+
+  <text x="114" y="224" fill="#1D4ED8" font-family="Helvetica, Arial, sans-serif" font-size="18" font-weight="700">01 · Discovery</text>
+  <text x="114" y="256" fill="#0F172A" font-family="Helvetica, Arial, sans-serif" font-size="28" font-weight="700">Query HMM + search</text>
+  <text x="114" y="294" fill="#334155" font-family="Helvetica, Arial, sans-serif" font-size="18">Input proteins or transcriptomes</text>
+  <text x="114" y="323" fill="#334155" font-family="Helvetica, Arial, sans-serif" font-size="18">Auto-build query HMM from tree/</text>
+
+  <text x="406" y="224" fill="#15803D" font-family="Helvetica, Arial, sans-serif" font-size="18" font-weight="700">02 · Filtering</text>
+  <text x="406" y="256" fill="#0F172A" font-family="Helvetica, Arial, sans-serif" font-size="28" font-weight="700">Quality control</text>
+  <text x="406" y="294" fill="#334155" font-family="Helvetica, Arial, sans-serif" font-size="18">Coverage thresholding</text>
+  <text x="406" y="323" fill="#334155" font-family="Helvetica, Arial, sans-serif" font-size="18">Length filter + near-duplicate collapse</text>
+
+  <text x="698" y="224" fill="#C2410C" font-family="Helvetica, Arial, sans-serif" font-size="18" font-weight="700">03 · Classification</text>
+  <text x="698" y="256" fill="#0F172A" font-family="Helvetica, Arial, sans-serif" font-size="28" font-weight="700">TPS feature space</text>
+  <text x="698" y="294" fill="#334155" font-family="Helvetica, Arial, sans-serif" font-size="18">TPS HMM feature matrix</text>
+  <text x="698" y="323" fill="#334155" font-family="Helvetica, Arial, sans-serif" font-size="18">Embedding + nearest-reference voting</text>
+
+  <text x="990" y="224" fill="#7C3AED" font-family="Helvetica, Arial, sans-serif" font-size="18" font-weight="700">04 · Phylogeny</text>
+  <text x="990" y="256" fill="#0F172A" font-family="Helvetica, Arial, sans-serif" font-size="28" font-weight="700">MAFFT + IQ-TREE</text>
+  <text x="990" y="294" fill="#334155" font-family="Helvetica, Arial, sans-serif" font-size="18">Merge candidates with references</text>
+  <text x="990" y="323" fill="#334155" font-family="Helvetica, Arial, sans-serif" font-size="18">Alignment and phylogenetic reconstruction</text>
+
+  <path d="M356 271H378" stroke="#93C5FD" stroke-width="8" stroke-linecap="round"/>
+  <path d="M648 271H670" stroke="#86EFAC" stroke-width="8" stroke-linecap="round"/>
+  <path d="M940 271H962" stroke="#FCD34D" stroke-width="8" stroke-linecap="round"/>
+
+  <circle cx="367" cy="271" r="10" fill="#60A5FA"/>
+  <circle cx="659" cy="271" r="10" fill="#4ADE80"/>
+  <circle cx="951" cy="271" r="10" fill="#F59E0B"/>
+
+  <rect x="86" y="420" width="1146" height="234" rx="28" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="2"/>
+  <text x="116" y="469" fill="#0F172A" font-family="Helvetica, Arial, sans-serif" font-size="26" font-weight="700">Tree-native design principle</text>
+  <text x="116" y="508" fill="#334155" font-family="Helvetica, Arial, sans-serif" font-size="19">The same curated multi-clade reference directory under tree/ is reused across every major stage:</text>
+  <text x="116" y="545" fill="#334155" font-family="Helvetica, Arial, sans-serif" font-size="19">• query-HMM construction for discovery</text>
+  <text x="116" y="575" fill="#334155" font-family="Helvetica, Arial, sans-serif" font-size="19">• TPS HMM library generation for feature-space classification</text>
+  <text x="116" y="605" fill="#334155" font-family="Helvetica, Arial, sans-serif" font-size="19">• phylogeny background sequences for MAFFT and IQ-TREE</text>
+
+  <rect x="972" y="462" width="224" height="142" rx="24" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="2"/>
+  <text x="1010" y="503" fill="#1E293B" font-family="Helvetica, Arial, sans-serif" font-size="18" font-weight="700">Key outputs</text>
+  <text x="1010" y="536" fill="#475569" font-family="Helvetica, Arial, sans-serif" font-size="16">embedding.svg</text>
+  <text x="1010" y="564" fill="#475569" font-family="Helvetica, Arial, sans-serif" font-size="16">classification.tsv</text>
+  <text x="1010" y="592" fill="#475569" font-family="Helvetica, Arial, sans-serif" font-size="16">iqtree.treefile</text>
+</svg>

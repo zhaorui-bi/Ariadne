@@ -1,0 +1,67 @@
+site_name: Ariadne
+site_description: Tree-native terpene synthase discovery, feature-space classification, and phylogeny documentation.
+site_author: Zhaorui Jiang
+repo_url: https://github.com/zhaoruijiang26/Ariadne
+repo_name: zhaoruijiang26/Ariadne
+edit_uri: edit/main/docs/
+docs_dir: docs
+site_dir: site
+
+theme:
+  name: material
+  language: en
+  logo: assets/ariadne_icon.svg
+  favicon: assets/ariadne_icon.svg
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.indexes
+    - search.highlight
+    - search.share
+    - content.code.copy
+    - content.tabs.link
+    - content.action.edit
+    - toc.follow
+  palette:
+    - scheme: default
+      primary: custom
+      accent: custom
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+extra_css:
+  - stylesheets/extra.css
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Method: method.md
+  - Tutorials: tutorials.md
+  - CLI Reference: cli-reference.md
+  - Outputs: outputs.md
+  - Documentation Site: documentation-site.md
+  - FAQ: faq.md
+  - Citation: citation.md

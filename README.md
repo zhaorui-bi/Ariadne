@@ -17,6 +17,13 @@
   <img alt="References" src="https://img.shields.io/badge/Default%20Reference-tree%2F-C2410C?style=flat-square">
   <img alt="MAFFT" src="https://img.shields.io/badge/MAFFT-required-14532D?style=flat-square">
   <img alt="IQ-TREE" src="https://img.shields.io/badge/IQ--TREE-required-1D4ED8?style=flat-square">
+  <a href="./docs/index.md"><img alt="Documentation" src="https://img.shields.io/badge/Documentation-English%20Docs-2563EB?style=flat-square&logo=readthedocs&logoColor=white"></a>
+</p>
+
+<p align="center">
+  <a href="./docs/index.md">
+    <img alt="Open Documentation" src="https://img.shields.io/badge/Open-Documentation-0B132B?style=for-the-badge&logo=readthedocs&logoColor=white">
+  </a>
 </p>
 
 > Ariadne is a research-oriented command-line platform for terpene synthase discovery, feature-space classification, multiple sequence alignment, and phylogenetic reconstruction.  
