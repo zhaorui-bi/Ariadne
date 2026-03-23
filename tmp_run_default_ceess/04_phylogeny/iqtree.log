@@ -1,0 +1,91 @@
+IQ-TREE version 3.0.1 for MacOS ARM 64-bit built Jul  9 2025
+Developed by Bui Quang Minh, Thomas Wong, Nhan Ly-Trong, Huaiyan Ren
+Contributed by Lam-Tung Nguyen, Dominik Schrempf, Chris Bielow,
+Olga Chernomor, Michael Woodhams, Diep Thi Hoang, Heiko Schmidt
+
+Host:    Jiangs-MacBook-Pro.local (SSE4.2, 16 GB RAM)
+Command: /opt/anaconda3/bin/iqtree -s tmp_run_default_ceess/04_phylogeny/phylogeny_alignment.fasta --prefix tmp_run_default_ceess/04_phylogeny/iqtree -m LG -T AUTO --fast -redo
+Seed:    999824 (Using SPRNG - Scalable Parallel Random Number Generator)
+Time:    Mon Mar 23 18:39:15 2026
+Kernel:  SSE2 - auto-detect threads (10 CPU cores detected)
+
+Reading alignment file tmp_run_default_ceess/04_phylogeny/phylogeny_alignment.fasta ... Fasta format detected
+Reading fasta file: done in 0.0470941 secs using 63.31% CPU
+Alignment most likely contains protein sequences
+Constructing alignment: done in 0.030968 secs using 52.95% CPU
+Alignment has 795 sequences with 2870 columns, 2345 distinct patterns
+1412 parsimony-informative, 554 singleton sites, 904 constant sites
+Analyzing sequences: done in 0.00186491 secs using 364.2% CPU
+WARNING: 795 sequences contain more than 50% gaps/ambiguity
+Checking for duplicate sequences: done in 0.00485682 secs using 373.8% CPU
+Identifying sites to remove: done in 0.015033 secs using 84.35% CPU
+NOTE: 8 identical sequences (see below) will be ignored for subsequent analysis
+Alignment was printed to tmp_run_default_ceess/04_phylogeny/iqtree.uniqueseq.phy
+
+For your convenience alignment with unique sequences printed to tmp_run_default_ceess/04_phylogeny/iqtree.uniqueseq.phy
+
+Create initial parsimony tree by phylogenetic likelihood library (PLL)... 1.21 seconds
+
+NOTE: 287 MB RAM (0 GB) is required!
+Measuring multi-threading efficiency up to 10 CPU cores
+7 trees examined
+Threads: 1 / Time: 10.19 sec / Speedup: 1.00 / Efficiency: 100% / LogL: -749642
+Threads: 2 / Time: 6.81 sec / Speedup: 1.50 / Efficiency: 75% / LogL: -749642
+Threads: 3 / Time: 5.57 sec / Speedup: 1.83 / Efficiency: 61% / LogL: -749642
+Threads: 4 / Time: 6.07 sec / Speedup: 1.68 / Efficiency: 42% / LogL: -749642
+Determining AUTO threadcount: done in 28.6795 secs using 141.8% CPU
+BEST NUMBER OF THREADS: 3
+
+Estimate model parameters (epsilon = 0.50)
+1. Initial log-likelihood: -418349.09
+Optimal log-likelihood: -326989.23
+Parameters optimization took 1 rounds (3.90 sec)
+Wrote distance file to... 
+Computing ML distances based on estimated model parameters...
+Calculating distance matrix: done in 20.7243 secs using 271.3% CPU
+Computing ML distances took 20.739654 sec (of wall-clock time) 56.241895 sec (of CPU time)
+WARNING: Some pairwise ML distances are too long (saturated)
+Setting up auxiliary I and S matrices: done in 0.00446105 secs using 350.9% CPU
+Constructing RapidNJ tree: done in 0.108154 secs using 152.1% CPU
+Computing RapidNJ tree took 0.112740 sec (of wall-clock time) 0.180245 sec (of CPU time)
+Log-likelihood of RapidNJ tree: -329274.172
+--------------------------------------------------------------------
+|             INITIALIZING CANDIDATE TREE SET                      |
+--------------------------------------------------------------------
+
+Do NNI search on 2 best initial trees
+Optimizing NNI: done in 11.9374 secs using 193% CPU
+Estimate model parameters (epsilon = 0.500)
+BETTER TREE FOUND at iteration 1: -326261.229
+Optimizing NNI: done in 14.4964 secs using 199.9% CPU
+Estimate model parameters (epsilon = 0.500)
+BETTER TREE FOUND at iteration 2: -326245.892
+Finish initializing candidate tree set (4)
+Current best tree score: -326245.892 / CPU time: 28.464
+Number of iterations: 2
+TREE SEARCH COMPLETED AFTER 2 ITERATIONS / Time: 0h:1m:30s
+
+--------------------------------------------------------------------
+|                    FINALIZING TREE SEARCH                        |
+--------------------------------------------------------------------
+Performs final model parameters optimization
+Estimate model parameters (epsilon = 0.050)
+1. Initial log-likelihood: -326245.892
+Optimal log-likelihood: -326245.891
+Parameters optimization took 1 rounds (0.855 sec)
+BEST SCORE FOUND : -326245.891
+Total tree length: 252.361
+
+Total number of iterations: 2
+CPU time used for tree search: 56.154 sec (0h:0m:56s)
+Wall-clock time used for tree search: 28.466 sec (0h:0m:28s)
+Total CPU time used: 176.626 sec (0h:2m:56s)
+Total wall-clock time used: 91.150 sec (0h:1m:31s)
+
+Analysis results written to: 
+  IQ-TREE report:                tmp_run_default_ceess/04_phylogeny/iqtree.iqtree
+  Maximum-likelihood tree:       tmp_run_default_ceess/04_phylogeny/iqtree.treefile
+  Likelihood distances:          tmp_run_default_ceess/04_phylogeny/iqtree.mldist
+  Screen log file:               tmp_run_default_ceess/04_phylogeny/iqtree.log
+
+Date and Time: Mon Mar 23 18:40:46 2026

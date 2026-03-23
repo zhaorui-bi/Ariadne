@@ -15,6 +15,7 @@
   <img alt="Python" src="https://img.shields.io/badge/Python-3.11%2B-0F172A?style=flat-square&logo=python&logoColor=white">
   <img alt="Workflow" src="https://img.shields.io/badge/Workflow-4%20Stages-0F766E?style=flat-square">
   <img alt="References" src="https://img.shields.io/badge/Default%20Reference-tree%2F-C2410C?style=flat-square">
+  <img alt="ESM2" src="https://img.shields.io/badge/Optional-ESM2%20Type%20Model-7C3AED?style=flat-square">
   <img alt="MAFFT" src="https://img.shields.io/badge/MAFFT-required-14532D?style=flat-square">
   <img alt="IQ-TREE" src="https://img.shields.io/badge/IQ--TREE-required-1D4ED8?style=flat-square">
 </p>
@@ -41,16 +42,35 @@
 
 - 🌊 Tree-native：一个 `tree/` 目录驱动发现、分类和建树。
 - 🧭 Feature-space 分类：候选序列会被投影到 TPS HMM 特征空间，并和参考集合做最近邻比较。
+- 🤖 CeeSs-aware 分类：在判定为 `coral-like` 之后，Ariadne 可以结合 `TPS/TPS.xlsx` 和 ESM2 继续寻找 `cembrene A / cembrene B` 候选。
 - 🌳 默认可建树：分类完成后，Ariadne 会直接输出 MAFFT alignment 和 IQ-TREE 系统发育树。
 - 🧪 CLI 结构清晰：既支持一键 `run`，也支持分阶段的 `discover`、`filter`、`classify`、`phylogeny`。
 - 📄 结果适合论文图：默认输出 `embedding.svg`、`embedding_3d_sections.svg`、局部 context tree 和最终 Newick tree。
+
+## 🖼️ Results Preview
+
+<p align="center">
+  <img src="./docs/assets/latest_embedding.svg" alt="最新 Ariadne embedding 预览" width="100%">
+</p>
+
+<p align="center">
+  <img src="./docs/assets/latest_embedding_3d_sections.svg" alt="最新 Ariadne 三视角 embedding 预览" width="100%">
+</p>
+
+<p align="center">
+  <img src="./docs/assets/latest_tree.svg" alt="最新 Ariadne 系统发育树预览" width="100%">
+</p>
+
+<p align="center">
+  以上结果同步自 <code>tmp_run_default_ceess/03_classification/</code> 与 <code>tmp_run_default_ceess/04_phylogeny/</code> 的最新默认流程输出，既展示了 <code>Candidate CeeSs</code> 和 <code>Candidate non-CeeSs</code> 在分类 embedding 中的区分，也展示了真实的下游 IQ-TREE 系统发育树结果。
+</p>
 
 ## 🧠 整体流程
 
 当前 Ariadne 的设计尽量保持紧凑：
 
 1. `discovery`
-   从 `tree/` 中的参考 FASTA 自动构建 query HMM，并在蛋白 FASTA 或转录组 ORF 中搜索候选 TPS。
+   优先使用 `ariadne/hmm/query.hmm` 进行 discovery；如果内置 HMM 不可用，再回退到 `tree/` 中的参考 FASTA 自动构建 query HMM，并在蛋白 FASTA 或转录组 ORF 中搜索候选 TPS。
 2. `filtering`
    去掉低 coverage、过短和近重复的候选序列。
 3. `classification`
@@ -62,8 +82,9 @@
 
 ```text
 Ariadne/
-├── ariadne/                # 核心包
+├── ariadne/                # 核心包，内含 ariadne/hmm/ 默认 HMM
 ├── input/                  # 示例输入
+├── TPS/                    # 用于 ESM type 分析的珊瑚 TPS 标注表
 ├── tree/                   # 默认参考 FASTA 集合
 ├── output/                 # 历史输出示例，仅保留作参考
 ├── fig/                    # logo 和 figures
@@ -76,8 +97,12 @@ Ariadne/
 
 - `input/`
   默认示例输入目录，通常作为 `--protein-folder` 的来源。
+- `TPS/`
+  可选的监督分析目录。`TPS/TPS.xlsx` 里保存了整理好的珊瑚 TPS 蛋白表，第二列是蛋白序列，第三列是产物 `Type` 标签。当前 `classification` 阶段会在需要时用它训练一个 ESM-based CeeSs 小模型。
 - `tree/`
-  当前最核心的参考目录。Ariadne 会从这里读取多物种 TPS FASTA，并自动构建 query HMM、TPS HMM library、分类背景和 phylogeny 背景。
+  当前最核心的参考目录。Ariadne 会从这里读取多物种 TPS FASTA，并在需要回退构建时生成 query HMM、TPS HMM library、分类背景和 phylogeny 背景。
+- `ariadne/hmm/`
+  由当前 `tree/` 数据集预先生成并内置在软件包中的默认 HMM 目录。Ariadne 现在会优先使用 `ariadne/hmm/query.hmm` 作为 discovery HMM，并使用 `ariadne/hmm/*.hmm` 作为默认 TPS HMM library。
 - `output/`
   历史示例输出目录，只用于保留旧结果展示，不再参与当前默认流程。
 
@@ -91,6 +116,45 @@ cd Ariadne
 conda env create -f environment.yml
 conda activate ariadne
 pip install -e .
+```
+
+### 可选安装：ESM 依赖
+
+如果你希望 Ariadne 在 `classification` 阶段进一步识别 `cembrene A / cembrene B` 候选，请额外安装：
+
+```bash
+pip install -e '.[esm]'
+```
+
+这一步会补上 ESM2 所需的 `torch` 和 `transformers`。
+
+### ESM model presets
+
+当前 Ariadne 默认使用更大的 ESM2 checkpoint：
+
+```text
+facebook/esm2_t33_650M_UR50D
+```
+
+为了方便切换，CLI 也支持简写 preset：
+
+| Preset | 实际解析到的模型 |
+| --- | --- |
+| `150M` | `facebook/esm2_t30_150M_UR50D` |
+| `650M` | `facebook/esm2_t33_650M_UR50D` |
+| `3B` | `facebook/esm2_t36_3B_UR50D` |
+| `15B` | `facebook/esm2_t48_15B_UR50D` |
+
+如果你习惯写 `504M`，Ariadne 也会接受，并在内部映射到当前默认的大模型 checkpoint。
+
+示例：
+
+```bash
+ariadne classify \
+  --candidates results/02_filtering/candidates.filtered.faa \
+  --reference-dir tree/ \
+  --output-dir results_classification/ \
+  --ceess-model-name 150M
 ```
 
 ### venv
@@ -138,8 +202,8 @@ ariadne run \
 
 这条命令会自动完成：
 
-- 从 `tree/` 自动构建 discovery query HMM
-- 从 `tree/` 自动构建 TPS HMM library
+- 优先使用 `ariadne/hmm/query.hmm` 作为 discovery HMM
+- 优先使用 `ariadne/hmm/*.hmm` 作为默认 TPS HMM library
 - 发现候选蛋白
 - 过滤和去冗余
 - 在 TPS 特征空间中完成分类
@@ -171,6 +235,49 @@ ariadne phylogeny \
   --reference-dir tree/ \
   --output-dir results_phylogeny/
 ```
+
+### 在 classification 里继续寻找 CeeSs 候选
+
+```bash
+ariadne classify \
+  --candidates results/02_filtering/candidates.filtered.faa \
+  --reference-dir tree/ \
+  --output-dir results_classification/
+```
+
+如果仓库里存在 `TPS/TPS.xlsx`，并且已经安装了可选 ESM 依赖，那么 `classification` 会自动：
+
+- 先圈出 `coral-like` 的候选
+- 用 `TPS/TPS.xlsx` 训练一个小型 ESM type classifier
+- 对这些 coral-like candidate 继续打分，判断它们是否更像 `cembrene A / cembrene B`
+- 导出最终的 CeeSs 候选表和 fasta
+
+重点结果文件包括：
+
+- `classification.tsv`
+- `ceess_predictions.tsv`
+- `ceess_candidates.tsv`
+- `ceess_candidates.fasta`
+- `ceess_embedding.svg`
+- `ceess_model_metrics.tsv`
+
+如果你只想单独分析 `TPS/TPS.xlsx` 这张已标注表，也可以继续用：
+
+```bash
+ariadne esm-type \
+  --xlsx TPS/TPS.xlsx \
+  --output-dir esm_results/
+```
+
+这个独立命令会输出：
+
+- `esm_embedding.svg`
+- `esm_projection.tsv`
+- `esm_predictions.tsv`
+- `esm_confusion_matrix.tsv`
+- `esm_metrics.tsv`
+
+基于当前仓库中的 `TPS/TPS.xlsx`，默认配置下共有 `50` 条蛋白、`5` 个类型，当前 ESM baseline 的交叉验证准确率为 `0.74`。
 
 ## 🎓 Tutorial
 
@@ -208,10 +315,40 @@ ariadne phylogeny \
 
 - `04_phylogeny/phylogeny_input.fasta`
 - `04_phylogeny/phylogeny_alignment.fasta`
+- `04_phylogeny/phylogeny_preview.svg`
 - `04_phylogeny/iqtree.treefile`
 - `04_phylogeny/iqtree.iqtree`
 
 这些文件对应下游手工检查、作图和生物学解释时最核心的 alignment 与 tree。
+
+### Tutorial 4. 在 classification 之后查看 CeeSs 结果
+
+完成 `ariadne classify` 之后，建议优先查看：
+
+- `classification.tsv`
+- `ceess_predictions.tsv`
+- `ceess_candidates.tsv`
+- `ceess_candidates.fasta`
+- `ceess_embedding.svg`
+
+在当前仓库自带的一个真实 candidate 集合上，Ariadne 先识别出了 `36` 条 `coral-like` 序列，再在 `--ceess-threshold 0.5` 下保留了 `12` 条高置信度 CeeSs 候选。
+
+### Tutorial 5. 对整理好的 coral TPS 表单独跑 ESM type 模型
+
+```bash
+.venv/bin/python -m ariadne esm-type \
+  --xlsx TPS/TPS.xlsx \
+  --output-dir tmp_esm_results
+```
+
+建议优先查看：
+
+- `tmp_esm_results/esm_embedding.svg`
+- `tmp_esm_results/esm_metrics.tsv`
+- `tmp_esm_results/esm_confusion_matrix.tsv`
+- `tmp_esm_results/esm_predictions.tsv`
+
+这条路线面向“已知 coral TPS 序列的监督式类型区分”，和主流程中的 de novo candidate discovery 是互补关系，不是替代关系。
 
 ## 🧪 CLI Reference
 
@@ -235,8 +372,8 @@ ariadne phylogeny \
 | `--transcriptomes` | `None` | 转录组 FASTA 输入 |
 | `--reference-dir` | 必填 | tree-native 参考目录 |
 | `--output-dir` | 必填 | 输出根目录 |
-| `--query-hmm` | 自动构建 | 显式指定 discovery HMM |
-| `--tps-hmm-dir` | 自动构建 | 显式指定 TPS HMM library |
+| `--query-hmm` | `ariadne/hmm/query.hmm` | 显式指定 discovery HMM |
+| `--tps-hmm-dir` | `ariadne/hmm/` | 显式指定 TPS HMM library |
 | `--min-coverage` | `10.0` | 过滤 coverage 阈值 |
 | `--min-length` | `300` | 最小蛋白长度 |
 | `--identity-threshold` | `0.95` | 近重复合并阈值 |
@@ -278,7 +415,7 @@ ariadne phylogeny \
 | `--candidates` | 必填 | 过滤后的 candidate FASTA |
 | `--reference-dir` | 必填 | 参考 FASTA 目录 |
 | `--output-dir` | 必填 | classification 输出目录 |
-| `--tps-hmm-dir` | 自动构建 | TPS HMM library 目录 |
+| `--tps-hmm-dir` | `ariadne/hmm/` | TPS HMM library 目录 |
 | `--top-k` | `5` | 最近邻投票数 |
 | `--tree-neighbors` | `12` | 局部 context tree 使用的邻居数 |
 
@@ -323,6 +460,7 @@ results/
 ├── 04_phylogeny/
 │   ├── phylogeny_input.fasta
 │   ├── phylogeny_alignment.fasta
+│   ├── phylogeny_preview.svg
 │   ├── phylogeny_sequence_map.tsv
 │   ├── iqtree.treefile
 │   └── iqtree.iqtree
@@ -334,7 +472,7 @@ results/
 1. 先看 `pipeline_summary.tsv`，确认流程是否完整结束。
 2. 再看 `03_classification/classification.tsv`，理解每条 candidate 的预测来源。
 3. 打开 `03_classification/embedding.svg`，检查全局分布。
-4. 最后结合 `04_phylogeny/iqtree.treefile` 和 `04_phylogeny/iqtree.iqtree` 做系统发育解释。
+4. 建议先看 `04_phylogeny/phylogeny_preview.svg`，再结合 `04_phylogeny/iqtree.treefile` 和 `04_phylogeny/iqtree.iqtree` 做完整系统发育解释。
 
 ## ⚠️ 说明
 

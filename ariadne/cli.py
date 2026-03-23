@@ -110,6 +110,14 @@ def _default_reference_dir() -> Optional[Path]:
     )
 
 
+def _default_tps_xlsx() -> Optional[Path]:
+    """Locate the coral TPS spreadsheet used by the ESM type workflow."""
+    return _first_existing_path(
+        Path.cwd() / "TPS" / "TPS.xlsx",
+        _repo_root() / "TPS" / "TPS.xlsx",
+    )
+
+
 def _is_bundled_tps_hmms(path: PathLike) -> bool:
     """Check whether a path points at Ariadne's bundled placeholder HMMs."""
     return Path(path).resolve() == _default_tps_hmms().resolve()
@@ -177,6 +185,30 @@ def _reference_fasta_paths(reference_dir: PathLike) -> list[Path]:
     if not fasta_paths:
         raise FileNotFoundError(f"No FASTA files were found in reference directory: {directory}")
     return fasta_paths
+
+
+def _bundled_hmm_dir() -> Path:
+    """Return the bundled HMM directory shipped with the Ariadne package."""
+    package_hmm = Path(__file__).resolve().parent / "hmm"
+    if package_hmm.exists():
+        return package_hmm
+    # Backward-compatible fallback for older worktrees that still used repo-root hmm/.
+    return Path(__file__).resolve().parent.parent / "hmm"
+
+
+def _bundled_query_hmm() -> Path | None:
+    """Return the bundled default discovery HMM when it is available."""
+    path = _bundled_hmm_dir() / "query.hmm"
+    return path if path.exists() else None
+
+
+def _bundled_tps_hmm_dir() -> Path | None:
+    """Return the bundled TPS HMM library directory when it is available."""
+    directory = _bundled_hmm_dir()
+    if not directory.exists():
+        return None
+    hmm_files = sorted(path for path in directory.glob("*.hmm") if path.name != "query.hmm")
+    return directory if hmm_files else None
 
 
 def _auto_build_query_hmm(reference_dir: PathLike, output_path: PathLike, *, name: str) -> Path:
@@ -385,10 +417,16 @@ def cmd_classify(args: argparse.Namespace) -> int:
     """Run stage 3 feature-space classification."""
     from ariadne.classification import classify_candidates
 
-    hmm_dir = Path(args.tps_hmm_dir) if args.tps_hmm_dir is not None else _auto_build_tps_hmm_library(
-        args.reference_dir,
-        Path(args.output_dir) / "_auto_tps_hmms",
-    )
+    if args.tps_hmm_dir is not None:
+        hmm_dir = Path(args.tps_hmm_dir)
+    elif _bundled_tps_hmm_dir() is not None:
+        hmm_dir = _bundled_tps_hmm_dir()
+        logger.info("No --tps-hmm-dir provided; using bundled TPS HMM library from %s", hmm_dir)
+    else:
+        hmm_dir = _auto_build_tps_hmm_library(
+            args.reference_dir,
+            Path(args.output_dir) / "_auto_tps_hmms",
+        )
     _warn_legacy_tps_hmms(hmm_dir)
     outputs = classify_candidates(
         args.candidates,
@@ -397,6 +435,14 @@ def cmd_classify(args: argparse.Namespace) -> int:
         hmm_dir=hmm_dir,
         top_k=args.top_k,
         tree_neighbors=args.tree_neighbors,
+        ceess_xlsx=None if args.skip_ceess_model else args.ceess_xlsx,
+        ceess_model_name=args.ceess_model_name,
+        ceess_batch_size=args.ceess_batch_size,
+        ceess_max_length=args.ceess_max_length,
+        ceess_device=args.ceess_device,
+        ceess_cv_folds=args.ceess_cv_folds,
+        ceess_random_state=args.ceess_random_state,
+        ceess_threshold=args.ceess_threshold,
     )
     for key, value in outputs.items():
         logger.info("  %-28s %s", key + ":", value)
@@ -419,6 +465,9 @@ def cmd_run(args: argparse.Namespace) -> int:
 
     if args.query_hmm:
         hmm_path = Path(args.query_hmm)
+    elif _bundled_query_hmm() is not None:
+        hmm_path = _bundled_query_hmm()
+        logger.info("No --query-hmm provided; using bundled discovery HMM from %s", hmm_path)
     else:
         hmm_path = _auto_build_query_hmm(args.reference_dir, discovery_dir / "query.hmm", name=args.hmm_name)
 
@@ -453,10 +502,16 @@ def cmd_run(args: argparse.Namespace) -> int:
         min_length=args.min_length,
         identity_threshold=args.identity_threshold,
     )
-    tps_hmm_dir = Path(args.tps_hmm_dir) if args.tps_hmm_dir is not None else _auto_build_tps_hmm_library(
-        args.reference_dir,
-        classification_dir / "_auto_tps_hmms",
-    )
+    if args.tps_hmm_dir is not None:
+        tps_hmm_dir = Path(args.tps_hmm_dir)
+    elif _bundled_tps_hmm_dir() is not None:
+        tps_hmm_dir = _bundled_tps_hmm_dir()
+        logger.info("No --tps-hmm-dir provided; using bundled TPS HMM library from %s", tps_hmm_dir)
+    else:
+        tps_hmm_dir = _auto_build_tps_hmm_library(
+            args.reference_dir,
+            classification_dir / "_auto_tps_hmms",
+        )
     _warn_legacy_tps_hmms(tps_hmm_dir)
     classification_outputs = classify_candidates(
         filtering_outputs["filtered_fasta"],
@@ -465,6 +520,14 @@ def cmd_run(args: argparse.Namespace) -> int:
         hmm_dir=tps_hmm_dir,
         top_k=args.top_k,
         tree_neighbors=args.tree_neighbors,
+        ceess_xlsx=None if args.skip_ceess_model else args.ceess_xlsx,
+        ceess_model_name=args.ceess_model_name,
+        ceess_batch_size=args.ceess_batch_size,
+        ceess_max_length=args.ceess_max_length,
+        ceess_device=args.ceess_device,
+        ceess_cv_folds=args.ceess_cv_folds,
+        ceess_random_state=args.ceess_random_state,
+        ceess_threshold=args.ceess_threshold,
     )
     phylogeny_outputs = {}
     if not args.skip_phylogeny:
@@ -503,6 +566,31 @@ def cmd_visualize(args: argparse.Namespace) -> int:
         args.output_dir,
         perplexities=args.perplexities,
         min_points=args.min_points,
+    )
+    for key, value in outputs.items():
+        logger.info("  %-28s %s", key + ":", value)
+    return 0
+
+
+def cmd_esm_type(args: argparse.Namespace) -> int:
+    """Run supervised ESM embedding analysis on the coral TPS spreadsheet."""
+    from ariadne.esm_type import analyze_tps_types_with_esm
+
+    if args.xlsx is None:
+        raise FileNotFoundError(
+            "Could not find TPS/TPS.xlsx automatically. Please pass --xlsx explicitly."
+        )
+
+    outputs = analyze_tps_types_with_esm(
+        args.xlsx,
+        args.output_dir,
+        sheet_name=args.sheet_name,
+        model_name=args.model_name,
+        batch_size=args.batch_size,
+        max_length=args.max_length,
+        device=args.device,
+        cv_folds=args.cv_folds,
+        random_state=args.random_state,
     )
     for key, value in outputs.items():
         logger.info("  %-28s %s", key + ":", value)
@@ -565,6 +653,8 @@ def cmd_dedupe_exact(args: argparse.Namespace) -> int:
 
 def build_parser() -> argparse.ArgumentParser:
     """Create the top-level parser and all Ariadne subcommands."""
+    from ariadne.esm_type import DEFAULT_ESM_MODEL_NAME, esm_model_help_text
+
     parser = argparse.ArgumentParser(
         prog="ariadne",
         description="Ariadne — Terpene Synthase Discovery & Annotation Pipeline.",
@@ -650,6 +740,15 @@ def build_parser() -> argparse.ArgumentParser:
     classify.add_argument("--tps-hmm-dir", default=None, type=Path, help="Optional directory containing TPS HMM profiles (*.hmm). When omitted, Ariadne builds them from --reference-dir.")
     classify.add_argument("--top-k", type=int, default=5)
     classify.add_argument("--tree-neighbors", type=int, default=12)
+    classify.add_argument("--ceess-xlsx", type=Path, default=_default_tps_xlsx(), help="Optional coral TPS workbook used to train the ESM CeeSs model. Defaults to TPS/TPS.xlsx when present.")
+    classify.add_argument("--skip-ceess-model", action="store_true", help="Skip the optional ESM-based CeeSs scoring stage.")
+    classify.add_argument("--ceess-threshold", type=float, default=0.5, help="Probability threshold used to keep predicted CeeSs candidates.")
+    classify.add_argument("--ceess-model-name", default=DEFAULT_ESM_MODEL_NAME, help=esm_model_help_text())
+    classify.add_argument("--ceess-batch-size", type=int, default=4)
+    classify.add_argument("--ceess-max-length", type=int, default=2048)
+    classify.add_argument("--ceess-device", default=None, help="Optional torch device for the ESM CeeSs model, for example cpu or cuda.")
+    classify.add_argument("--ceess-cv-folds", type=int, default=5)
+    classify.add_argument("--ceess-random-state", type=int, default=0)
     classify.set_defaults(func=cmd_classify)
 
     run = subparsers.add_parser("run", help="Execute Ariadne end-to-end: discovery, filtering, classification, and optional phylogeny.")
@@ -673,6 +772,15 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--tps-hmm-dir", default=None, type=Path, help="Optional directory containing TPS HMM profiles (*.hmm). When omitted, Ariadne builds them from --reference-dir.")
     run.add_argument("--top-k", type=int, default=5)
     run.add_argument("--tree-neighbors", type=int, default=12)
+    run.add_argument("--ceess-xlsx", type=Path, default=_default_tps_xlsx(), help="Optional coral TPS workbook used to train the ESM CeeSs model. Defaults to TPS/TPS.xlsx when present.")
+    run.add_argument("--skip-ceess-model", action="store_true", help="Skip the optional ESM-based CeeSs scoring stage.")
+    run.add_argument("--ceess-threshold", type=float, default=0.5, help="Probability threshold used to keep predicted CeeSs candidates.")
+    run.add_argument("--ceess-model-name", default=DEFAULT_ESM_MODEL_NAME, help=esm_model_help_text())
+    run.add_argument("--ceess-batch-size", type=int, default=4)
+    run.add_argument("--ceess-max-length", type=int, default=2048)
+    run.add_argument("--ceess-device", default=None, help="Optional torch device for the ESM CeeSs model, for example cpu or cuda.")
+    run.add_argument("--ceess-cv-folds", type=int, default=5)
+    run.add_argument("--ceess-random-state", type=int, default=0)
     run.add_argument("--skip-phylogeny", action="store_true", help="Skip the MAFFT + IQ-TREE phylogeny step.")
     run.add_argument("--mafft-bin", default=None, help="Path or executable name for MAFFT.")
     run.add_argument("--mafft-mode", default="--auto", help="MAFFT mode flag, for example --auto or --localpair.")
@@ -718,6 +826,21 @@ def build_parser() -> argparse.ArgumentParser:
     visualize.add_argument("--perplexities", nargs="+", type=int, default=None, help="Explicit t-SNE perplexities. Default follows legacy AFLP heuristic.")
     visualize.add_argument("--min-points", type=int, default=20, help="Clustering min points, equivalent to legacy minPts.")
     visualize.set_defaults(func=cmd_visualize)
+
+    esm_type = subparsers.add_parser(
+        "esm-type",
+        help="Embed labeled coral TPS proteins from TPS.xlsx with ESM2 and classify their types.",
+    )
+    esm_type.add_argument("--xlsx", type=Path, default=_default_tps_xlsx(), help="Input TPS spreadsheet. Defaults to TPS/TPS.xlsx when present.")
+    esm_type.add_argument("--output-dir", required=True, type=Path)
+    esm_type.add_argument("--sheet-name", default=None, help="Optional worksheet name. Defaults to the first sheet.")
+    esm_type.add_argument("--model-name", default=DEFAULT_ESM_MODEL_NAME, help=esm_model_help_text())
+    esm_type.add_argument("--batch-size", type=int, default=4)
+    esm_type.add_argument("--max-length", type=int, default=2048)
+    esm_type.add_argument("--device", default=None, help="Optional torch device, for example cpu or cuda.")
+    esm_type.add_argument("--cv-folds", type=int, default=5)
+    esm_type.add_argument("--random-state", type=int, default=0)
+    esm_type.set_defaults(func=cmd_esm_type)
 
     coverage_only = subparsers.add_parser("filter-coverage-only", help="Compatibility helper for the legacy coverage filter.")
     coverage_only.add_argument("min_coverage", type=float)

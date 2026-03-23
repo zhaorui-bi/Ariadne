@@ -76,6 +76,7 @@ Key files:
 - `iqtree.treefile`
 - `iqtree.iqtree`
 - `iqtree.log`
+- `phylogeny_preview.svg`
 
 What to inspect:
 
@@ -85,6 +86,8 @@ What to inspect:
   final phylogeny in Newick format
 - `iqtree.iqtree`
   model and inference summary from IQ-TREE
+- `phylogeny_preview.svg`
+  compact SVG preview automatically rendered from the final IQ-TREE tree
 
 ## Reading order
 
@@ -93,14 +96,22 @@ If you are new to Ariadne, this reading order usually works best:
 1. `pipeline_summary.tsv`
 2. `03_classification/classification.tsv`
 3. `03_classification/embedding.svg`
-4. `04_phylogeny/iqtree.treefile`
-5. `04_phylogeny/iqtree.iqtree`
+4. `04_phylogeny/phylogeny_preview.svg`
+5. `04_phylogeny/iqtree.treefile`
+6. `04_phylogeny/iqtree.iqtree`
 
 ## Representative preview
 
 <figure class="paper-figure">
-  <img src="assets/results_preview.svg" alt="Representative outputs preview">
+  <img src="assets/latest_embedding.svg" alt="Latest classification embedding preview">
   <figcaption>
-    Figure 2. The most user-facing artifacts are the classification embedding panels and the final phylogeny outputs.
+    Figure 2. Latest default-run classification embedding, synced from <code>tmp_run_default_ceess/03_classification/embedding.svg</code>.
+  </figcaption>
+</figure>
+
+<figure class="paper-figure">
+  <img src="assets/latest_embedding_3d_sections.svg" alt="Latest classification 3D embedding preview">
+  <figcaption>
+    Figure 3. The companion orthogonal embedding panels from the same run, showing <code>Candidate CeeSs</code> and <code>Candidate non-CeeSs</code> against the reference background.
   </figcaption>
 </figure>

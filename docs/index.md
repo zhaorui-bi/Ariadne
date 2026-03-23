@@ -90,20 +90,35 @@ In the associated study context, this platform supported the identification of C
 ## 🖼️ Results Preview
 
 <figure class="paper-figure">
-  <img src="assets/results_preview.svg" alt="Representative Ariadne outputs">
+  <img src="assets/latest_embedding.svg" alt="Latest Ariadne embedding output">
   <figcaption>
-    Figure 2. Conference-style preview of the two most important result families: TPS feature-space embedding and final alignment-driven phylogeny.
+    Figure 2. Latest default-run classification embedding, synced from <code>tmp_run_default_ceess/03_classification/embedding.svg</code>. Coral-like candidates are explicitly separated into <code>Candidate CeeSs</code> and <code>Candidate non-CeeSs</code>.
+  </figcaption>
+</figure>
+
+<figure class="paper-figure">
+  <img src="assets/latest_embedding_3d_sections.svg" alt="Latest Ariadne 3D embedding output">
+  <figcaption>
+    Figure 3. Orthogonal embedding sections from the same default run, useful when comparing foreground candidate groups against the broader multi-clade TPS background.
+  </figcaption>
+</figure>
+
+<figure class="paper-figure">
+  <img src="assets/latest_tree.svg" alt="Latest Ariadne phylogeny preview">
+  <figcaption>
+    Figure 4. Alignment-driven phylogeny preview rendered from <code>tmp_run_default_ceess/04_phylogeny/iqtree.treefile</code>. The thumbnail preserves the real default-run branch structure while highlighting candidate placements against the multi-clade reference backbone.
   </figcaption>
 </figure>
 
 <div class="preview-grid">
   <div class="paper-card">
     <h3>Embedding panel</h3>
-    <p><code>embedding.svg</code> and <code>embedding_3d_sections.svg</code> summarize how candidates relate to the reference clades in TPS HMM feature space.</p>
+    <p><code>embedding.svg</code> and <code>embedding_3d_sections.svg</code> now show the latest default-run result, including explicit separation between <code>Candidate CeeSs</code> and <code>Candidate non-CeeSs</code>.</p>
   </div>
   <div class="paper-card">
     <h3>Tree panel</h3>
-    <p><code>phylogeny_alignment.fasta</code>, <code>iqtree.treefile</code>, and <code>iqtree.iqtree</code> provide the alignment and the final tree for downstream interpretation.</p>
+    <img src="assets/latest_tree.svg" alt="Tree panel thumbnail from the latest default run">
+    <p><code>phylogeny_alignment.fasta</code>, <code>iqtree.treefile</code>, and <code>iqtree.iqtree</code> now resolve to a real default-run tree preview instead of placeholder copy, making the docs homepage closer to the actual downstream result users will inspect.</p>
   </div>
 </div>
 
@@ -118,8 +133,8 @@ ariadne run \
 
 This command will:
 
-- auto-build the discovery query HMM from `tree/`
-- auto-build the TPS HMM library from `tree/`
+- use the bundled discovery query HMM from `ariadne/hmm/query.hmm`
+- use the bundled TPS HMM library from `ariadne/hmm/`
 - discover and filter candidates
 - classify them in TPS feature space
 - directly generate the final alignment and phylogeny

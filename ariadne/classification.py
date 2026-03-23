@@ -21,6 +21,7 @@ from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 
 from ariadne.fasta_utils import FastaRecord, ensure_directory, read_fasta, sanitize_newick_name, write_fasta, write_tsv
 from ariadne.references import load_reference_records
+from ariadne.esm_type import DEFAULT_ESM_MODEL_NAME
 
 PathLike = Union[str, Path]
 
@@ -111,7 +112,7 @@ def _pca_coordinates(matrix: np.ndarray, n_components: int = 3) -> tuple[np.ndar
 def _embedding_group_label(record: FastaRecord) -> str:
     """Return the label used by supervised embedding to separate display groups."""
     if record.metadata.get("source") == "candidate":
-        return record.metadata.get("candidate_group", _candidate_group(record))
+        return _candidate_group(record)
     return f"ref:{record.metadata.get('source', 'unknown')}"
 
 
@@ -373,6 +374,10 @@ def _candidate_group(record: FastaRecord) -> str:
     """Map a record to a candidate/reference display category."""
     if record.metadata.get("source") != "candidate":
         return f"ref:{record.metadata.get('source', 'unknown')}"
+    if record.metadata.get("is_ceess_candidate") == "yes":
+        return "candidate_ceess"
+    if record.metadata.get("esm_ceess_label") == "non-CeeSs" or record.metadata.get("is_coral_like") == "yes":
+        return "candidate_non_ceess"
     return "candidate"
 
 
@@ -408,6 +413,28 @@ def _marker_svg(x: float, y: float, *, shape: str, radius: float, fill: str, str
     return (
         f'<circle cx="{x:.2f}" cy="{y:.2f}" r="{radius:.2f}" fill="{fill}" opacity="{opacity}" '
         f'stroke="{stroke}" stroke-width="{stroke_width}" />'
+    )
+
+
+def _candidate_group_overlay(points: list[tuple[float, float]], *, fill: str, stroke: str, label: str) -> str:
+    """Render a soft ellipse + label that highlights one candidate subgroup."""
+    if not points:
+        return ""
+    xs = [point[0] for point in points]
+    ys = [point[1] for point in points]
+    min_x, max_x = min(xs), max(xs)
+    min_y, max_y = min(ys), max(ys)
+    cx = (min_x + max_x) / 2
+    cy = (min_y + max_y) / 2
+    rx = max((max_x - min_x) / 2 + 18.0, 24.0)
+    ry = max((max_y - min_y) / 2 + 16.0, 22.0)
+    label_y = cy - ry - 10.0
+    return (
+        f'<ellipse cx="{cx:.2f}" cy="{cy:.2f}" rx="{rx:.2f}" ry="{ry:.2f}" '
+        f'fill="{fill}" fill-opacity="0.08" stroke="{stroke}" stroke-opacity="0.6" '
+        f'stroke-width="1.5" stroke-dasharray="6,4" />'
+        f'<text x="{cx:.2f}" y="{label_y:.2f}" text-anchor="middle" font-size="11" '
+        f'font-weight="700" fill="{stroke}">{label}</text>'
     )
 
 
@@ -468,6 +495,7 @@ def _render_scatter(
     ]
 
     axis_names = component_labels or [f"Axis{i + 1}" for i in range(max(2, coords.shape[1]))]
+    candidate_overlay_points: dict[str, list[tuple[float, float]]] = {group: [] for group in candidate_groups}
 
     def axis_label(dim: int) -> str:
         name = axis_names[dim] if dim < len(axis_names) else f"Axis{dim + 1}"
@@ -510,7 +538,10 @@ def _render_scatter(
             source = record.metadata.get("source", "unknown")
             svg.append(f'<circle cx="{x:.2f}" cy="{y:.2f}" r="3.6" fill="{ref_colour.get(source, "#9CA3AF")}" fill-opacity="0.58" stroke="none"/>')
             continue
-        cfg = _CANDIDATE_CFG.get(_candidate_group(record), _CANDIDATE_CFG["candidate"])
+        group = _candidate_group(record)
+        cfg = _CANDIDATE_CFG.get(group, _CANDIDATE_CFG["candidate"])
+        if group in candidate_overlay_points:
+            candidate_overlay_points[group].append((x, y))
         svg.append(
             _marker_svg(
                 x,
@@ -523,6 +554,17 @@ def _render_scatter(
                 stroke_width=1.3,
             )
         )
+
+    for group in candidate_groups:
+        cfg = _CANDIDATE_CFG[group]
+        overlay = _candidate_group_overlay(
+            candidate_overlay_points.get(group, []),
+            fill=cfg["fill"],
+            stroke=cfg["stroke"],
+            label=cfg["label"],
+        )
+        if overlay:
+            svg.insert(5, overlay)
 
     legend_x = plot_right + 36
     legend_y = plot_top + 24
@@ -564,9 +606,17 @@ _FILL_EXTRA = ["#87CEFA", "#FFC0CB", "#800080", "#191970", "#FF7F50", "#808080",
 
 # Candidate-group display configuration (shape + colour, NO text labels)
 _CANDIDATE_CFG: dict[str, dict] = {
+    "candidate_ceess": {
+        "label": "Candidate CeeSs",
+        "fill": "#D97706", "stroke": "#7C2D12", "shape": "diamond", "r": 8.2, "op": 0.94,
+    },
+    "candidate_non_ceess": {
+        "label": "Candidate non-CeeSs",
+        "fill": "#0F766E", "stroke": "#134E4A", "shape": "square", "r": 7.6, "op": 0.9,
+    },
     "candidate": {
-        "label": "Candidate",
-        "fill": "#374151", "stroke": "#111827", "shape": "circle",   "r": 7.5, "op": 0.88,
+        "label": "Candidate other",
+        "fill": "#374151", "stroke": "#111827", "shape": "circle",   "r": 7.2, "op": 0.84,
     },
 }
 
@@ -841,6 +891,7 @@ def _render_3d_sections(
         # paint references (background) before candidates (foreground)
         ref_pts: list[str] = []
         cand_pts: list[str] = []
+        cand_overlay_points: dict[str, list[tuple[float, float]]] = {group: [] for group in cand_groups_present}
 
         for rec, xv, yv in zip(records, xs, ys):
             cx = max(plot_x0, min(plot_x1, svgx(float(xv))))
@@ -858,6 +909,8 @@ def _render_3d_sections(
                 # candidate: larger shape marker, NO text label
                 grp = _candidate_group(rec)
                 cfg = _CANDIDATE_CFG.get(grp, _CANDIDATE_CFG["candidate"])
+                if grp in cand_overlay_points:
+                    cand_overlay_points[grp].append((cx, cy))
                 cand_pts.append(
                     _marker_svg(
                         cx, cy,
@@ -870,6 +923,16 @@ def _render_3d_sections(
                     )
                 )
 
+        for grp in cand_groups_present:
+            cfg = _CANDIDATE_CFG[grp]
+            overlay = _candidate_group_overlay(
+                cand_overlay_points.get(grp, []),
+                fill=cfg["fill"],
+                stroke=cfg["stroke"],
+                label=cfg["label"],
+            )
+            if overlay:
+                svg.append(overlay)
         svg.extend(ref_pts)
         svg.extend(cand_pts)
 
@@ -903,9 +966,7 @@ def _render_3d_sections(
         f'Candidate groups:</text>',
     )
     ix2 = OL + 128
-    for grp in ["candidate"]:
-        if grp not in cand_groups_present:
-            continue
+    for grp in cand_groups_present:
         cfg = _CANDIDATE_CFG[grp]
         svg.append(
             _marker_svg(ix2 + 7, leg_y2 - 5,
@@ -941,6 +1002,14 @@ def classify_candidates(
     hmm_dir: PathLike,
     top_k: int = 5,
     tree_neighbors: int = 12,
+    ceess_xlsx: Optional[PathLike] = None,
+    ceess_model_name: str = DEFAULT_ESM_MODEL_NAME,
+    ceess_batch_size: int = 4,
+    ceess_max_length: int = 2048,
+    ceess_device: Optional[str] = None,
+    ceess_cv_folds: int = 5,
+    ceess_random_state: int = 0,
+    ceess_threshold: float = 0.5,
 ) -> dict[str, Path]:
     """Assign each candidate to the dominant source of its nearest references."""
     references = load_reference_records(reference_dir)
@@ -979,43 +1048,11 @@ def classify_candidates(
         feature_rows.append(row)
     features_path = write_tsv(feature_rows, output_root / "tps_features.tsv")
 
-    embedding_rows = []
-    for index, record in enumerate(all_records):
-        embedding_rows.append(
-            {
-                "sequence_id": record.id,
-                "source": record.metadata.get("source", "unknown"),
-                "candidate_group": record.metadata.get("candidate_group", ""),
-                "embedding_group": embedding_groups[index],
-                "embedding_method": embedding_method,
-                "axis1_label": component_labels[0] if len(component_labels) > 0 else "Axis1",
-                "axis2_label": component_labels[1] if len(component_labels) > 1 else "Axis2",
-                "axis3_label": component_labels[2] if len(component_labels) > 2 else "Axis3",
-                "axis1": round(float(coords[index, 0]), 6),
-                "axis2": round(float(coords[index, 1]), 6),
-                "axis3": round(float(coords[index, 2]), 6),
-                "pc1": round(float(coords[index, 0]), 6),
-                "pc2": round(float(coords[index, 1]), 6),
-                "pc3": round(float(coords[index, 2]), 6),
-            }
-        )
-    embedding_path = write_tsv(embedding_rows, output_root / "embedding.tsv")
-    variance_path = write_tsv(
-        [
-            {
-                "embedding_method": embedding_method,
-                "component": component_labels[component_index] if component_index < len(component_labels) else f"Axis{component_index + 1}",
-                "explained_variance": round(float(value), 6),
-            }
-            for component_index, value in enumerate(explained, start=0)
-        ],
-        output_root / "embedding_variance.tsv",
-    )
-
     reference_count = len(references)
     candidate_rows: list[dict[str, object]] = []
     neighbor_rows: list[dict[str, object]] = []
     cluster_context_rows: list[dict[str, object]] = []
+    candidate_records_by_id: dict[str, FastaRecord] = {}
     tree_dir = ensure_directory(output_root / "trees")
 
     for candidate_index in range(reference_count, len(all_records)):
@@ -1032,15 +1069,29 @@ def classify_candidates(
         ) / len(top_neighbors)
         nearest_reference_index, nearest_distance = top_neighbors[0]
         nearest_reference = references[nearest_reference_index]
+        is_coral_like = predicted_source == "coral" or nearest_reference.metadata.get("source", "unknown") == "coral"
+        candidate.metadata["is_coral_like"] = "yes" if is_coral_like else "no"
+        candidate.metadata["is_ceess_candidate"] = "no"
+        candidate.metadata["esm_ceess_label"] = ""
+        candidate_records_by_id[candidate.id] = candidate
         candidate_rows.append(
             {
                 "sequence_id": candidate.id,
                 "candidate_group": candidate.metadata.get("candidate_group", "candidate"),
                 "predicted_source": predicted_source,
                 "confidence": round(confidence, 4),
+                "is_coral_like": "yes" if is_coral_like else "no",
                 "nearest_reference": nearest_reference.id,
                 "nearest_reference_source": nearest_reference.metadata.get("source", "unknown"),
                 "nearest_distance": round(nearest_distance, 6),
+                "esm_type_prediction": "",
+                "esm_ceess_label": "",
+                "esm_ceess_subtype": "",
+                "esm_ceess_probability": "",
+                "esm_non_ceess_probability": "",
+                "esm_cembrene_a_probability": "",
+                "esm_cembrene_b_probability": "",
+                "is_ceess_candidate": "no",
             }
         )
         for rank, (neighbor_index, distance) in enumerate(top_neighbors, start=1):
@@ -1083,6 +1134,122 @@ def classify_candidates(
     classification_path = write_tsv(candidate_rows, output_root / "classification.tsv")
     neighbors_path = write_tsv(neighbor_rows, output_root / "nearest_neighbors.tsv")
     cluster_context_path = write_tsv(cluster_context_rows, output_root / "candidate_cluster_context.tsv")
+
+    ceess_outputs: dict[str, Path] = {}
+    if ceess_xlsx is not None:
+        ceess_xlsx_path = Path(ceess_xlsx)
+        coral_like_ids = [str(row["sequence_id"]) for row in candidate_rows if row["is_coral_like"] == "yes"]
+        coral_like_records = [candidate_records_by_id[sequence_id] for sequence_id in coral_like_ids]
+        if coral_like_records and ceess_xlsx_path.exists():
+            try:
+                from ariadne.esm_type import classify_ceess_candidates_with_esm
+
+                ceess_result = classify_ceess_candidates_with_esm(
+                    coral_like_records,
+                    ceess_xlsx_path,
+                    output_root,
+                    model_name=ceess_model_name,
+                    batch_size=ceess_batch_size,
+                    max_length=ceess_max_length,
+                    device=ceess_device,
+                    cv_folds=ceess_cv_folds,
+                    random_state=ceess_random_state,
+                    ceess_threshold=ceess_threshold,
+                )
+                by_id = {str(row["sequence_id"]): row for row in ceess_result.prediction_rows}
+                for row in candidate_rows:
+                    prediction = by_id.get(str(row["sequence_id"]))
+                    if prediction is None:
+                        continue
+                    candidate_record = candidate_records_by_id.get(str(row["sequence_id"]))
+                    if candidate_record is not None:
+                        candidate_record.metadata["is_ceess_candidate"] = prediction["is_ceess_candidate"]
+                        candidate_record.metadata["esm_ceess_label"] = prediction.get("esm_ceess_label", "")
+                    row["esm_type_prediction"] = prediction["esm_type_prediction"]
+                    row["esm_ceess_label"] = prediction.get("esm_ceess_label", "")
+                    row["esm_ceess_subtype"] = prediction["esm_ceess_subtype"]
+                    row["esm_ceess_probability"] = prediction["esm_ceess_probability"]
+                    row["esm_non_ceess_probability"] = prediction.get("esm_non_ceess_probability", "")
+                    row["esm_cembrene_a_probability"] = prediction["esm_cembrene_a_probability"]
+                    row["esm_cembrene_b_probability"] = prediction["esm_cembrene_b_probability"]
+                    row["is_ceess_candidate"] = prediction["is_ceess_candidate"]
+                classification_path = write_tsv(candidate_rows, output_root / "classification.tsv")
+                ceess_outputs = ceess_result.output_paths
+            except Exception as error:
+                logger.warning("Skipped optional CeeSs ESM stage: %s", error)
+        elif not ceess_xlsx_path.exists():
+            logger.warning("CeeSs ESM spreadsheet not found, skipped: %s", ceess_xlsx_path)
+
+    coords, explained, component_labels, embedding_method = _embedding_coordinates(
+        normalized_matrix,
+        all_records,
+        n_components=3,
+    )
+    embedding_groups = _embedding_group_labels(_zscore_matrix(normalized_matrix), all_records)
+
+    embedding_rows = []
+    for index, record in enumerate(all_records):
+        embedding_rows.append(
+            {
+                "sequence_id": record.id,
+                "source": record.metadata.get("source", "unknown"),
+                "candidate_group": _candidate_group(record) if record.metadata.get("source") == "candidate" else record.metadata.get("candidate_group", ""),
+                "embedding_group": embedding_groups[index],
+                "embedding_method": embedding_method,
+                "axis1_label": component_labels[0] if len(component_labels) > 0 else "Axis1",
+                "axis2_label": component_labels[1] if len(component_labels) > 1 else "Axis2",
+                "axis3_label": component_labels[2] if len(component_labels) > 2 else "Axis3",
+                "axis1": round(float(coords[index, 0]), 6),
+                "axis2": round(float(coords[index, 1]), 6),
+                "axis3": round(float(coords[index, 2]), 6),
+                "pc1": round(float(coords[index, 0]), 6),
+                "pc2": round(float(coords[index, 1]), 6),
+                "pc3": round(float(coords[index, 2]), 6),
+            }
+        )
+    embedding_path = write_tsv(embedding_rows, output_root / "embedding.tsv")
+    variance_path = write_tsv(
+        [
+            {
+                "embedding_method": embedding_method,
+                "component": component_labels[component_index] if component_index < len(component_labels) else f"Axis{component_index + 1}",
+                "explained_variance": round(float(value), 6),
+            }
+            for component_index, value in enumerate(explained, start=0)
+        ],
+        output_root / "embedding_variance.tsv",
+    )
+    cluster_context_rows = []
+    for candidate_index in range(reference_count, len(all_records)):
+        candidate = all_records[candidate_index]
+        nearest_distance = float(
+            next(row["nearest_distance"] for row in candidate_rows if row["sequence_id"] == candidate.id)
+        )
+        nearest_source = str(
+            next(row["nearest_reference_source"] for row in candidate_rows if row["sequence_id"] == candidate.id)
+        )
+        predicted_source = str(
+            next(row["predicted_source"] for row in candidate_rows if row["sequence_id"] == candidate.id)
+        )
+        cluster_context_rows.append(
+            {
+                "sequence_id": candidate.id,
+                "candidate_group": _candidate_group(candidate),
+                "predicted_source": predicted_source,
+                "nearest_reference_source": nearest_source,
+                "nearest_distance": round(nearest_distance, 6),
+                "embedding_group": embedding_groups[candidate_index],
+                "embedding_method": embedding_method,
+                "axis1": round(float(coords[candidate_index, 0]), 6),
+                "axis2": round(float(coords[candidate_index, 1]), 6),
+                "axis3": round(float(coords[candidate_index, 2]), 6),
+                "pc1": round(float(coords[candidate_index, 0]), 6),
+                "pc2": round(float(coords[candidate_index, 1]), 6),
+                "pc3": round(float(coords[candidate_index, 2]), 6),
+            }
+        )
+    cluster_context_path = write_tsv(cluster_context_rows, output_root / "candidate_cluster_context.tsv")
+
     scatter_path = _render_scatter(
         all_records,
         coords,
@@ -1116,7 +1283,7 @@ def classify_candidates(
             }
         )
     assignment_summary_path = write_tsv(assignment_summary_rows, output_root / "assignment_summary.tsv")
-    return {
+    outputs = {
         "features": features_path,
         "embedding": embedding_path,
         "variance": variance_path,
@@ -1129,3 +1296,5 @@ def classify_candidates(
         "assignment_summary": assignment_summary_path,
         "tree_dir": tree_dir,
     }
+    outputs.update(ceess_outputs)
+    return outputs

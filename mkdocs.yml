@@ -59,6 +59,7 @@ nav:
   - Home: index.md
   - Getting Started: getting-started.md
   - Method: method.md
+  - ESM Type Model: esm-type.md
   - Tutorials: tutorials.md
   - CLI Reference: cli-reference.md
   - Outputs: outputs.md

@@ -15,6 +15,11 @@ The current release depends on:
 - `pyrodigal >= 3.7.0`
 - `scikit-learn >= 1.4`
 
+Optional for the integrated coral CeeSs classifier:
+
+- `torch >= 2.2`
+- `transformers >= 4.44`
+
 The recommended setup is the bundled conda environment, because it keeps the bioinformatics dependencies reproducible across platforms.
 
 ## Recommended installation
@@ -40,14 +45,24 @@ python -m pip install -U pip
 python -m pip install -e .
 ```
 
+If you want Ariadne to run the ESM-based CeeSs head during `classify` and `run`, add:
+
+```bash
+python -m pip install -e '.[esm]'
+```
+
 ## Minimal project assumptions
 
 The active Ariadne workflow assumes a tree-native repository structure:
 
 - `input/`
   protein FASTA inputs for standard discovery
+- `TPS/`
+  optional labeled coral TPS workbook used to train the CeeSs classifier inside the classification stage
 - `tree/`
   the multi-clade TPS reference collection used across discovery, classification, and phylogeny
+- `ariadne/hmm/`
+  bundled default discovery and TPS-library HMMs generated from the current `tree/` dataset
 - `output/`
   a historical example-output directory that is no longer required by the current workflow
 
@@ -70,6 +85,12 @@ This command executes the full four-stage workflow:
 2. filtering and near-duplicate removal
 3. TPS feature-space classification
 4. MAFFT alignment and IQ-TREE reconstruction
+
+If `TPS/TPS.xlsx` is available, Ariadne can also attach a second-stage ESM classifier during stage 3:
+
+1. keep only `coral-like` candidates from the normal HMM-based classification layer
+2. train a small ESM type classifier from the labeled coral TPS workbook
+3. prioritize `cembrene A / cembrene B` as final CeeSs candidates
 
 The expected output layout is:
 
@@ -115,9 +136,10 @@ If you are working inside the local project virtual environment:
 
 ## Practical assumptions worth remembering
 
-- If `--query-hmm` is omitted, Ariadne automatically builds a discovery HMM from the coral reference in `tree/`.
-- If `--tps-hmm-dir` is omitted, Ariadne builds a TPS HMM library from all FASTA files under `tree/`.
+- If `--query-hmm` is omitted, Ariadne first uses the bundled `ariadne/hmm/query.hmm`; if that directory is unavailable, it falls back to building a discovery HMM from the coral reference in `tree/`.
+- If `--tps-hmm-dir` is omitted, Ariadne first uses the bundled `ariadne/hmm/` library and only builds a fresh TPS HMM library from `tree/` as a fallback.
 - The active workflow proceeds directly from classification to alignment and phylogeny.
+- If `TPS/TPS.xlsx` is present and the ESM dependencies are installed, the classification stage also writes `ceess_predictions.tsv`, `ceess_candidates.tsv`, and `ceess_candidates.fasta`.
 - The software is currently framed around coral TPS mining and CeeSs prioritization, but the underlying reference logic is still cross-clade.
 
 ## Suggested reading order for new users

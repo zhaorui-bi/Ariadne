@@ -80,6 +80,9 @@ Start with:
 - `nearest_neighbors.tsv`
 - `embedding.svg`
 - `embedding_3d_sections.svg`
+- `ceess_predictions.tsv`
+- `ceess_candidates.tsv`
+- `ceess_candidates.fasta`
 
 Suggested reading order:
 
@@ -87,10 +90,31 @@ Suggested reading order:
 2. read `nearest_neighbors.tsv` to understand which references support that assignment
 3. inspect `embedding.svg` for a global two-dimensional view
 4. inspect `embedding_3d_sections.svg` for a more presentation-ready geometric summary
+5. read `ceess_predictions.tsv` to see which coral-like candidates were scored toward `cembrene A / cembrene B`
+6. open `ceess_candidates.tsv` and `ceess_candidates.fasta` for the final CeeSs shortlist
 
 In practice, this is the stage where you decide which candidates deserve deeper phylogenetic attention.
 
-## Tutorial 4. Read the phylogeny outputs as an evolutionary layer
+## Tutorial 4. Run the standalone coral TPS ESM model
+
+If you want to inspect the supervised coral TPS type model independently of de novo candidate discovery:
+
+```bash
+.venv/bin/python -m ariadne esm-type \
+  --xlsx TPS/TPS.xlsx \
+  --output-dir tmp_esm_results
+```
+
+Recommended files to inspect:
+
+- `esm_embedding.svg`
+- `esm_metrics.tsv`
+- `esm_confusion_matrix.tsv`
+- `esm_predictions.tsv`
+
+This standalone mode is useful when you want to evaluate how well the labeled coral TPS proteins in `TPS/TPS.xlsx` separate in ESM space before using that model inside the main classification workflow.
+
+## Tutorial 5. Read the phylogeny outputs as an evolutionary layer
 
 The phylogeny stage provides the alignment-driven context that follows the feature-space screening step.
 
@@ -105,7 +129,7 @@ The sequence map is especially important because it connects the tree-safe ident
 
 This stage is the most useful when you want to compare screened candidates against known reference clades, examine local placement, or prepare figures for a manuscript or presentation.
 
-## Tutorial 5. Use your own prebuilt models
+## Tutorial 6. Use your own prebuilt models
 
 If you already have a custom discovery HMM:
 
@@ -129,7 +153,7 @@ ariadne run \
 
 These modes are useful when you want to preserve Ariadne's downstream classification and phylogeny logic while substituting your own HMM resources upstream.
 
-## Tutorial 6. Iterate quickly without rebuilding the final tree
+## Tutorial 7. Iterate quickly without rebuilding the final tree
 
 When your immediate goal is threshold tuning or candidate triage, the fastest practical loop is:
 
