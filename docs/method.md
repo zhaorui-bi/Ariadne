@@ -1,44 +1,50 @@
 # Method
 
-## Pipeline philosophy
+## Conceptual framing
 
-Ariadne is built around a tree-native idea: the same curated multi-clade reference collection under `tree/` should guide candidate discovery, candidate interpretation, and final phylogenetic placement.
+Ariadne is organized around a simple biological and computational premise: the same curated reference collection should support candidate discovery, candidate interpretation, and final phylogenetic placement. In the current release, that shared reference backbone is the `tree/` directory.
 
-This reduces friction in practice:
-
-- you do not need one reference source for HMM discovery and another for phylogeny
-- the feature-space classifier and the final tree share the same biological background
-- the outputs are easier to compare and curate manually
+This design is particularly useful for coral TPS mining and CeeSs prioritization, because it prevents the discovery stage, the classification stage, and the phylogeny stage from drifting apart in terms of biological context.
 
 ## Overview figure
 
 <figure class="paper-figure">
   <img src="assets/overview_pipeline.svg" alt="Ariadne pipeline method figure">
   <figcaption>
-    Figure 1. A four-stage workflow driven by a single multi-clade TPS reference directory.
+    Figure 1. Ariadne uses a four-stage workflow driven by a single multi-clade TPS reference directory.
   </figcaption>
 </figure>
 
-## Stage 1. Discovery
+## Design principle: one reference backbone
 
-The discovery stage builds a query HMM from the coral reference FASTA under `tree/` unless a prebuilt `--query-hmm` is supplied.
+The tree-native design has three direct consequences:
 
-It supports two input modes:
+- the discovery query HMM and the classification feature space remain coupled to the same reference universe
+- the final phylogeny is reconstructed against the same multi-clade background that informed screening
+- output interpretation becomes easier, because nearest-neighbor assignments and phylogenetic placement can be compared within a consistent context
 
-- protein FASTA discovery with `--protein-folder`
-- transcriptome FASTA discovery with `--transcriptomes`
+## Stage I. Discovery
 
-For transcriptome inputs, Ariadne predicts ORFs first and then searches the translated proteins with the discovery HMM.
+The first stage focuses on sensitivity: Ariadne builds a discovery HMM from the default coral reference under `tree/` unless a prebuilt `--query-hmm` is explicitly supplied.
 
-Main outputs:
+Two entry modes are supported:
+
+- protein FASTA mode with `--protein-folder`
+- transcriptome FASTA mode with `--transcriptomes`
+
+In transcriptome mode, Ariadne first predicts ORFs with `pyrodigal`, then searches the translated proteins against the query HMM. In protein mode, the input proteins are searched directly.
+
+Primary outputs:
 
 - `candidates.protein.faa`
 - `candidates.orf.fna`
 - `candidates.hits.tsv`
 
-## Stage 2. Filtering
+These files define the candidate universe that will be refined downstream.
 
-The filtering stage is intentionally simple and practical.
+## Stage II. Filtering
+
+The second stage focuses on candidate quality rather than biological interpretation.
 
 It applies:
 
@@ -46,48 +52,53 @@ It applies:
 - minimum protein length filtering
 - near-duplicate collapsing
 
-This stage is designed to clean the candidate pool before feature-space comparison and phylogenetic reconstruction.
+This stage is deliberately conservative and transparent. Rather than hiding filtering decisions inside a monolithic score, Ariadne exports reports that make the reasons for removal and representative selection explicit.
 
-Main outputs:
+Primary outputs:
 
 - `candidates.filtered.faa`
 - `filter_report.tsv`
 - `dedupe_clusters.tsv`
 - `manual_review.tsv`
 
-## Stage 3. Classification
+## Stage III. Classification
 
-Classification is performed in TPS HMM feature space.
+The third stage is the interpretive core of the workflow.
 
-The reference sequences and filtered candidates are all scored against a TPS HMM library. Ariadne then:
+All filtered candidates and all reference sequences are scored against a TPS HMM library derived from `tree/`. Ariadne then constructs a joint feature space and performs:
 
-1. builds a feature matrix
-2. normalizes the scores
-3. embeds the joint reference-candidate set
-4. assigns each candidate to the dominant source among its nearest reference neighbors
+1. feature-matrix construction
+2. score normalization
+3. low-dimensional embedding
+4. nearest-reference voting
 
-This is the stage that produces the most screening-friendly outputs.
+The result is not merely a label, but a structured evidence layer that includes embedding coordinates, nearest neighbors, local context trees, and a global context tree.
 
-Main outputs:
+Primary outputs:
 
 - `tps_features.tsv`
 - `embedding.tsv`
 - `classification.tsv`
 - `nearest_neighbors.tsv`
+- `candidate_cluster_context.tsv`
 - `embedding.svg`
 - `embedding_3d_sections.svg`
 - `global_context_tree.nwk`
 
-## Stage 4. Phylogeny
+This stage is especially useful for CeeSs-oriented prioritization because it places candidate sequences inside the broader TPS landscape before phylogenetic reconstruction.
 
-The phylogeny stage merges the filtered candidates with the reference sequences loaded from `tree/`, then:
+## Stage IV. Phylogeny
 
-1. runs MAFFT on the combined FASTA
-2. runs IQ-TREE on the alignment
+The fourth stage converts the screened candidate set into a phylogeny-ready analysis object.
 
-This creates a direct bridge from candidate screening to phylogenetic interpretation.
+Filtered candidates are merged with the reference sequences loaded from `tree/`, then processed with:
 
-Main outputs:
+1. MAFFT for multiple sequence alignment
+2. IQ-TREE for phylogenetic inference
+
+This stage provides the bridge from candidate discovery to evolutionary interpretation.
+
+Primary outputs:
 
 - `phylogeny_input.fasta`
 - `phylogeny_alignment.fasta`
@@ -95,24 +106,24 @@ Main outputs:
 - `iqtree.treefile`
 - `iqtree.iqtree`
 
-## Why this structure works well
+## Why the current structure is effective
 
 <div class="card-grid">
   <div class="paper-card">
-    <h3>Unified reference logic</h3>
-    <p>The same tree-native reference collection is reused across discovery, classification, and phylogeny.</p>
+    <h3>Reference consistency</h3>
+    <p>The same tree-native reference collection is reused across discovery, classification, and phylogeny, which improves interpretability.</p>
   </div>
   <div class="paper-card">
-    <h3>Fast manual inspection</h3>
-    <p>The workflow exposes interpretable outputs such as embeddings, nearest-neighbor tables, and Newick trees.</p>
+    <h3>Screening-to-evolution continuity</h3>
+    <p>Ariadne keeps nearest-neighbor evidence, embeddings, and phylogenetic outputs within one coherent result directory.</p>
   </div>
 </div>
 
-## What the current release does not include
+## Scope of the current release
 
-The current release intentionally does not include:
+The active release intentionally excludes:
 
-- motif-based post-filtering
-- benchmark-vs-expected FASTA comparison
+- motif-centric post-filtering
+- benchmark-versus-expected FASTA comparison
 
-Those paths were removed to keep the active workflow compact and stable.
+Those paths were removed so the current implementation remains focused on a stable and interpretable four-stage workflow.

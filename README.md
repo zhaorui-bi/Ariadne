@@ -8,7 +8,7 @@
 
 <p align="center">
   🧬 <strong>Ariadne</strong><br>
-  A tree-native terpene synthase discovery and phylogeny platform for coral-centered and cross-clade TPS mining
+  A coral-centered terpene synthase discovery and CeeSs prioritization platform
 </p>
 
 <p align="center">
@@ -26,11 +26,20 @@
   </a>
 </p>
 
-> Ariadne is a research-oriented command-line platform for terpene synthase discovery, feature-space classification, multiple sequence alignment, and phylogenetic reconstruction.  
+> Ariadne is a research-oriented platform for coral TPS genome mining, CeeSs prioritization, and downstream phylogenetic analysis.  
 > The current release uses a streamlined `discovery -> filtering -> classification -> phylogeny` workflow with `tree/` as the default reference source.
+
+## 🪸 Introduction
+
+The rational discovery of terpene synthases by genome mining is a promising route toward new natural-product scaffolds from microorganisms and other biological resources. In practice, however, discovering a novel TPS gene is much easier than identifying the synthase responsible for a specific end product, which is why biochemical validation remains essential.
+
+Cnidarians are marine animals that produce diverse terpenoids as defensive metabolites, making coral genomes an attractive resource for TPS discovery. Ariadne was built around this opportunity: it supports both genome-wide TPS mining from corals and the targeted prioritization of product-specific synthases, here formalized as <strong>CeeSs</strong>.
+
+The platform is designed to bridge computational screening and experimental follow-up. In the associated study context, Ariadne was used to recover CeeSs candidates, support heterologous-expression validation with an accuracy of 80%, and guide phylogenetic analysis toward the evolutionary interpretation of distinct CeeSs and ancestral scaffold discovery.
 
 ## 📢 News
 
+- `2026-03-23`: The repository introduction was updated around the new `CeeSs` framing for coral TPS mining and CeeSs prioritization.
 - `2026-03-21`: GitHub landing page switched to English by default, with a dedicated Chinese documentation page at [README_ZH.md](./README_ZH.md).
 - `2026-03-21`: The pipeline was simplified to a cleaner four-stage workflow. All `motif` and `benchmark` functionality was removed.
 - `2026-03-21`: `tree/` is now the default source for query-HMM construction, TPS HMM library generation, classification background, and phylogeny references.

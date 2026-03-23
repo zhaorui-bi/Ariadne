@@ -18,8 +18,9 @@ def _prepare_record(record: FastaRecord, *, source: str, extra: Optional[dict[st
     prepared = record.clone(sequence=ungap(record.sequence).replace("*", ""))
     prepared.metadata["source"] = source
     prepared.metadata["header"] = prepared.header
-    prepared.metadata["label"] = "cembrene" if "cembrene" in prepared.header.lower() else "other"
+    prepared.metadata["label"] = "CeeSs" if "cembrene" in prepared.header.lower() else "other"
     prepared.metadata["is_cembrene"] = "yes" if "cembrene" in prepared.header.lower() else "no"
+    prepared.metadata["is_ceess"] = "yes" if "cembrene" in prepared.header.lower() else "no"
     if extra:
         prepared.metadata.update(extra)
     return prepared
@@ -89,6 +90,7 @@ def prepare_insect_reference(
         record.metadata["clade"] = str(clade).strip()
         record.metadata["label"] = str(clade).strip()
         record.metadata["is_cembrene"] = "no"
+        record.metadata["is_ceess"] = "no"
         records.append(record)
         if limit is not None and len(records) >= limit:
             break

@@ -1,7 +1,7 @@
 <div class="hero-panel">
   <div class="hero-copy">
     <h1>Ariadne</h1>
-    <p><strong>A tree-native terpene synthase discovery and phylogeny platform</strong> for coral-centered and cross-clade TPS mining.</p>
+    <p><strong>A coral-centered terpene synthase discovery and CeeSs prioritization platform</strong> for genome mining, feature-space interpretation, and phylogenetic analysis.</p>
     <p>Ariadne turns a curated <code>tree/</code> reference directory into a practical four-stage workflow: HMM-guided discovery, filtering, TPS feature-space classification, and alignment-driven phylogeny.</p>
     <div class="hero-actions">
       <a class="md-button md-button--primary" href="getting-started/">Get Started</a>
@@ -22,9 +22,18 @@
 
 ## 📢 News
 
+- `2026-03-23` The repository introduction was updated around the new CeeSs framing, reflecting Ariadne as a platform for coral TPS mining and CeeSs prioritization.
 - `2026-03-22` Ariadne now ships with an English documentation site built with MkDocs + Material for Read the Docs deployment.
 - `2026-03-21` The software workflow was simplified to a focused four-stage pipeline: `discovery -> filtering -> classification -> phylogeny`.
 - `2026-03-21` `tree/` became the default source for query-HMM construction, TPS HMM library generation, classification references, and phylogeny references.
+
+## 🪸 Introduction
+
+The rational discovery of terpene synthases by genome mining is an attractive route toward new natural-product scaffolds, but the identification of TPSs responsible for specific end products remains substantially harder than the discovery of novel TPS genes alone.
+
+Cnidarians produce diverse terpenoids as defensive metabolites, making coral genomes an especially compelling source for TPS discovery. Ariadne was therefore designed as a practical platform for both genome-wide coral TPS mining and the targeted prioritization of product-specific synthases, which we formalize here as <strong>CeeSs</strong>.
+
+In the associated study context, this platform supported the identification of CeeSs candidates, experimental validation through heterologous expression with 80% accuracy, and phylogenetic analyses that helped interpret the evolutionary trajectory of distinct CeeSs and guide ancestral enzyme engineering.
 
 ## ✨ Why Ariadne?
 

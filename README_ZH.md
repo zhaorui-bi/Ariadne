@@ -8,7 +8,7 @@
 
 <p align="center">
   🧬 <strong>Ariadne</strong><br>
-  一个面向珊瑚及跨物种 TPS 参考库的 tree-native terpene synthase 挖掘与系统发育分析平台
+  一个面向珊瑚 TPS 挖掘与 CeeSs 优先识别的平台
 </p>
 
 <p align="center">
@@ -19,11 +19,20 @@
   <img alt="IQ-TREE" src="https://img.shields.io/badge/IQ--TREE-required-1D4ED8?style=flat-square">
 </p>
 
-> Ariadne 是一个面向研究场景的命令行平台，用于 terpene synthase 候选发现、TPS 特征空间分类、多序列比对与系统发育重建。  
+> Ariadne 是一个面向研究场景的平台，用于珊瑚 TPS 基因组挖掘、CeeSs 优先识别以及下游系统发育分析。  
 > 当前版本采用更清晰的 `discovery -> filtering -> classification -> phylogeny` 四阶段流程，并默认以 `tree/` 作为参考来源。
+
+## 🪸 Introduction
+
+通过基因组挖掘来理性发现 terpene synthase（TPS），是获取新型天然产物骨架的一条重要路线。然而，发现一个新的 TPS 基因，远比准确识别“负责某个特定终产物”的 TPS 更容易，因此实验生化验证仍然是不可缺少的环节。
+
+刺胞动物是海洋中能够产生多样萜类防御代谢物的重要类群，这意味着珊瑚基因组也可以成为 TPS 挖掘的重要资源。Ariadne 正是在这一背景下构建的：它不仅支持对珊瑚基因组进行全局 TPS 挖掘，也支持对产物特异性 synthase 的定向优先识别，这里统一称为 <strong>CeeSs</strong>。
+
+这个平台的目标，是把计算筛选和实验验证真正接起来。在对应研究语境中，Ariadne 被用于发现 CeeSs 候选，并支撑后续异源表达验证，预测准确率达到 80%；进一步的系统发育分析也帮助解析不同 CeeSs 的演化轨迹，并为祖先酶定向进化和新型骨架的发现提供线索。
 
 ## 📢 News
 
+- `2026-03-23`：仓库整体介绍已更新为新的 `CeeSs` 叙事，用于强调珊瑚 TPS 挖掘与 CeeSs 优先识别。
 - `2026-03-21`：GitHub 默认主页切换为英文版，中文文档独立放在 [README_ZH.md](./README_ZH.md)。
 - `2026-03-21`：流程收缩为更稳定的四阶段主线，`motif` 和 `benchmark` 功能已经移除。
 - `2026-03-21`：`tree/` 现在同时作为 query HMM、TPS HMM library、分类背景和 phylogeny 背景的默认来源。

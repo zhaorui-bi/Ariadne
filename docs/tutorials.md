@@ -1,11 +1,15 @@
 # Tutorials
 
+## Tutorial philosophy
+
+The tutorials below are written as practical analysis pathways rather than isolated command snippets. The goal is to mirror how Ariadne is typically used in a research workflow: run the pipeline, inspect the classification layer, then move into phylogenetic interpretation.
+
 ## Tutorial 1. Reproduce the bundled example
 
-The repository already contains an example protein input folder and a prepared reference folder:
+The repository already contains:
 
-- `input/`
-- `tree/`
+- `input/` as an example protein input folder
+- `tree/` as the prepared reference directory
 
 Run:
 
@@ -23,7 +27,11 @@ Expected stage directories:
 - `tmp_run_example/03_classification/`
 - `tmp_run_example/04_phylogeny/`
 
-## Tutorial 2. Run stage by stage
+This is the best starting point if you want to see the full Ariadne workflow on a known example before adapting it to your own dataset.
+
+## Tutorial 2. Reconstruct the workflow stage by stage
+
+Running stage by stage is useful when you want to inspect intermediate files or alter one stage without rerunning the rest.
 
 ### Discovery
 
@@ -60,9 +68,13 @@ Expected stage directories:
   --output-dir tmp_manual/04_phylogeny
 ```
 
-## Tutorial 3. Interpret the classification stage
+This stage-wise decomposition is particularly helpful when you are tuning filtering thresholds or comparing different HMM sources.
 
-The most informative files are:
+## Tutorial 3. Read the classification outputs as a screening layer
+
+The classification stage is often the most informative point for early interpretation.
+
+Start with:
 
 - `classification.tsv`
 - `nearest_neighbors.tsv`
@@ -71,12 +83,16 @@ The most informative files are:
 
 Suggested reading order:
 
-1. open `classification.tsv` to inspect the predicted reference source for each candidate
-2. read `nearest_neighbors.tsv` to see which references support that assignment
-3. inspect `embedding.svg` for a global 2D view
-4. inspect `embedding_3d_sections.svg` for publication-style projections
+1. open `classification.tsv` to inspect the predicted source assignment for each candidate
+2. read `nearest_neighbors.tsv` to understand which references support that assignment
+3. inspect `embedding.svg` for a global two-dimensional view
+4. inspect `embedding_3d_sections.svg` for a more presentation-ready geometric summary
 
-## Tutorial 4. Interpret the phylogeny stage
+In practice, this is the stage where you decide which candidates deserve deeper phylogenetic attention.
+
+## Tutorial 4. Read the phylogeny outputs as an evolutionary layer
+
+The phylogeny stage provides the alignment-driven context that follows the feature-space screening step.
 
 Focus on:
 
@@ -85,7 +101,9 @@ Focus on:
 - `iqtree.treefile`
 - `iqtree.iqtree`
 
-The sequence map is especially useful because it connects the tree-safe identifiers back to the original headers.
+The sequence map is especially important because it connects the tree-safe identifiers back to the original FASTA headers.
+
+This stage is the most useful when you want to compare screened candidates against known reference clades, examine local placement, or prepare figures for a manuscript or presentation.
 
 ## Tutorial 5. Use your own prebuilt models
 
@@ -109,9 +127,11 @@ ariadne run \
   --output-dir my_results/
 ```
 
-## Tutorial 6. Skip phylogeny during fast iteration
+These modes are useful when you want to preserve Ariadne's downstream classification and phylogeny logic while substituting your own HMM resources upstream.
 
-If you are tuning thresholds and only want discovery, filtering, and classification:
+## Tutorial 6. Iterate quickly without rebuilding the final tree
+
+When your immediate goal is threshold tuning or candidate triage, the fastest practical loop is:
 
 ```bash
 ariadne run \
@@ -121,4 +141,19 @@ ariadne run \
   --output-dir tmp_fast_iteration/
 ```
 
-This is useful when you need to inspect `classification.tsv` and `embedding.svg` repeatedly without rerunning MAFFT and IQ-TREE.
+This allows repeated inspection of:
+
+- `classification.tsv`
+- `nearest_neighbors.tsv`
+- `embedding.svg`
+
+without rerunning MAFFT and IQ-TREE at every iteration.
+
+## Suggested workflow for manuscript preparation
+
+If you are preparing figures or supplement-style analyses, a good working order is:
+
+1. generate a complete run with `ariadne run`
+2. screen candidates using `classification.tsv` and `embedding.svg`
+3. interpret the final placement with `iqtree.treefile`
+4. archive `pipeline_summary.tsv`, `classification.tsv`, and the phylogeny outputs together for reproducibility

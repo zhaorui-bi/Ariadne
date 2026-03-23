@@ -61,15 +61,15 @@
 
   <g>
     <text x="676" y="214" fill="#0B132B" font-family="Helvetica, Arial, sans-serif" font-size="110" font-weight="700" letter-spacing="-2">Ariadne</text>
-    <text x="682" y="268" fill="#2563EB" font-family="Helvetica, Arial, sans-serif" font-size="26" font-weight="700" letter-spacing="4">CORAL TPS • PHYLOGENY PLATFORM</text>
+    <text x="682" y="268" fill="#2563EB" font-family="Helvetica, Arial, sans-serif" font-size="26" font-weight="700" letter-spacing="4">CORAL TPS • CeeSs DISCOVERY PLATFORM</text>
     <text x="680" y="334" fill="#334155" font-family="Helvetica, Arial, sans-serif" font-size="31" font-weight="400">
-      HMM-guided mining, feature-space classification, alignment,
+      HMM-guided mining, CeeSs prioritization, alignment,
     </text>
     <text x="680" y="378" fill="#334155" font-family="Helvetica, Arial, sans-serif" font-size="31" font-weight="400">
-      and phylogeny for terpene synthase discovery in coral-centered datasets.
+      and phylogeny for coral terpene synthase discovery.
     </text>
     <rect x="680" y="404" width="164" height="38" rx="19" fill="#E0ECFF"/>
-    <text x="728" y="429" fill="#1D4ED8" font-family="Helvetica, Arial, sans-serif" font-size="18" font-weight="700">4 stages</text>
+    <text x="724" y="429" fill="#1D4ED8" font-family="Helvetica, Arial, sans-serif" font-size="18" font-weight="700">CeeSs-aware</text>
     <rect x="858" y="404" width="228" height="38" rx="19" fill="#E8FBF7"/>
     <text x="900" y="429" fill="#0F766E" font-family="Helvetica, Arial, sans-serif" font-size="18" font-weight="700">MAFFT + IQ-TREE</text>
     <rect x="1100" y="404" width="218" height="38" rx="19" fill="#FFF4E5"/>

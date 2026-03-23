@@ -58,10 +58,10 @@ def prepare_demo_workspace(
     reference_dir = ensure_directory(root / "references")
 
     aligned_coral = read_fasta(coral_alignment_fasta, keep_gaps=True)
-    cembrene_records = [record for record in aligned_coral if "cembrene" in record.header.lower()]
-    non_cembrene_records = [record for record in aligned_coral if "cembrene" not in record.header.lower()]
-    if len(cembrene_records) < 3:
-        raise ValueError("The coral reference file does not contain enough cembrene-labelled sequences for the demo.")
+    ceess_records = [record for record in aligned_coral if "cembrene" in record.header.lower()]
+    non_ceess_records = [record for record in aligned_coral if "cembrene" not in record.header.lower()]
+    if len(ceess_records) < 3:
+        raise ValueError("The coral reference file does not contain enough CeeSs-labelled sequences for the demo.")
 
     preferred_candidate_terms = ["DgTC-2-cembreneA", "AbTC-2-cembreneA", "StTC-1-cembreneC"]
     preferred_candidate = None
@@ -70,7 +70,7 @@ def prepare_demo_workspace(
         if preferred_candidate is not None:
             break
     if preferred_candidate is None:
-        preferred_candidate = cembrene_records[0]
+        preferred_candidate = ceess_records[0]
     full_length_protein = ungap(preferred_candidate.sequence).replace("*", "")
     truncated_protein = full_length_protein[:210]
     decoy_protein = "M" + ("GAVLIQNST" * 18)
@@ -88,7 +88,7 @@ def prepare_demo_workspace(
     ]
     protein_path = write_fasta(protein_records, protein_dir / "demo_sample_proteins.faa")
 
-    preferred_cembrene_terms = [
+    preferred_ceess_terms = [
         "DgTC-2-cembreneA",
         "AbTC-2-cembreneA",
         "StTC-1-cembreneC",
@@ -96,7 +96,7 @@ def prepare_demo_workspace(
         "NA-047_TC3-cembreneA",
         "CdTC-2-cembrene",
     ]
-    preferred_non_cembrene_terms = [
+    preferred_non_ceess_terms = [
         "S_CdTC-2",
         "CdTC-3",
         "VgTC-2",
@@ -105,36 +105,37 @@ def prepare_demo_workspace(
         "S_EsTC-2",
     ]
 
-    selected_cembrene: list[FastaRecord] = []
-    for term in preferred_cembrene_terms:
-        match = next((record for record in cembrene_records if term.lower() in record.header.lower()), None)
-        if match is not None and match not in selected_cembrene:
-            selected_cembrene.append(match)
-    if len(selected_cembrene) < 6:
-        for record in cembrene_records:
-            if record not in selected_cembrene:
-                selected_cembrene.append(record)
-            if len(selected_cembrene) >= 6:
+    selected_ceess: list[FastaRecord] = []
+    for term in preferred_ceess_terms:
+        match = next((record for record in ceess_records if term.lower() in record.header.lower()), None)
+        if match is not None and match not in selected_ceess:
+            selected_ceess.append(match)
+    if len(selected_ceess) < 6:
+        for record in ceess_records:
+            if record not in selected_ceess:
+                selected_ceess.append(record)
+            if len(selected_ceess) >= 6:
                 break
 
-    selected_non_cembrene: list[FastaRecord] = []
-    for term in preferred_non_cembrene_terms:
-        match = next((record for record in non_cembrene_records if term.lower() in record.header.lower()), None)
-        if match is not None and match not in selected_non_cembrene:
-            selected_non_cembrene.append(match)
-    if len(selected_non_cembrene) < 6:
-        for record in non_cembrene_records:
-            if record not in selected_non_cembrene:
-                selected_non_cembrene.append(record)
-            if len(selected_non_cembrene) >= 6:
+    selected_non_ceess: list[FastaRecord] = []
+    for term in preferred_non_ceess_terms:
+        match = next((record for record in non_ceess_records if term.lower() in record.header.lower()), None)
+        if match is not None and match not in selected_non_ceess:
+            selected_non_ceess.append(match)
+    if len(selected_non_ceess) < 6:
+        for record in non_ceess_records:
+            if record not in selected_non_ceess:
+                selected_non_ceess.append(record)
+            if len(selected_non_ceess) >= 6:
                 break
 
     coral_demo_records: list[FastaRecord] = []
-    for record in (selected_cembrene[:6] + selected_non_cembrene[:6]):
+    for record in (selected_ceess[:6] + selected_non_ceess[:6]):
         demo_record = FastaRecord(header=record.header, sequence=ungap(record.sequence).replace("*", ""))
         demo_record.metadata["source"] = "coral"
-        demo_record.metadata["label"] = "cembrene" if "cembrene" in record.header.lower() else "other"
+        demo_record.metadata["label"] = "CeeSs" if "cembrene" in record.header.lower() else "other"
         demo_record.metadata["is_cembrene"] = "yes" if "cembrene" in record.header.lower() else "no"
+        demo_record.metadata["is_ceess"] = "yes" if "cembrene" in record.header.lower() else "no"
         coral_demo_records.append(demo_record)
     coral_reference_path = write_fasta(coral_demo_records, reference_dir / "coral.fasta")
 

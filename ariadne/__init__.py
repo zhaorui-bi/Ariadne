@@ -8,5 +8,5 @@ and packaging configuration.
 
 __version__     = "0.1.0"
 __author__      = "Zhaorui Jiang"
-__description__ = "Tree-native Terpene Synthase Discovery, Classification & Phylogeny Pipeline"
+__description__ = "Coral TPS Discovery, Candidate CeeSs Prioritization & Phylogeny Platform"
 __url__         = "https://github.com/zhaoruijiang26/Ariadne"

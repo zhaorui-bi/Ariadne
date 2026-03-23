@@ -1,8 +1,10 @@
 # Getting Started
 
-## Environment
+## Installation philosophy
 
-Ariadne is a Python command-line tool designed to work with:
+Ariadne is intended to be easy to reproduce in a research setting: one environment, one reference root, and one command that can take you from raw protein inputs to a phylogeny-ready result directory.
+
+The current release depends on:
 
 - Python `>= 3.9`
 - `mafft`
@@ -13,11 +15,11 @@ Ariadne is a Python command-line tool designed to work with:
 - `pyrodigal >= 3.7.0`
 - `scikit-learn >= 1.4`
 
-The recommended setup is the bundled conda environment.
+The recommended setup is the bundled conda environment, because it keeps the bioinformatics dependencies reproducible across platforms.
 
-## Installation
+## Recommended installation
 
-### Option 1. Conda
+### Conda
 
 ```bash
 git clone https://github.com/zhaoruijiang26/Ariadne.git
@@ -27,7 +29,7 @@ conda activate ariadne
 pip install -e .
 ```
 
-### Option 2. Local virtual environment
+### Local virtual environment
 
 ```bash
 git clone https://github.com/zhaoruijiang26/Ariadne.git
@@ -38,18 +40,22 @@ python -m pip install -U pip
 python -m pip install -e .
 ```
 
-## Repository inputs
+## Minimal project assumptions
 
-The current Ariadne release assumes a tree-native project structure:
+The active Ariadne workflow assumes a tree-native repository structure:
 
 - `input/`
   protein FASTA inputs for standard discovery
 - `tree/`
-  multi-clade TPS reference FASTA collection
+  the multi-clade TPS reference collection used across discovery, classification, and phylogeny
 - `output/`
-  legacy example outputs, not required by the active workflow
+  a historical example-output directory that is no longer required by the current workflow
+
+The key conceptual shift is that `tree/` is not just a phylogeny folder. It is the reference backbone of the whole pipeline.
 
 ## First end-to-end run
+
+The simplest complete run is:
 
 ```bash
 ariadne run \
@@ -58,7 +64,14 @@ ariadne run \
   --output-dir results/
 ```
 
-This run will create:
+This command executes the full four-stage workflow:
+
+1. discovery by HMM-guided screening
+2. filtering and near-duplicate removal
+3. TPS feature-space classification
+4. MAFFT alignment and IQ-TREE reconstruction
+
+The expected output layout is:
 
 ```text
 results/
@@ -71,7 +84,7 @@ results/
 
 ## Transcriptome mode
 
-If your inputs are transcriptomes instead of predicted proteins:
+If your starting point is transcriptome FASTA rather than predicted proteins, Ariadne can infer ORFs before HMM search:
 
 ```bash
 ariadne run \
@@ -80,11 +93,11 @@ ariadne run \
   --output-dir results_from_transcriptomes/
 ```
 
-In this mode, Ariadne uses `pyrodigal` to predict ORFs before HMM screening.
+In this mode, `pyrodigal` is used upstream of the discovery step.
 
-## Local sanity checks
+## Sanity checks after installation
 
-After installation, these commands should work:
+These commands should succeed once the environment is ready:
 
 ```bash
 ariadne --help
@@ -92,22 +105,26 @@ ariadne run --help
 ariadne classify --help
 ```
 
-If you installed Ariadne inside the project virtual environment, the equivalent commands are:
+If you are working inside the local project virtual environment:
 
 ```bash
 .venv/bin/python -m ariadne --help
 .venv/bin/python -m ariadne run --help
+.venv/bin/python -m ariadne classify --help
 ```
 
-## Design principles to keep in mind
+## Practical assumptions worth remembering
 
-- `tree/` is the default reference source across the whole workflow.
-- A discovery query HMM is automatically built from the coral reference when `--query-hmm` is omitted.
-- A TPS HMM library is automatically built from all FASTA files under `tree/` when `--tps-hmm-dir` is omitted.
-- After classification, the workflow directly proceeds to alignment and phylogeny.
+- If `--query-hmm` is omitted, Ariadne automatically builds a discovery HMM from the coral reference in `tree/`.
+- If `--tps-hmm-dir` is omitted, Ariadne builds a TPS HMM library from all FASTA files under `tree/`.
+- The active workflow proceeds directly from classification to alignment and phylogeny.
+- The software is currently framed around coral TPS mining and CeeSs prioritization, but the underlying reference logic is still cross-clade.
 
-## Next steps
+## Suggested reading order for new users
 
-- Read [Method](method.md) for a deeper explanation of the four stages.
-- Use [Tutorials](tutorials.md) to reproduce a practical end-to-end analysis.
-- Keep [CLI Reference](cli-reference.md) open when tuning parameters.
+If this is your first time using Ariadne, the most productive next sequence is:
+
+1. read [Method](method.md) to understand the four-stage design
+2. run the bundled example from [Tutorials](tutorials.md)
+3. inspect `classification.tsv`, `embedding.svg`, and `iqtree.treefile`
+4. keep [CLI Reference](cli-reference.md) open while tuning parameters

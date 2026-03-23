@@ -18,7 +18,7 @@ If Ariadne is useful in your work, please cite the software entry below and upda
 
 You may also describe Ariadne in papers, posters, or talks as:
 
-> Ariadne is a tree-native terpene synthase discovery workflow that integrates HMM-guided screening, TPS feature-space classification, multiple sequence alignment, and phylogenetic reconstruction.
+> Ariadne is a coral-centered terpene synthase discovery workflow for genome-wide TPS mining, CeeSs prioritization, multiple sequence alignment, and phylogenetic reconstruction.
 
 ## Citation note
 
