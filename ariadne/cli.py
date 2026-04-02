@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Optional, Tuple, Union
 
 from ariadne import __version__
-from ariadne import log as _log
+from ariadne import utils as _log
 
 PathLike = Union[str, Path]
 
@@ -96,12 +96,6 @@ def _default_plant() -> Optional[Path]:
     )
 
 
-def _default_tps_hmms() -> Path:
-    """Return the bundled TPS HMM directory."""
-    bundled = Path(__file__).resolve().parent / "tps_hmm"
-    return bundled
-
-
 def _default_reference_dir() -> Optional[Path]:
     """Locate the default tree/reference directory when present."""
     return _first_existing_path(
@@ -111,26 +105,10 @@ def _default_reference_dir() -> Optional[Path]:
 
 
 def _default_tps_xlsx() -> Optional[Path]:
-    """Locate the coral TPS spreadsheet used by the ESM type workflow."""
+    """Locate the coral TPS spreadsheet used by the integrated CeeSs workflow."""
     return _first_existing_path(
         Path.cwd() / "TPS" / "TPS.xlsx",
         _repo_root() / "TPS" / "TPS.xlsx",
-    )
-
-
-def _is_bundled_tps_hmms(path: PathLike) -> bool:
-    """Check whether a path points at Ariadne's bundled placeholder HMMs."""
-    return Path(path).resolve() == _default_tps_hmms().resolve()
-
-
-def _warn_legacy_tps_hmms(path: PathLike) -> None:
-    """Warn users that bundled HMMs are only placeholders."""
-    if not _is_bundled_tps_hmms(path):
-        return
-    logger.warning(
-        "Using bundled TPS HMMs under ariadne/tps_hmm. "
-        "These profiles are legacy AFLP-derived placeholders. "
-        "For publication-grade TPS analysis, build and pass your own --tps-hmm-dir."
     )
 
 
@@ -213,7 +191,7 @@ def _bundled_tps_hmm_dir() -> Path | None:
 
 def _auto_build_query_hmm(reference_dir: PathLike, output_path: PathLike, *, name: str) -> Path:
     """Build the discovery query HMM from the default reference FASTA in ``reference_dir``."""
-    from ariadne.discovery import build_hmm
+    from ariadne.search import build_hmm
 
     source_fasta = _find_reference_alignment(reference_dir)
     logger.info("No --query-hmm provided; building query HMM from %s", source_fasta)
@@ -222,8 +200,8 @@ def _auto_build_query_hmm(reference_dir: PathLike, output_path: PathLike, *, nam
 
 def _auto_build_tps_hmm_library(reference_dir: PathLike, output_dir: PathLike) -> Path:
     """Build a TPS HMM library from all FASTA files in ``reference_dir``."""
-    from ariadne.discovery import build_hmm
-    from ariadne.fasta_utils import ensure_directory
+    from ariadne.search import build_hmm
+    from ariadne.utils import ensure_directory
 
     destination = ensure_directory(output_dir)
     built_any = False
@@ -258,8 +236,8 @@ def _existing_path_or_none(value: Optional[PathLike], *, label: str) -> Optional
 
 def cmd_prepare_references(args: argparse.Namespace) -> int:
     """Prepare reference FASTA files and metadata tables."""
-    from ariadne.fasta_utils import ensure_directory
-    from ariadne.references import (
+    from ariadne.utils import ensure_directory
+    from ariadne.data import (
         prepare_coral_reference,
         prepare_extra_reference,
         prepare_insect_reference,
@@ -307,34 +285,9 @@ def cmd_prepare_references(args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_prepare_demo(args: argparse.Namespace) -> int:
-    """Create a compact demo workspace with synthetic inputs and prepared refs."""
-    from ariadne.demo import prepare_demo_workspace
-
-    if args.coral is None or not Path(args.coral).exists():
-        raise FileNotFoundError(
-            "prepare-demo requires a coral alignment FASTA. "
-            "Please pass --coral explicitly (e.g., --coral './coralTPS (modified)-cembrene.fasta')."
-        )
-    if args.insect_xlsx is None or not Path(args.insect_xlsx).exists():
-        raise FileNotFoundError(
-            "prepare-demo requires an insect workbook. "
-            "Please pass --insect-xlsx explicitly (e.g., --insect-xlsx './Insecta TPS.xlsx')."
-        )
-
-    outputs = prepare_demo_workspace(
-        args.output_dir,
-        coral_alignment_fasta=args.coral,
-        insect_xlsx=args.insect_xlsx,
-    )
-    for key, value in outputs.items():
-        logger.info("  %-28s %s", key + ":", value)
-    return 0
-
-
 def cmd_build_hmm(args: argparse.Namespace) -> int:
     """Build one query HMM from an aligned FASTA/MSA."""
-    from ariadne.discovery import build_hmm
+    from ariadne.search import build_hmm
 
     hmm_path = build_hmm(args.alignment, args.output, name=args.name)
     logger.info("HMM written to %s", hmm_path)
@@ -343,8 +296,8 @@ def cmd_build_hmm(args: argparse.Namespace) -> int:
 
 def cmd_build_tps_hmm_library(args: argparse.Namespace) -> int:
     """Build a directory of TPS HMM profiles from one or more alignments."""
-    from ariadne.discovery import build_hmm
-    from ariadne.fasta_utils import ensure_directory
+    from ariadne.search import build_hmm
+    from ariadne.utils import ensure_directory
 
     output_dir = ensure_directory(args.output_dir)
     built_paths: list[Path] = []
@@ -366,7 +319,7 @@ def cmd_build_tps_hmm_library(args: argparse.Namespace) -> int:
 
 def cmd_discover(args: argparse.Namespace) -> int:
     """Run stage 1 candidate discovery from proteins or transcriptomes."""
-    from ariadne.discovery import collect_protein_files, discover_candidates, discover_candidates_from_proteins
+    from ariadne.search import collect_protein_files, discover_candidates, discover_candidates_from_proteins
 
     if args.protein_folder:
         protein_paths = collect_protein_files(args.protein_folder, protein_glob=args.protein_glob)
@@ -399,7 +352,7 @@ def cmd_discover(args: argparse.Namespace) -> int:
 
 def cmd_filter(args: argparse.Namespace) -> int:
     """Run stage 2 candidate filtering and deduplication."""
-    from ariadne.filtering import filter_candidates
+    from ariadne.filter import filter_candidates
 
     outputs = filter_candidates(
         args.input_fasta,
@@ -407,6 +360,7 @@ def cmd_filter(args: argparse.Namespace) -> int:
         min_coverage=args.min_coverage,
         min_length=args.min_length,
         identity_threshold=args.identity_threshold,
+        reference_dir=args.reference_dir,
     )
     for key, value in outputs.items():
         logger.info("  %-28s %s", key + ":", value)
@@ -415,7 +369,7 @@ def cmd_filter(args: argparse.Namespace) -> int:
 
 def cmd_classify(args: argparse.Namespace) -> int:
     """Run stage 3 feature-space classification."""
-    from ariadne.classification import classify_candidates
+    from ariadne.embed import classify_candidates
 
     if args.tps_hmm_dir is not None:
         hmm_dir = Path(args.tps_hmm_dir)
@@ -427,7 +381,6 @@ def cmd_classify(args: argparse.Namespace) -> int:
             args.reference_dir,
             Path(args.output_dir) / "_auto_tps_hmms",
         )
-    _warn_legacy_tps_hmms(hmm_dir)
     outputs = classify_candidates(
         args.candidates,
         args.reference_dir,
@@ -443,6 +396,17 @@ def cmd_classify(args: argparse.Namespace) -> int:
         ceess_cv_folds=args.ceess_cv_folds,
         ceess_random_state=args.ceess_random_state,
         ceess_threshold=args.ceess_threshold,
+        ceess_classifier=args.ceess_classifier,
+        ceess_epochs=args.ceess_epochs,
+        ceess_hidden_dim=args.ceess_hidden_dim,
+        ceess_representation_dim=args.ceess_barlow_representation_dim,
+        ceess_projection_dim=args.ceess_barlow_projection_dim,
+        ceess_dropout=args.ceess_dropout,
+        ceess_learning_rate=args.ceess_learning_rate,
+        ceess_weight_decay=args.ceess_weight_decay,
+        ceess_train_batch_size=args.ceess_train_batch_size,
+        ceess_barlow_redundancy_weight=args.ceess_barlow_redundancy_weight,
+        ceess_mlp_checkpoint=args.ceess_mlp_checkpoint,
     )
     for key, value in outputs.items():
         logger.info("  %-28s %s", key + ":", value)
@@ -451,11 +415,11 @@ def cmd_classify(args: argparse.Namespace) -> int:
 
 def cmd_run(args: argparse.Namespace) -> int:
     """Execute the full Ariadne workflow end to end."""
-    from ariadne.classification import classify_candidates
-    from ariadne.discovery import collect_protein_files, discover_candidates, discover_candidates_from_proteins
-    from ariadne.fasta_utils import ensure_directory, write_tsv
-    from ariadne.filtering import filter_candidates
-    from ariadne.phylogeny import build_phylogeny
+    from ariadne.embed import classify_candidates
+    from ariadne.search import collect_protein_files, discover_candidates, discover_candidates_from_proteins
+    from ariadne.utils import ensure_directory, write_tsv
+    from ariadne.filter import filter_candidates
+    from ariadne.tree import build_phylogeny
 
     root = ensure_directory(args.output_dir)
     discovery_dir = ensure_directory(root / "01_discovery")
@@ -501,6 +465,7 @@ def cmd_run(args: argparse.Namespace) -> int:
         min_coverage=args.min_coverage,
         min_length=args.min_length,
         identity_threshold=args.identity_threshold,
+        reference_dir=args.reference_dir,
     )
     if args.tps_hmm_dir is not None:
         tps_hmm_dir = Path(args.tps_hmm_dir)
@@ -512,7 +477,6 @@ def cmd_run(args: argparse.Namespace) -> int:
             args.reference_dir,
             classification_dir / "_auto_tps_hmms",
         )
-    _warn_legacy_tps_hmms(tps_hmm_dir)
     classification_outputs = classify_candidates(
         filtering_outputs["filtered_fasta"],
         args.reference_dir,
@@ -528,6 +492,17 @@ def cmd_run(args: argparse.Namespace) -> int:
         ceess_cv_folds=args.ceess_cv_folds,
         ceess_random_state=args.ceess_random_state,
         ceess_threshold=args.ceess_threshold,
+        ceess_classifier=args.ceess_classifier,
+        ceess_epochs=args.ceess_epochs,
+        ceess_hidden_dim=args.ceess_hidden_dim,
+        ceess_representation_dim=args.ceess_barlow_representation_dim,
+        ceess_projection_dim=args.ceess_barlow_projection_dim,
+        ceess_dropout=args.ceess_dropout,
+        ceess_learning_rate=args.ceess_learning_rate,
+        ceess_weight_decay=args.ceess_weight_decay,
+        ceess_train_batch_size=args.ceess_train_batch_size,
+        ceess_barlow_redundancy_weight=args.ceess_barlow_redundancy_weight,
+        ceess_mlp_checkpoint=args.ceess_mlp_checkpoint,
     )
     phylogeny_outputs = {}
     if not args.skip_phylogeny:
@@ -557,49 +532,9 @@ def cmd_run(args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_visualize(args: argparse.Namespace) -> int:
-    """Generate legacy t-SNE style visualisations from feature tables."""
-    from ariadne.visualization import visualize_profiles
-
-    outputs = visualize_profiles(
-        args.input_table,
-        args.output_dir,
-        perplexities=args.perplexities,
-        min_points=args.min_points,
-    )
-    for key, value in outputs.items():
-        logger.info("  %-28s %s", key + ":", value)
-    return 0
-
-
-def cmd_esm_type(args: argparse.Namespace) -> int:
-    """Run supervised ESM embedding analysis on the coral TPS spreadsheet."""
-    from ariadne.esm_type import analyze_tps_types_with_esm
-
-    if args.xlsx is None:
-        raise FileNotFoundError(
-            "Could not find TPS/TPS.xlsx automatically. Please pass --xlsx explicitly."
-        )
-
-    outputs = analyze_tps_types_with_esm(
-        args.xlsx,
-        args.output_dir,
-        sheet_name=args.sheet_name,
-        model_name=args.model_name,
-        batch_size=args.batch_size,
-        max_length=args.max_length,
-        device=args.device,
-        cv_folds=args.cv_folds,
-        random_state=args.random_state,
-    )
-    for key, value in outputs.items():
-        logger.info("  %-28s %s", key + ":", value)
-    return 0
-
-
 def cmd_phylogeny(args: argparse.Namespace) -> int:
     """Build a MAFFT alignment and IQ-TREE phylogeny from candidates plus references."""
-    from ariadne.phylogeny import build_phylogeny
+    from ariadne.tree import build_phylogeny
 
     outputs = build_phylogeny(
         args.candidates,
@@ -618,42 +553,12 @@ def cmd_phylogeny(args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_filter_coverage_only(args: argparse.Namespace) -> int:
-    """Compatibility wrapper for coverage-only filtering."""
-    from ariadne.fasta_utils import read_fasta, write_fasta
-    from ariadne.filtering import filter_by_coverage
-
-    records = filter_by_coverage(read_fasta(args.input_fasta), args.min_coverage)
-    output_path = write_fasta(records, args.output)
-    logger.info("Output: %s", output_path)
-    return 0
-
-
-def cmd_filter_length_only(args: argparse.Namespace) -> int:
-    """Compatibility wrapper for length-only filtering."""
-    from ariadne.fasta_utils import read_fasta, write_fasta
-    from ariadne.filtering import filter_by_length
-
-    records = filter_by_length(read_fasta(args.input_fasta), args.min_length)
-    output_path = write_fasta(records, args.output)
-    logger.info("Output: %s", output_path)
-    return 0
-
-
-def cmd_dedupe_exact(args: argparse.Namespace) -> int:
-    """Compatibility wrapper for exact-sequence deduplication."""
-    from ariadne.fasta_utils import read_fasta, write_fasta
-    from ariadne.filtering import deduplicate_exact
-
-    records = deduplicate_exact(read_fasta(args.input_fasta))
-    output_path = write_fasta(records, args.output)
-    logger.info("Output: %s", output_path)
-    return 0
-
-
 def build_parser() -> argparse.ArgumentParser:
     """Create the top-level parser and all Ariadne subcommands."""
-    from ariadne.esm_type import DEFAULT_ESM_MODEL_NAME, esm_model_help_text
+    from ariadne.model import (
+        DEFAULT_ESM_MODEL_NAME,
+        esm_model_help_text,
+    )
 
     parser = argparse.ArgumentParser(
         prog="ariadne",
@@ -685,11 +590,6 @@ def build_parser() -> argparse.ArgumentParser:
     prepare_refs.add_argument("--output-dir", required=True, type=Path)
     prepare_refs.set_defaults(func=cmd_prepare_references)
 
-    prepare_demo = subparsers.add_parser("prepare-demo", help="Create a small fully-runnable demo workspace.")
-    prepare_demo.add_argument("--output-dir", required=True, type=Path)
-    prepare_demo.add_argument("--coral", default=_default_coral(), type=Path)
-    prepare_demo.add_argument("--insect-xlsx", default=_default_insect(), type=Path)
-    prepare_demo.set_defaults(func=cmd_prepare_demo)
 
     build_hmm_parser = subparsers.add_parser("build-hmm", help="Build a HMM from a reference FASTA/MSA source.")
     build_hmm_parser.add_argument("--alignment", required=True, type=Path)
@@ -731,6 +631,7 @@ def build_parser() -> argparse.ArgumentParser:
     filter_parser.add_argument("--min-coverage", type=float, default=10.0)
     filter_parser.add_argument("--min-length", type=int, default=300)
     filter_parser.add_argument("--identity-threshold", type=float, default=0.95)
+    filter_parser.add_argument("--reference-dir", type=Path, default=None, help="Optional reference FASTA directory used to remove candidates that already match known references.")
     filter_parser.set_defaults(func=cmd_filter)
 
     classify = subparsers.add_parser("classify", help="Classify TPS candidates in profile feature space.")
@@ -742,13 +643,24 @@ def build_parser() -> argparse.ArgumentParser:
     classify.add_argument("--tree-neighbors", type=int, default=12)
     classify.add_argument("--ceess-xlsx", type=Path, default=_default_tps_xlsx(), help="Optional coral TPS workbook used to train the ESM CeeSs model. Defaults to TPS/TPS.xlsx when present.")
     classify.add_argument("--skip-ceess-model", action="store_true", help="Skip the optional ESM-based CeeSs scoring stage.")
-    classify.add_argument("--ceess-threshold", type=float, default=0.5, help="Probability threshold used to keep predicted CeeSs candidates.")
+    classify.add_argument("--ceess-threshold", type=float, default=0.9, help="Probability threshold used to keep predicted CeeSs candidates.")
+    classify.add_argument("--ceess-classifier", choices=["mlp", "logreg", "contrastive"], default="mlp", help="Classifier pipeline used on top of frozen ESM embeddings.")
     classify.add_argument("--ceess-model-name", default=DEFAULT_ESM_MODEL_NAME, help=esm_model_help_text())
     classify.add_argument("--ceess-batch-size", type=int, default=4)
     classify.add_argument("--ceess-max-length", type=int, default=2048)
     classify.add_argument("--ceess-device", default=None, help="Optional torch device for the ESM CeeSs model, for example cpu or cuda.")
     classify.add_argument("--ceess-cv-folds", type=int, default=5)
     classify.add_argument("--ceess-random-state", type=int, default=0)
+    classify.add_argument("--ceess-epochs", type=int, default=200, help="Training epochs for the MLP CeeSs head.")
+    classify.add_argument("--ceess-hidden-dim", type=int, default=128, help="Hidden layer width for the MLP CeeSs head.")
+    classify.add_argument("--ceess-barlow-representation-dim", type=int, default=None, help="Optional encoded representation width for the Barlow Twins CeeSs pipeline.")
+    classify.add_argument("--ceess-barlow-projection-dim", type=int, default=None, help="Optional projection-head output width for the Barlow Twins CeeSs pipeline.")
+    classify.add_argument("--ceess-barlow-redundancy-weight", type=float, default=0.005, help="Off-diagonal redundancy penalty used when --ceess-classifier=contrastive.")
+    classify.add_argument("--ceess-dropout", type=float, default=0.1, help="Dropout rate for the MLP CeeSs head.")
+    classify.add_argument("--ceess-learning-rate", type=float, default=1e-3, help="Learning rate for the MLP CeeSs head.")
+    classify.add_argument("--ceess-weight-decay", type=float, default=1e-4, help="Weight decay for the MLP CeeSs head.")
+    classify.add_argument("--ceess-train-batch-size", type=int, default=8, help="Training batch size for the MLP CeeSs head.")
+    classify.add_argument("--ceess-mlp-checkpoint", type=Path, default=None, help="Optional pretrained Torch MLP checkpoint (.pt) for --ceess-classifier mlp. When provided, Ariadne skips final MLP training and loads this classifier directly.")
     classify.set_defaults(func=cmd_classify)
 
     run = subparsers.add_parser("run", help="Execute Ariadne end-to-end: discovery, filtering, classification, and optional phylogeny.")
@@ -774,13 +686,24 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--tree-neighbors", type=int, default=12)
     run.add_argument("--ceess-xlsx", type=Path, default=_default_tps_xlsx(), help="Optional coral TPS workbook used to train the ESM CeeSs model. Defaults to TPS/TPS.xlsx when present.")
     run.add_argument("--skip-ceess-model", action="store_true", help="Skip the optional ESM-based CeeSs scoring stage.")
-    run.add_argument("--ceess-threshold", type=float, default=0.5, help="Probability threshold used to keep predicted CeeSs candidates.")
+    run.add_argument("--ceess-threshold", type=float, default=0.9, help="Probability threshold used to keep predicted CeeSs candidates.")
+    run.add_argument("--ceess-classifier", choices=["mlp", "logreg", "contrastive"], default="mlp", help="Classifier pipeline used on top of frozen ESM embeddings.")
     run.add_argument("--ceess-model-name", default=DEFAULT_ESM_MODEL_NAME, help=esm_model_help_text())
     run.add_argument("--ceess-batch-size", type=int, default=4)
     run.add_argument("--ceess-max-length", type=int, default=2048)
     run.add_argument("--ceess-device", default=None, help="Optional torch device for the ESM CeeSs model, for example cpu or cuda.")
     run.add_argument("--ceess-cv-folds", type=int, default=5)
     run.add_argument("--ceess-random-state", type=int, default=0)
+    run.add_argument("--ceess-epochs", type=int, default=200, help="Training epochs for the MLP CeeSs head.")
+    run.add_argument("--ceess-hidden-dim", type=int, default=128, help="Hidden layer width for the MLP CeeSs head.")
+    run.add_argument("--ceess-barlow-representation-dim", type=int, default=None, help="Optional encoded representation width for the Barlow Twins CeeSs pipeline.")
+    run.add_argument("--ceess-barlow-projection-dim", type=int, default=None, help="Optional projection-head output width for the Barlow Twins CeeSs pipeline.")
+    run.add_argument("--ceess-barlow-redundancy-weight", type=float, default=0.005, help="Off-diagonal redundancy penalty used when --ceess-classifier=contrastive.")
+    run.add_argument("--ceess-dropout", type=float, default=0.1, help="Dropout rate for the MLP CeeSs head.")
+    run.add_argument("--ceess-learning-rate", type=float, default=1e-3, help="Learning rate for the MLP CeeSs head.")
+    run.add_argument("--ceess-weight-decay", type=float, default=1e-4, help="Weight decay for the MLP CeeSs head.")
+    run.add_argument("--ceess-train-batch-size", type=int, default=8, help="Training batch size for the MLP CeeSs head.")
+    run.add_argument("--ceess-mlp-checkpoint", type=Path, default=None, help="Optional pretrained Torch MLP checkpoint (.pt) for --ceess-classifier mlp. When provided, Ariadne skips final MLP training and loads this classifier directly.")
     run.add_argument("--skip-phylogeny", action="store_true", help="Skip the MAFFT + IQ-TREE phylogeny step.")
     run.add_argument("--mafft-bin", default=None, help="Path or executable name for MAFFT.")
     run.add_argument("--mafft-mode", default="--auto", help="MAFFT mode flag, for example --auto or --localpair.")
@@ -812,52 +735,6 @@ def build_parser() -> argparse.ArgumentParser:
     )
     phylogeny.set_defaults(func=cmd_phylogeny)
 
-    visualize = subparsers.add_parser(
-        "visualize",
-        help="Generate t-SNE style visualization from TPS HMM score tables.",
-    )
-    visualize.add_argument(
-        "--input-table",
-        required=True,
-        type=Path,
-        help="Input TPS score table: supports run/classify output tps_features.tsv and legacy hmm_tab.txt style.",
-    )
-    visualize.add_argument("--output-dir", required=True, type=Path)
-    visualize.add_argument("--perplexities", nargs="+", type=int, default=None, help="Explicit t-SNE perplexities. Default follows legacy AFLP heuristic.")
-    visualize.add_argument("--min-points", type=int, default=20, help="Clustering min points, equivalent to legacy minPts.")
-    visualize.set_defaults(func=cmd_visualize)
-
-    esm_type = subparsers.add_parser(
-        "esm-type",
-        help="Embed labeled coral TPS proteins from TPS.xlsx with ESM2 and classify their types.",
-    )
-    esm_type.add_argument("--xlsx", type=Path, default=_default_tps_xlsx(), help="Input TPS spreadsheet. Defaults to TPS/TPS.xlsx when present.")
-    esm_type.add_argument("--output-dir", required=True, type=Path)
-    esm_type.add_argument("--sheet-name", default=None, help="Optional worksheet name. Defaults to the first sheet.")
-    esm_type.add_argument("--model-name", default=DEFAULT_ESM_MODEL_NAME, help=esm_model_help_text())
-    esm_type.add_argument("--batch-size", type=int, default=4)
-    esm_type.add_argument("--max-length", type=int, default=2048)
-    esm_type.add_argument("--device", default=None, help="Optional torch device, for example cpu or cuda.")
-    esm_type.add_argument("--cv-folds", type=int, default=5)
-    esm_type.add_argument("--random-state", type=int, default=0)
-    esm_type.set_defaults(func=cmd_esm_type)
-
-    coverage_only = subparsers.add_parser("filter-coverage-only", help="Compatibility helper for the legacy coverage filter.")
-    coverage_only.add_argument("min_coverage", type=float)
-    coverage_only.add_argument("input_fasta", type=Path)
-    coverage_only.add_argument("--output", required=True, type=Path)
-    coverage_only.set_defaults(func=cmd_filter_coverage_only)
-
-    length_only = subparsers.add_parser("filter-length-only", help="Compatibility helper for the legacy length filter.")
-    length_only.add_argument("min_length", type=int)
-    length_only.add_argument("input_fasta", type=Path)
-    length_only.add_argument("--output", required=True, type=Path)
-    length_only.set_defaults(func=cmd_filter_length_only)
-
-    dedupe_only = subparsers.add_parser("dedupe-exact", help="Compatibility helper for exact duplicate removal.")
-    dedupe_only.add_argument("input_fasta", type=Path)
-    dedupe_only.add_argument("--output", required=True, type=Path)
-    dedupe_only.set_defaults(func=cmd_dedupe_exact)
     return parser
 
 

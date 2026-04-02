@@ -10,7 +10,7 @@ If Ariadne is useful in your work, please cite the software entry below and upda
   title        = {Ariadne: A Tree-Native Terpene Synthase Discovery and Phylogeny Platform},
   year         = {2026},
   url          = {https://github.com/zhaoruijiang26/Ariadne},
-  version      = {0.1.0}
+  version      = {1.0.0}
 }
 ```
 

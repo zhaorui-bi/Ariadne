@@ -6,7 +6,7 @@ is implemented in stage-oriented modules such as ``discovery.py`` and
 and packaging configuration.
 """
 
-__version__     = "0.1.0"
+__version__     = "1.0.0"
 __author__      = "Zhaorui Jiang"
 __description__ = "Coral TPS Discovery, Candidate CeeSs Prioritization & Phylogeny Platform"
 __url__         = "https://github.com/zhaoruijiang26/Ariadne"

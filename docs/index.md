@@ -22,10 +22,12 @@
 
 ## 📢 News
 
+- `2026-04-02` Architecture refactored to a clean 7-module layout: `utils`, `data`, `search`, `filter`, `embed`, `model`, `tree`. Old verbose names retired.
+- `2026-04-02` Filtering updated: candidates matching reference sequences are now **retained** in `candidates.filtered.faa`; matches are still logged in `reference_matches.tsv` for traceability.
+- `2026-04-02` Test run benchmark: 100 candidates discovered → 36 retained after filtering → 36 classified as coral-like → **5 CeeSs candidates** shortlisted (P(CeeSs) ≥ 0.9).
 - `2026-03-23` The repository introduction was updated around the new CeeSs framing, reflecting Ariadne as a platform for coral TPS mining and CeeSs prioritization.
 - `2026-03-22` Ariadne now ships with an English documentation site built with MkDocs + Material for Read the Docs deployment.
 - `2026-03-21` The software workflow was simplified to a focused four-stage pipeline: `discovery -> filtering -> classification -> phylogeny`.
-- `2026-03-21` `tree/` became the default source for query-HMM construction, TPS HMM library generation, classification references, and phylogeny references.
 
 ## 🪸 Introduction
 
@@ -90,37 +92,11 @@ In the associated study context, this platform supported the identification of C
 ## 🖼️ Results Preview
 
 <figure class="paper-figure">
-  <img src="assets/latest_embedding.svg" alt="Latest Ariadne embedding output">
+  <img src="assets/latest_embedding.svg" alt="Latest Ariadne classification embedding output">
   <figcaption>
-    Figure 2. Latest default-run classification embedding, synced from <code>tmp_run_default_ceess/03_classification/embedding.svg</code>. Coral-like candidates are explicitly separated into <code>Candidate CeeSs</code> and <code>Candidate non-CeeSs</code>.
+    Figure 2. Current bundled local result preview, synced from <code>result/03_classification/embedding.svg</code>. In this local run, <code>36</code> coral-like candidates were scored and <code>5</code> were retained as final CeeSs candidates (P(CeeSs) ≥ 0.9).
   </figcaption>
 </figure>
-
-<figure class="paper-figure">
-  <img src="assets/latest_embedding_3d_sections.svg" alt="Latest Ariadne 3D embedding output">
-  <figcaption>
-    Figure 3. Orthogonal embedding sections from the same default run, useful when comparing foreground candidate groups against the broader multi-clade TPS background.
-  </figcaption>
-</figure>
-
-<figure class="paper-figure">
-  <img src="assets/latest_tree.svg" alt="Latest Ariadne phylogeny preview">
-  <figcaption>
-    Figure 4. Alignment-driven phylogeny preview rendered from <code>tmp_run_default_ceess/04_phylogeny/iqtree.treefile</code>. The thumbnail preserves the real default-run branch structure while highlighting candidate placements against the multi-clade reference backbone.
-  </figcaption>
-</figure>
-
-<div class="preview-grid">
-  <div class="paper-card">
-    <h3>Embedding panel</h3>
-    <p><code>embedding.svg</code> and <code>embedding_3d_sections.svg</code> now show the latest default-run result, including explicit separation between <code>Candidate CeeSs</code> and <code>Candidate non-CeeSs</code>.</p>
-  </div>
-  <div class="paper-card">
-    <h3>Tree panel</h3>
-    <img src="assets/latest_tree.svg" alt="Tree panel thumbnail from the latest default run">
-    <p><code>phylogeny_alignment.fasta</code>, <code>iqtree.treefile</code>, and <code>iqtree.iqtree</code> now resolve to a real default-run tree preview instead of placeholder copy, making the docs homepage closer to the actual downstream result users will inspect.</p>
-  </div>
-</div>
 
 ## 🚀 Quick Start
 

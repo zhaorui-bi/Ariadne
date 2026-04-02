@@ -48,17 +48,20 @@ The second stage focuses on candidate quality rather than biological interpretat
 
 It applies:
 
-- coverage filtering
-- minimum protein length filtering
-- near-duplicate collapsing
+- coverage filtering (default ≥ 10×)
+- minimum protein length filtering (default ≥ 300 aa)
+- near-duplicate collapsing at 95% sequence identity
 
-This stage is deliberately conservative and transparent. Rather than hiding filtering decisions inside a monolithic score, Ariadne exports reports that make the reasons for removal and representative selection explicit.
+Reference-matched candidates (sequences with ≥95% identity to any reference in `tree/`) are **retained** in `candidates.filtered.faa`. Their reference matches are logged in `reference_matches.tsv` for downstream traceability — this allows novel alleles or species-specific variants of known coral TPS genes to proceed through classification and CeeSs scoring rather than being silently discarded.
+
+This stage is deliberately conservative and transparent. Rather than hiding filtering decisions inside a monolithic score, Ariadne exports reports that make the reasons for representative selection and deduplication explicit.
 
 Primary outputs:
 
 - `candidates.filtered.faa`
 - `filter_report.tsv`
 - `dedupe_clusters.tsv`
+- `reference_matches.tsv`
 - `manual_review.tsv`
 
 ## Stage III. Classification

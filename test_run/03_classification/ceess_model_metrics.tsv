@@ -1,0 +1,54 @@
+metric	value
+num_sequences	49
+num_types	6
+cv_folds	4
+classifier_kind	mlp
+cv_accuracy	0.77551
+cv_macro_f1	0.750712
+cv_weighted_f1	0.772632
+mlp_epochs	200
+mlp_hidden_dim	128
+mlp_dropout	0.1
+mlp_learning_rate	0.001
+mlp_weight_decay	0.0001
+mlp_batch_size	8
+Sesquiterpenes_precision	0.75
+Sesquiterpenes_recall	0.6
+Sesquiterpenes_f1	0.666667
+Sesquiterpenes_support	15
+cembrene A_precision	0.571429
+cembrene A_recall	0.666667
+cembrene A_f1	0.615385
+cembrene A_support	6
+cembrene B_precision	1.0
+cembrene B_recall	1.0
+cembrene B_f1	1.0
+cembrene B_support	10
+elisabethatriene_precision	0.888889
+elisabethatriene_recall	0.888889
+elisabethatriene_f1	0.888889
+elisabethatriene_support	9
+klysimplexin R_precision	0.714286
+klysimplexin R_recall	1.0
+klysimplexin R_f1	0.833333
+klysimplexin R_support	5
+xeniaphyllene_precision	0.5
+xeniaphyllene_recall	0.5
+xeniaphyllene_f1	0.5
+xeniaphyllene_support	4
+esm_model	facebook/esm2_t33_650M_UR50D
+ceess_threshold	0.9
+ceess_positive_types	cembrene A,cembrene B
+num_ceess_references	16
+num_non_ceess_references	33
+num_coral_like_candidates	36
+cv_ceess_group_accuracy	0.897959
+cv_ceess_group_macro_f1	0.885781
+CeeSs_group_precision	0.823529
+CeeSs_group_recall	0.875
+CeeSs_group_f1	0.848485
+CeeSs_group_support	16
+non_CeeSs_group_precision	0.9375
+non_CeeSs_group_recall	0.909091
+non_CeeSs_group_f1	0.923077
+non_CeeSs_group_support	33

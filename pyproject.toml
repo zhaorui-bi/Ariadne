@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ariadne-tps"
-version = "0.1.0"
+version = "1.0.0"
 description = "Ariadne platform for coral TPS discovery, candidate CeeSs prioritization, and phylogeny."
 readme = "README.md"
 requires-python = ">=3.9"
@@ -20,6 +20,7 @@ dependencies = [
 esm = [
   "torch>=2.2",
   "transformers>=4.44",
+  "tqdm>=4.66",
 ]
 
 [project.scripts]
