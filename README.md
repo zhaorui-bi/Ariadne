@@ -231,20 +231,141 @@ Ariadne/
 
 ## CLI Reference
 
-```
-ariadne --help
+| Command | Purpose |
+|---|---|
+| `ariadne run` | Full end-to-end pipeline (stages 1–4) |
+| `ariadne discover` | Stage 1: HMM-guided candidate discovery |
+| `ariadne filter` | Stage 2: quality filtering and deduplication |
+| `ariadne classify` | Stage 3: feature-space embedding and classification |
+| `ariadne phylogeny` | Stage 4: MAFFT alignment + IQ-TREE phylogeny |
+| `ariadne prepare-references` | Prepare reference FASTA files from source data |
+| `ariadne build-hmm` | Build a single profile HMM from an alignment |
+| `ariadne build-tps-hmm-library` | Build a TPS HMM library from multiple alignments |
 
-Commands:
-  prepare-references    Prepare reference FASTA files from coral / insect / extra sources
-  prepare-demo          Create a small reproducible demo workspace
-  build-hmm             Build a profile HMM from a reference alignment
-  build-tps-hmm-library Build a TPS HMM library from multiple reference FASTAs
-  discover              Stage 1: HMM-guided candidate discovery
-  filter                Stage 2: quality filtering and deduplication
-  classify              Stage 3: feature-space embedding and classification
-  phylogeny             Stage 4: MAFFT alignment + IQ-TREE phylogeny
-  run                   Full pipeline (stages 1–4)
-```
+### `ariadne run` — full pipeline
+
+| Parameter | Default | Description |
+|---|---|---|
+| `--protein-folder PATH` | `None` | directory of protein FASTA files |
+| `--transcriptomes PATH …` | `None` | transcriptome FASTAs; ORFs predicted with Pyrodigal |
+| `--protein-glob GLOB …` | auto | override recursive glob patterns under `--protein-folder` |
+| `--query-hmm PATH` | bundled | profile HMM for discovery; auto-built from `tree/` as fallback |
+| `--reference-dir PATH` | **required** | tree-native reference FASTA directory |
+| `--output-dir PATH` | **required** | output root directory |
+| `--hmm-name NAME` | `ariadne_query` | name for any auto-built discovery HMM |
+| `--discovery-min-score FLOAT` | `None` | minimum HMM bitscore for discovery |
+| `--discovery-max-evalue FLOAT` | `None` | maximum E-value for discovery |
+| `--min-coverage FLOAT` | `10.0` | minimum sequencing coverage (filtering) |
+| `--min-length INT` | `300` | minimum protein length in aa (filtering) |
+| `--identity-threshold FLOAT` | `0.95` | near-duplicate collapsing threshold |
+| `--tps-hmm-dir PATH` | auto | TPS HMM library; uses bundled or auto-builds from `tree/` |
+| `--top-k INT` | `5` | nearest-reference voting size |
+| `--tree-neighbors INT` | `12` | neighbors for local candidate context trees |
+| `--ceess-xlsx PATH` | `TPS/TPS.xlsx` | labeled coral TPS workbook for ESM CeeSs scoring |
+| `--skip-ceess-model` | `False` | skip ESM-based CeeSs scoring |
+| `--ceess-threshold FLOAT` | `0.9` | minimum P(CeeSs) for `ceess_candidates.tsv` |
+| `--ceess-classifier` | `mlp` | classifier head: `mlp`, `logreg`, or `contrastive` |
+| `--ceess-model-name NAME` | `facebook/esm2_t33_650M_UR50D` | ESM2 preset or Hugging Face model ID |
+| `--ceess-batch-size INT` | `4` | ESM2 inference batch size |
+| `--ceess-max-length INT` | `2048` | maximum tokenized length for ESM2 |
+| `--ceess-device DEVICE` | auto | torch device, e.g. `cuda:0` or `cpu` |
+| `--ceess-cv-folds INT` | `5` | cross-validation folds for classifier evaluation |
+| `--ceess-random-state INT` | `0` | random seed |
+| `--ceess-epochs INT` | `200` | MLP training epochs |
+| `--ceess-hidden-dim INT` | `128` | MLP hidden layer width |
+| `--ceess-dropout FLOAT` | `0.1` | MLP dropout rate |
+| `--ceess-learning-rate FLOAT` | `1e-3` | MLP learning rate |
+| `--ceess-weight-decay FLOAT` | `1e-4` | MLP weight decay |
+| `--ceess-train-batch-size INT` | `8` | MLP training batch size |
+| `--ceess-barlow-representation-dim INT` | `None` | Barlow Twins encoder width (`contrastive` only) |
+| `--ceess-barlow-projection-dim INT` | `None` | Barlow Twins projection width (`contrastive` only) |
+| `--ceess-barlow-redundancy-weight FLOAT` | `0.005` | Barlow Twins off-diagonal penalty (`contrastive` only) |
+| `--ceess-mlp-checkpoint PATH` | `None` | pretrained MLP `.pt` checkpoint; skips training |
+| `--skip-phylogeny` | `False` | skip MAFFT + IQ-TREE |
+| `--mafft-bin PATH` | auto | explicit MAFFT binary |
+| `--mafft-mode FLAG` | `--auto` | MAFFT alignment mode |
+| `--iqtree-bin PATH` | auto | explicit IQ-TREE binary |
+| `--iqtree-model MODEL` | `LG` | IQ-TREE substitution model |
+| `--iqtree-threads INT\|AUTO` | `AUTO` | IQ-TREE thread count |
+| `--iqtree-bootstrap INT` | `None` | ultrafast bootstrap replicates |
+| `--no-iqtree-fast` | `False` | disable IQ-TREE `--fast` mode |
+
+### `ariadne discover`
+
+| Parameter | Default | Description |
+|---|---|---|
+| `--protein-folder PATH` | `None` | protein FASTA directory |
+| `--transcriptomes PATH …` | `None` | transcriptome FASTA inputs |
+| `--protein-glob GLOB …` | auto | recursive search patterns |
+| `--hmm PATH` | **required** | discovery HMM |
+| `--output-dir PATH` | **required** | discovery output directory |
+| `--min-score FLOAT` | `None` | minimum HMM bitscore |
+| `--max-evalue FLOAT` | `None` | maximum E-value |
+
+### `ariadne filter`
+
+| Parameter | Default | Description |
+|---|---|---|
+| `--input-fasta PATH` | **required** | candidate protein FASTA |
+| `--output-dir PATH` | **required** | filter output directory |
+| `--min-coverage FLOAT` | `10.0` | minimum sequencing coverage |
+| `--min-length INT` | `300` | minimum protein length (aa) |
+| `--identity-threshold FLOAT` | `0.95` | near-duplicate threshold |
+| `--reference-dir PATH` | `None` | reference directory; matches are logged in `reference_matches.tsv` and **kept** |
+
+### `ariadne classify`
+
+Accepts the same `--ceess-*` flags as `ariadne run` (see full table above).
+
+| Parameter | Default | Description |
+|---|---|---|
+| `--candidates PATH` | **required** | filtered candidate FASTA |
+| `--reference-dir PATH` | **required** | reference FASTA directory |
+| `--output-dir PATH` | **required** | classification output directory |
+| `--tps-hmm-dir PATH` | auto | TPS HMM library directory |
+| `--top-k INT` | `5` | voting neighbors |
+| `--tree-neighbors INT` | `12` | local context-tree neighbors |
+
+### `ariadne phylogeny`
+
+| Parameter | Default | Description |
+|---|---|---|
+| `--candidates PATH` | **required** | filtered candidate FASTA |
+| `--reference-dir PATH` | **required** | reference FASTA directory |
+| `--output-dir PATH` | **required** | phylogeny output directory |
+| `--mafft-bin PATH` | auto | explicit MAFFT binary |
+| `--mafft-mode FLAG` | `--auto` | MAFFT alignment mode |
+| `--iqtree-bin PATH` | auto | explicit IQ-TREE binary |
+| `--iqtree-model MODEL` | `LG` | substitution model |
+| `--iqtree-threads INT\|AUTO` | `AUTO` | threads |
+| `--iqtree-bootstrap INT` | `None` | optional bootstrap replicates |
+| `--no-iqtree-fast` | `False` | disable fast mode |
+
+### `ariadne prepare-references`
+
+| Parameter | Default | Description |
+|---|---|---|
+| `--coral PATH` | `None` | coral reference FASTA |
+| `--coral-limit INT` | `None` | maximum coral sequences |
+| `--insect-xlsx PATH` | `None` | insect TPS Excel workbook |
+| `--insect-limit INT` | `None` | maximum insect sequences |
+| `--bacteria-fasta PATH` | `None` | bacterial TPS FASTA |
+| `--fungal-fasta PATH` | `None` | fungal TPS FASTA |
+| `--plant-fasta PATH` | `None` | plant TPS FASTA |
+| `--extra-fasta PATH …` | `None` | additional FASTA files |
+| `--output-dir PATH` | **required** | output directory |
+
+### `ariadne build-hmm` / `ariadne build-tps-hmm-library`
+
+| Command | Parameter | Description |
+|---|---|---|
+| `build-hmm` | `--alignment PATH` (required) | input alignment or FASTA |
+| `build-hmm` | `--output PATH` (required) | output `.hmm` file |
+| `build-hmm` | `--name NAME` | profile name |
+| `build-tps-hmm-library` | `--alignment NAME=PATH …` (required) | named alignment files |
+| `build-tps-hmm-library` | `--output-dir PATH` (required) | output HMM library directory |
+
+> **Note:** Global flags (`--verbose`, `--log-file`) must precede the subcommand: `ariadne --verbose run ...`
 
 Full CLI documentation: [docs/cli-reference.md](./docs/cli-reference.md)
 
