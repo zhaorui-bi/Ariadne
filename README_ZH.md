@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="fig/logo.png" alt="Ariadne logo" width="980">
+  <img src="fig/logo.png" alt="Ariadne logo" width="520">
 </p>
 
 <p align="center">
