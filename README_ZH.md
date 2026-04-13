@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="fig/logo.png" alt="Ariadne logo" width="520">
+  <img src="fig/logo.png" alt="Ariadne logo" width="450">
 </p>
 
 <p align="center">
@@ -176,139 +176,139 @@ Ariadne/
 
 ## ⌨️ 命令行参数说明
 
-| 命令 | 用途 |
-|---|---|
-| `ariadne run` | 完整四阶段流程 |
-| `ariadne discover` | 第一阶段：HMM 候选发现 |
-| `ariadne filter` | 第二阶段：质量过滤与去冗余 |
-| `ariadne classify` | 第三阶段：特征空间分类 |
-| `ariadne phylogeny` | 第四阶段：MAFFT 比对 + IQ-TREE 建树 |
-| `ariadne prepare-references` | 准备参考 FASTA 文件 |
-| `ariadne build-hmm` | 从比对文件构建单个 HMM |
-| `ariadne build-tps-hmm-library` | 从多个比对文件构建 TPS HMM 库 |
+| 命令                            | 用途                                |
+| ------------------------------- | ----------------------------------- |
+| `ariadne run`                   | 完整四阶段流程                      |
+| `ariadne discover`              | 第一阶段：HMM 候选发现              |
+| `ariadne filter`                | 第二阶段：质量过滤与去冗余          |
+| `ariadne classify`              | 第三阶段：特征空间分类              |
+| `ariadne phylogeny`             | 第四阶段：MAFFT 比对 + IQ-TREE 建树 |
+| `ariadne prepare-references`    | 准备参考 FASTA 文件                 |
+| `ariadne build-hmm`             | 从比对文件构建单个 HMM              |
+| `ariadne build-tps-hmm-library` | 从多个比对文件构建 TPS HMM 库       |
 
 ### `ariadne run` — 完整流程
 
-| 参数 | 默认值 | 说明 |
-|---|---|---|
-| `--protein-folder PATH` | `None` | 蛋白 FASTA 文件目录 |
-| `--transcriptomes PATH …` | `None` | 转录组 FASTA；用 Pyrodigal 预测 ORF |
-| `--protein-glob GLOB …` | 自动 | 覆盖 `--protein-folder` 下的递归 glob 模式 |
-| `--query-hmm PATH` | 内置 | 用于发现的 profile HMM；缺失时从 `tree/` 自动构建 |
-| `--reference-dir PATH` | **必填** | tree-native 参考 FASTA 目录 |
-| `--output-dir PATH` | **必填** | 输出根目录 |
-| `--hmm-name NAME` | `ariadne_query` | 自动构建 HMM 时写入的名称 |
-| `--discovery-min-score FLOAT` | `None` | 发现阶段的最低 HMM bitscore |
-| `--discovery-max-evalue FLOAT` | `None` | 发现阶段的最大 E-value |
-| `--min-coverage FLOAT` | `10.0` | 过滤阶段的最低测序覆盖度 |
-| `--min-length INT` | `300` | 过滤阶段的最短蛋白长度（aa） |
-| `--identity-threshold FLOAT` | `0.95` | 近重复折叠阈值 |
-| `--tps-hmm-dir PATH` | 自动 | TPS HMM 库目录；优先内置，否则从 `tree/` 构建 |
-| `--top-k INT` | `5` | 最近参考投票邻居数 |
-| `--tree-neighbors INT` | `12` | 构建局部上下文树的邻居数 |
-| `--ceess-xlsx PATH` | `TPS/TPS.xlsx` | 用于 CeeSs 打分的有标注珊瑚 TPS 工作簿 |
-| `--skip-ceess-model` | `False` | 跳过 ESM CeeSs 打分阶段 |
-| `--ceess-threshold FLOAT` | `0.9` | 写入 `ceess_candidates.tsv` 的最低 P(CeeSs) |
-| `--ceess-classifier` | `mlp` | 分类头：`mlp`、`logreg` 或 `contrastive` |
-| `--ceess-model-name NAME` | `facebook/esm2_t33_650M_UR50D` | ESM2 预设名或 Hugging Face 模型 ID |
-| `--ceess-batch-size INT` | `4` | ESM2 推理 batch size |
-| `--ceess-max-length INT` | `2048` | ESM2 最大 token 长度 |
-| `--ceess-device DEVICE` | 自动 | torch 设备，如 `cuda:0` 或 `cpu` |
-| `--ceess-cv-folds INT` | `5` | 交叉验证折数 |
-| `--ceess-random-state INT` | `0` | 随机种子 |
-| `--ceess-epochs INT` | `200` | MLP 训练轮数 |
-| `--ceess-hidden-dim INT` | `128` | MLP 隐层宽度 |
-| `--ceess-dropout FLOAT` | `0.1` | MLP dropout 率 |
-| `--ceess-learning-rate FLOAT` | `1e-3` | MLP 学习率 |
-| `--ceess-weight-decay FLOAT` | `1e-4` | MLP 权重衰减 |
-| `--ceess-train-batch-size INT` | `8` | MLP 训练 batch size |
-| `--ceess-barlow-representation-dim INT` | `None` | Barlow Twins 编码器宽度（仅 `contrastive`） |
-| `--ceess-barlow-projection-dim INT` | `None` | Barlow Twins 投影头宽度（仅 `contrastive`） |
-| `--ceess-barlow-redundancy-weight FLOAT` | `0.005` | Barlow Twins 冗余惩罚（仅 `contrastive`） |
-| `--ceess-mlp-checkpoint PATH` | `None` | 预训练 MLP `.pt` 检查点；加载后跳过训练 |
-| `--skip-phylogeny` | `False` | 跳过 MAFFT + IQ-TREE |
-| `--mafft-bin PATH` | 自动 | MAFFT 可执行文件路径 |
-| `--mafft-mode FLAG` | `--auto` | MAFFT 比对模式 |
-| `--iqtree-bin PATH` | 自动 | IQ-TREE 可执行文件路径 |
-| `--iqtree-model MODEL` | `LG` | IQ-TREE 替换模型 |
-| `--iqtree-threads INT\|AUTO` | `AUTO` | IQ-TREE 线程数 |
-| `--iqtree-bootstrap INT` | `None` | 超快速 bootstrap 重复数 |
-| `--no-iqtree-fast` | `False` | 禁用 IQ-TREE `--fast` 模式 |
+| 参数                                     | 默认值                         | 说明                                              |
+| ---------------------------------------- | ------------------------------ | ------------------------------------------------- |
+| `--protein-folder PATH`                  | `None`                         | 蛋白 FASTA 文件目录                               |
+| `--transcriptomes PATH …`                | `None`                         | 转录组 FASTA；用 Pyrodigal 预测 ORF               |
+| `--protein-glob GLOB …`                  | 自动                           | 覆盖 `--protein-folder` 下的递归 glob 模式        |
+| `--query-hmm PATH`                       | 内置                           | 用于发现的 profile HMM；缺失时从 `tree/` 自动构建 |
+| `--reference-dir PATH`                   | **必填**                       | tree-native 参考 FASTA 目录                       |
+| `--output-dir PATH`                      | **必填**                       | 输出根目录                                        |
+| `--hmm-name NAME`                        | `ariadne_query`                | 自动构建 HMM 时写入的名称                         |
+| `--discovery-min-score FLOAT`            | `None`                         | 发现阶段的最低 HMM bitscore                       |
+| `--discovery-max-evalue FLOAT`           | `None`                         | 发现阶段的最大 E-value                            |
+| `--min-coverage FLOAT`                   | `10.0`                         | 过滤阶段的最低测序覆盖度                          |
+| `--min-length INT`                       | `300`                          | 过滤阶段的最短蛋白长度（aa）                      |
+| `--identity-threshold FLOAT`             | `0.95`                         | 近重复折叠阈值                                    |
+| `--tps-hmm-dir PATH`                     | 自动                           | TPS HMM 库目录；优先内置，否则从 `tree/` 构建     |
+| `--top-k INT`                            | `5`                            | 最近参考投票邻居数                                |
+| `--tree-neighbors INT`                   | `12`                           | 构建局部上下文树的邻居数                          |
+| `--ceess-xlsx PATH`                      | `TPS/TPS.xlsx`                 | 用于 CeeSs 打分的有标注珊瑚 TPS 工作簿            |
+| `--skip-ceess-model`                     | `False`                        | 跳过 ESM CeeSs 打分阶段                           |
+| `--ceess-threshold FLOAT`                | `0.9`                          | 写入 `ceess_candidates.tsv` 的最低 P(CeeSs)       |
+| `--ceess-classifier`                     | `mlp`                          | 分类头：`mlp`、`logreg` 或 `contrastive`          |
+| `--ceess-model-name NAME`                | `facebook/esm2_t33_650M_UR50D` | ESM2 预设名或 Hugging Face 模型 ID                |
+| `--ceess-batch-size INT`                 | `4`                            | ESM2 推理 batch size                              |
+| `--ceess-max-length INT`                 | `2048`                         | ESM2 最大 token 长度                              |
+| `--ceess-device DEVICE`                  | 自动                           | torch 设备，如 `cuda:0` 或 `cpu`                  |
+| `--ceess-cv-folds INT`                   | `5`                            | 交叉验证折数                                      |
+| `--ceess-random-state INT`               | `0`                            | 随机种子                                          |
+| `--ceess-epochs INT`                     | `200`                          | MLP 训练轮数                                      |
+| `--ceess-hidden-dim INT`                 | `128`                          | MLP 隐层宽度                                      |
+| `--ceess-dropout FLOAT`                  | `0.1`                          | MLP dropout 率                                    |
+| `--ceess-learning-rate FLOAT`            | `1e-3`                         | MLP 学习率                                        |
+| `--ceess-weight-decay FLOAT`             | `1e-4`                         | MLP 权重衰减                                      |
+| `--ceess-train-batch-size INT`           | `8`                            | MLP 训练 batch size                               |
+| `--ceess-barlow-representation-dim INT`  | `None`                         | Barlow Twins 编码器宽度（仅 `contrastive`）       |
+| `--ceess-barlow-projection-dim INT`      | `None`                         | Barlow Twins 投影头宽度（仅 `contrastive`）       |
+| `--ceess-barlow-redundancy-weight FLOAT` | `0.005`                        | Barlow Twins 冗余惩罚（仅 `contrastive`）         |
+| `--ceess-mlp-checkpoint PATH`            | `None`                         | 预训练 MLP `.pt` 检查点；加载后跳过训练           |
+| `--skip-phylogeny`                       | `False`                        | 跳过 MAFFT + IQ-TREE                              |
+| `--mafft-bin PATH`                       | 自动                           | MAFFT 可执行文件路径                              |
+| `--mafft-mode FLAG`                      | `--auto`                       | MAFFT 比对模式                                    |
+| `--iqtree-bin PATH`                      | 自动                           | IQ-TREE 可执行文件路径                            |
+| `--iqtree-model MODEL`                   | `LG`                           | IQ-TREE 替换模型                                  |
+| `--iqtree-threads INT\|AUTO`             | `AUTO`                         | IQ-TREE 线程数                                    |
+| `--iqtree-bootstrap INT`                 | `None`                         | 超快速 bootstrap 重复数                           |
+| `--no-iqtree-fast`                       | `False`                        | 禁用 IQ-TREE `--fast` 模式                        |
 
 ### `ariadne discover`
 
-| 参数 | 默认值 | 说明 |
-|---|---|---|
-| `--protein-folder PATH` | `None` | 蛋白 FASTA 目录 |
-| `--transcriptomes PATH …` | `None` | 转录组 FASTA 输入 |
-| `--protein-glob GLOB …` | 自动 | 递归搜索模式 |
-| `--hmm PATH` | **必填** | 发现用 HMM |
-| `--output-dir PATH` | **必填** | 发现输出目录 |
-| `--min-score FLOAT` | `None` | 最低 HMM bitscore |
-| `--max-evalue FLOAT` | `None` | 最大 E-value |
+| 参数                      | 默认值   | 说明              |
+| ------------------------- | -------- | ----------------- |
+| `--protein-folder PATH`   | `None`   | 蛋白 FASTA 目录   |
+| `--transcriptomes PATH …` | `None`   | 转录组 FASTA 输入 |
+| `--protein-glob GLOB …`   | 自动     | 递归搜索模式      |
+| `--hmm PATH`              | **必填** | 发现用 HMM        |
+| `--output-dir PATH`       | **必填** | 发现输出目录      |
+| `--min-score FLOAT`       | `None`   | 最低 HMM bitscore |
+| `--max-evalue FLOAT`      | `None`   | 最大 E-value      |
 
 ### `ariadne filter`
 
-| 参数 | 默认值 | 说明 |
-|---|---|---|
-| `--input-fasta PATH` | **必填** | 候选蛋白 FASTA |
-| `--output-dir PATH` | **必填** | 过滤输出目录 |
-| `--min-coverage FLOAT` | `10.0` | 最低测序覆盖度 |
-| `--min-length INT` | `300` | 最短蛋白长度（aa） |
-| `--identity-threshold FLOAT` | `0.95` | 近重复折叠阈值 |
-| `--reference-dir PATH` | `None` | 参考目录；匹配参考的候选记录在 `reference_matches.tsv` 中，**保留**于过滤输出 |
+| 参数                         | 默认值   | 说明                                                                          |
+| ---------------------------- | -------- | ----------------------------------------------------------------------------- |
+| `--input-fasta PATH`         | **必填** | 候选蛋白 FASTA                                                                |
+| `--output-dir PATH`          | **必填** | 过滤输出目录                                                                  |
+| `--min-coverage FLOAT`       | `10.0`   | 最低测序覆盖度                                                                |
+| `--min-length INT`           | `300`    | 最短蛋白长度（aa）                                                            |
+| `--identity-threshold FLOAT` | `0.95`   | 近重复折叠阈值                                                                |
+| `--reference-dir PATH`       | `None`   | 参考目录；匹配参考的候选记录在 `reference_matches.tsv` 中，**保留**于过滤输出 |
 
 ### `ariadne classify`
 
 接受与 `ariadne run` 相同的所有 `--ceess-*` 参数（见上表）。
 
-| 参数 | 默认值 | 说明 |
-|---|---|---|
-| `--candidates PATH` | **必填** | 过滤后的候选 FASTA |
-| `--reference-dir PATH` | **必填** | 参考 FASTA 目录 |
-| `--output-dir PATH` | **必填** | 分类输出目录 |
-| `--tps-hmm-dir PATH` | 自动 | TPS HMM 库目录 |
-| `--top-k INT` | `5` | 投票邻居数 |
-| `--tree-neighbors INT` | `12` | 局部上下文树邻居数 |
+| 参数                   | 默认值   | 说明               |
+| ---------------------- | -------- | ------------------ |
+| `--candidates PATH`    | **必填** | 过滤后的候选 FASTA |
+| `--reference-dir PATH` | **必填** | 参考 FASTA 目录    |
+| `--output-dir PATH`    | **必填** | 分类输出目录       |
+| `--tps-hmm-dir PATH`   | 自动     | TPS HMM 库目录     |
+| `--top-k INT`          | `5`      | 投票邻居数         |
+| `--tree-neighbors INT` | `12`     | 局部上下文树邻居数 |
 
 ### `ariadne phylogeny`
 
-| 参数 | 默认值 | 说明 |
-|---|---|---|
-| `--candidates PATH` | **必填** | 过滤后的候选 FASTA |
-| `--reference-dir PATH` | **必填** | 参考 FASTA 目录 |
-| `--output-dir PATH` | **必填** | 建树输出目录 |
-| `--mafft-bin PATH` | 自动 | MAFFT 可执行文件 |
-| `--mafft-mode FLAG` | `--auto` | MAFFT 比对模式 |
-| `--iqtree-bin PATH` | 自动 | IQ-TREE 可执行文件 |
-| `--iqtree-model MODEL` | `LG` | 替换模型 |
-| `--iqtree-threads INT\|AUTO` | `AUTO` | 线程数 |
-| `--iqtree-bootstrap INT` | `None` | bootstrap 重复数 |
-| `--no-iqtree-fast` | `False` | 禁用 fast 模式 |
+| 参数                         | 默认值   | 说明               |
+| ---------------------------- | -------- | ------------------ |
+| `--candidates PATH`          | **必填** | 过滤后的候选 FASTA |
+| `--reference-dir PATH`       | **必填** | 参考 FASTA 目录    |
+| `--output-dir PATH`          | **必填** | 建树输出目录       |
+| `--mafft-bin PATH`           | 自动     | MAFFT 可执行文件   |
+| `--mafft-mode FLAG`          | `--auto` | MAFFT 比对模式     |
+| `--iqtree-bin PATH`          | 自动     | IQ-TREE 可执行文件 |
+| `--iqtree-model MODEL`       | `LG`     | 替换模型           |
+| `--iqtree-threads INT\|AUTO` | `AUTO`   | 线程数             |
+| `--iqtree-bootstrap INT`     | `None`   | bootstrap 重复数   |
+| `--no-iqtree-fast`           | `False`  | 禁用 fast 模式     |
 
 ### `ariadne prepare-references`
 
-| 参数 | 默认值 | 说明 |
-|---|---|---|
-| `--coral PATH` | `None` | 珊瑚参考 FASTA |
-| `--coral-limit INT` | `None` | 最大珊瑚序列数 |
-| `--insect-xlsx PATH` | `None` | 昆虫 TPS Excel 工作簿 |
-| `--insect-limit INT` | `None` | 最大昆虫序列数 |
-| `--bacteria-fasta PATH` | `None` | 细菌 TPS FASTA |
-| `--fungal-fasta PATH` | `None` | 真菌 TPS FASTA |
-| `--plant-fasta PATH` | `None` | 植物 TPS FASTA |
-| `--extra-fasta PATH …` | `None` | 额外 FASTA 文件 |
-| `--output-dir PATH` | **必填** | 输出目录 |
+| 参数                    | 默认值   | 说明                  |
+| ----------------------- | -------- | --------------------- |
+| `--coral PATH`          | `None`   | 珊瑚参考 FASTA        |
+| `--coral-limit INT`     | `None`   | 最大珊瑚序列数        |
+| `--insect-xlsx PATH`    | `None`   | 昆虫 TPS Excel 工作簿 |
+| `--insect-limit INT`    | `None`   | 最大昆虫序列数        |
+| `--bacteria-fasta PATH` | `None`   | 细菌 TPS FASTA        |
+| `--fungal-fasta PATH`   | `None`   | 真菌 TPS FASTA        |
+| `--plant-fasta PATH`    | `None`   | 植物 TPS FASTA        |
+| `--extra-fasta PATH …`  | `None`   | 额外 FASTA 文件       |
+| `--output-dir PATH`     | **必填** | 输出目录              |
 
 ### `ariadne build-hmm` / `ariadne build-tps-hmm-library`
 
-| 命令 | 参数 | 说明 |
-|---|---|---|
-| `build-hmm` | `--alignment PATH`（必填） | 输入比对或 FASTA 文件 |
-| `build-hmm` | `--output PATH`（必填） | 输出 `.hmm` 文件 |
-| `build-hmm` | `--name NAME` | HMM profile 名称 |
-| `build-tps-hmm-library` | `--alignment NAME=PATH …`（必填） | 命名比对文件 |
-| `build-tps-hmm-library` | `--output-dir PATH`（必填） | 输出 HMM 库目录 |
+| 命令                    | 参数                              | 说明                  |
+| ----------------------- | --------------------------------- | --------------------- |
+| `build-hmm`             | `--alignment PATH`（必填）        | 输入比对或 FASTA 文件 |
+| `build-hmm`             | `--output PATH`（必填）           | 输出 `.hmm` 文件      |
+| `build-hmm`             | `--name NAME`                     | HMM profile 名称      |
+| `build-tps-hmm-library` | `--alignment NAME=PATH …`（必填） | 命名比对文件          |
+| `build-tps-hmm-library` | `--output-dir PATH`（必填）       | 输出 HMM 库目录       |
 
 > **注意：** 全局参数（`--verbose`、`--log-file`）必须放在子命令之前：`ariadne --verbose run ...`
 
