@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="fig/ariadne_cvpr_logo.svg" alt="Ariadne logo" width="980">
+  <img src="fig/logo.png" alt="Ariadne logo" width="980">
 </p>
 
 <p align="center">
@@ -17,7 +17,7 @@
 
 ---
 
-## Abstract
+## 🪸 Abstract
 
 Coral terpene synthases (TPSs) represent an underexplored frontier in natural product biosynthesis. Identifying which of the hundreds of predicted coral TPS proteins is responsible for a specific terpenoid product — in particular the cembrene-class (CeeSs) compounds — requires more than sequence homology: it demands systematic embedding in a curated reference space.
 
@@ -25,7 +25,7 @@ Coral terpene synthases (TPSs) represent an underexplored frontier in natural pr
 
 ---
 
-## Highlights
+## ✨ Contributions
 
 - **Tree-native design** — a single `tree/` reference directory drives discovery, classification, and phylogeny without manual bookkeeping between stages.
 - **HMM feature space** — candidates are scored against a multi-source TPS HMM library, embedded with LDA/PCA, and assigned nearest reference neighbors before any phylogenetic tree is built.
@@ -34,10 +34,10 @@ Coral terpene synthases (TPSs) represent an underexplored frontier in natural pr
 
 ---
 
-## Method Overview
+## 🔬 Method
 
 <p align="center">
-  <img src="./docs/assets/overview_pipeline.svg" alt="Ariadne pipeline overview" width="100%">
+  <img src="fig/framework.png" alt="Ariadne pipeline overview" width="100%">
 </p>
 
 Ariadne runs as a sequential four-stage pipeline. Each stage can also be invoked independently.
@@ -63,23 +63,7 @@ References and filtered candidates are merged into a deduplicated FASTA, aligned
 
 ---
 
-## Results Preview
-
-<p align="center">
-  <img src="./docs/assets/latest_embedding.svg" alt="TPS feature-space embedding" width="100%">
-</p>
-
-<p align="center">
-  <em>TPS HMM feature-space embedding from a representative run. 100 candidates discovered → 36 retained after filtering → 36 classified as coral-like → 5 CeeSs candidates shortlisted (P(CeeSs) ≥ 0.9).</em>
-</p>
-
-<p align="center">
-  <img src="./docs/assets/latest_embedding_3d_sections.svg" alt="3D embedding sections" width="100%">
-</p>
-
----
-
-## Installation
+## ⚙️ Installation
 
 **Recommended** — Python 3.11 with the bundled Conda environment:
 
@@ -109,7 +93,7 @@ Core Python dependencies: `numpy >= 1.24`, `pyhmmer >= 0.12.0`, `pyrodigal >= 3.
 
 ---
 
-## Quick Start
+## 🚀 Quick Start
 
 ### Full pipeline from protein FASTAs
 
@@ -161,7 +145,7 @@ ariadne phylogeny \
 
 ---
 
-## CeeSs Scoring (Optional)
+## 🧬 CeeSs Scoring (Optional)
 
 When `TPS/TPS.xlsx` is present and the ESM stack is installed, stages `run` and `classify` automatically attach an ESM2 CeeSs scoring pass after the HMM classification step.
 
@@ -193,7 +177,7 @@ When `TPS/TPS.xlsx` is present and the ESM stack is installed, stages `run` and 
 
 ---
 
-## Module Layout
+## 📦 Module Layout
 
 ```
 ariadne/
@@ -213,7 +197,7 @@ ariadne/
 
 ---
 
-## Repository Layout
+## 🗂️ Repository Layout
 
 ```
 Ariadne/
@@ -229,7 +213,7 @@ Ariadne/
 
 ---
 
-## CLI Reference
+## ⌨️ CLI Reference
 
 | Command | Purpose |
 |---|---|
@@ -371,7 +355,7 @@ Full CLI documentation: [docs/cli-reference.md](./docs/cli-reference.md)
 
 ---
 
-## Documentation
+## 📖 Documentation
 
 - [Getting Started](./docs/index.md)
 - [CLI Reference](./docs/cli-reference.md)
@@ -381,7 +365,7 @@ Full CLI documentation: [docs/cli-reference.md](./docs/cli-reference.md)
 
 ---
 
-## Citation
+## 📄 Citation
 
 ```bibtex
 @software{jiang2026ariadne,

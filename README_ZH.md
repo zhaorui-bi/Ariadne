@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="fig/ariadne_cvpr_logo.svg" alt="Ariadne logo" width="980">
+  <img src="fig/logo.png" alt="Ariadne logo" width="980">
 </p>
 
 <p align="center">
@@ -24,7 +24,7 @@
 > Ariadne 是一个面向研究场景的平台，用于珊瑚 TPS 挖掘、CeeSs 优先识别以及下游系统发育分析。  
 > 当前版本采用 tree-native 的四阶段主线流程：`discovery -> filtering -> classification -> phylogeny`。
 
-## 简介
+## 🪸 简介
 
 发现一个新的 terpene synthase 很重要，但更难的问题通常是识别“哪个 synthase 对应某个特定产物”。Ariadne 就是围绕这个问题构建的。
 
@@ -32,14 +32,14 @@
 
 它的核心设计原则很简单：同一个经过整理的 `tree/` 参考目录，应该同时服务于 discovery、候选解释和最终系统发育定位，让整个流程始终处在一致的生物学背景中。
 
-## Ariadne 的特点
+## ✨ 主要贡献
 
 - Tree-native：同一个 `tree/` 目录贯穿 discovery、classification 和 phylogeny。
 - Feature-space 解释能力：候选序列会被投影到 TPS HMM score space，用于最近参考分配和可视化筛查。
 - 面向 CeeSs 的优先识别：如果提供 `TPS/TPS.xlsx` 并安装 ESM 依赖，Ariadne 可以继续筛选更像 `cembrene A / cembrene B` 的 coral-like candidates。
 - 建树衔接直接：过滤后的候选可以直接进入 MAFFT alignment 和 IQ-TREE 推断。
 
-## 四阶段流程
+## 🔬 四阶段流程
 
 1. `discovery`  
    用 query HMM 在蛋白输入或转录组推断的 ORF 中搜索 TPS 候选。
@@ -52,27 +52,17 @@
 
 如果没有显式传入 `--query-hmm` 或 `--tps-hmm-dir`，Ariadne 会在 `ariadne/hmm/` 有内置资源时优先复用它们；否则再从 `tree/` 自动构建。
 
-## 结构框架图
+## 🗺️ 方法
 
 <p align="center">
-  <img src="./docs/assets/overview_pipeline.svg" alt="Ariadne 结构框架图" width="100%">
+  <img src="fig/framework.png" alt="Ariadne 结构框架图" width="100%">
 </p>
 
 <p align="center">
   这张结构图概括了当前版本的软件框架：同一个 tree-native 参考骨架贯穿 discovery、filtering、特征空间 classification、可选的 CeeSs 打分以及下游 phylogeny。
 </p>
 
-## 结果预览
-
-<p align="center">
-  <img src="./docs/assets/latest_embedding.svg" alt="Ariadne classification embedding 结果预览" width="100%">
-</p>
-
-<p align="center">
-  当前仓库自带的本地结果快照来自 <code>result/03_classification/</code>。这里展示的是该目录下的 <code>embedding.svg</code>；在这次本地运行中，共有 <code>36</code> 条 coral-like candidate 被打分，其中 <code>5</code> 条被保留为最终 CeeSs 候选（P(CeeSs) ≥ 0.9）。
-</p>
-
-## 安装
+## ⚙️ 安装
 
 推荐环境：Python `3.11`，优先使用仓库自带的 Conda 环境。
 
@@ -101,7 +91,7 @@ pip install -e .
 pip install -e '.[esm]'
 ```
 
-## 快速开始
+## 🚀 快速开始
 
 ### 蛋白输入的一键完整流程
 
@@ -150,7 +140,7 @@ ariadne phylogeny \
   --output-dir results_phylogeny/
 ```
 
-## 可选的 CeeSs 模式
+## 🧬 可选的 CeeSs 模式
 
 如果仓库中存在 `TPS/TPS.xlsx`，并且已经安装可选的 ESM 依赖，那么 `run` 和 `classify` 在第三阶段会额外执行一层 CeeSs 打分。这层判别逻辑位于 `ariadne.model`，使用冻结的 ESM2 embedding 加一个可训练的小头，默认是 MLP，同时支持 logistic regression 和 Barlow Twins 对比学习变体。
 
@@ -168,7 +158,7 @@ ariadne phylogeny \
 - `ceess_model_metrics.tsv`
 - `type_score_hits/`、`type_score_fastas/`
 
-## 仓库结构
+## 🗂️ 仓库结构
 
 ```text
 Ariadne/
@@ -184,7 +174,7 @@ Ariadne/
 └── pyproject.toml
 ```
 
-## 命令行参数说明
+## ⌨️ 命令行参数说明
 
 | 命令 | 用途 |
 |---|---|
@@ -324,7 +314,7 @@ Ariadne/
 
 完整 CLI 文档：[docs/cli-reference.md](./docs/cli-reference.md)
 
-## 文档入口
+## 📖 文档入口
 
 - [Getting Started](./docs/index.md)
 - [CLI Reference](./docs/cli-reference.md)
@@ -332,7 +322,7 @@ Ariadne/
 - [CeeSs / ESM Type](./docs/esm-type.md)
 - [Citation](./docs/citation.md)
 
-## 引用
+## 📄 引用
 
 ```bibtex
 @software{jiang2026ariadne,

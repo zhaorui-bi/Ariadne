@@ -16,7 +16,7 @@
     </div>
   </div>
   <div class="hero-visual">
-    <img src="assets/overview_pipeline.svg" alt="Ariadne overview figure">
+    <img src="assets/framework.png" alt="Ariadne overview figure">
   </div>
 </div>
 
@@ -64,7 +64,7 @@ In the associated study context, this platform supported the identification of C
 ## 🧠 Method At A Glance
 
 <figure class="paper-figure">
-  <img src="assets/overview_pipeline.svg" alt="Ariadne method overview">
+  <img src="assets/framework.png" alt="Ariadne method overview">
   <figcaption>
     Figure 1. Ariadne uses a four-stage, tree-native workflow. The same <code>tree/</code> reference collection is reused across discovery, classification, and phylogeny.
   </figcaption>
