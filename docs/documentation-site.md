@@ -62,6 +62,7 @@ The English documentation site currently includes:
 - `Home`
 - `Getting Started`
 - `Method`
+- `ESM Type Model`
 - `Tutorials`
 - `CLI Reference`
 - `Outputs`

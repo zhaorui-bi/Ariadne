@@ -7,9 +7,9 @@ If Ariadne is useful in your work, please cite the software entry below and upda
 ```bibtex
 @software{jiang2026ariadne,
   author       = {Jiang, Zhaorui},
-  title        = {Ariadne: A Tree-Native Terpene Synthase Discovery and Phylogeny Platform},
+  title        = {Ariadne: A Coral-Centered Terpene Synthase Discovery and CeeSs Prioritization Platform},
   year         = {2026},
-  url          = {https://github.com/zhaoruijiang26/Ariadne},
+  url          = {https://github.com/zhaorui-bi/Ariadne},
   version      = {1.0.0}
 }
 ```

@@ -68,7 +68,7 @@ References and filtered candidates are merged into a deduplicated FASTA, aligned
 **Recommended** — Python 3.11 with the bundled Conda environment:
 
 ```bash
-git clone https://github.com/zhaoruijiang26/Ariadne.git
+git clone https://github.com/zhaorui-bi/Ariadne.git
 cd Ariadne
 conda env create -f environment.yml
 conda activate ariadne
@@ -372,7 +372,7 @@ Full CLI documentation: [docs/cli-reference.md](./docs/cli-reference.md)
   author    = {Jiang, Zhaorui},
   title     = {Ariadne: A Coral-Centered Terpene Synthase Discovery and CeeSs Prioritization Platform},
   year      = {2026},
-  url       = {https://github.com/zhaoruijiang26/Ariadne},
+  url       = {https://github.com/zhaorui-bi/Ariadne},
   version   = {1.0.0}
 }
 ```

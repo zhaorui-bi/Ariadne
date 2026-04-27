@@ -67,7 +67,7 @@
 推荐环境：Python `3.11`，优先使用仓库自带的 Conda 环境。
 
 ```bash
-git clone https://github.com/zhaoruijiang26/Ariadne.git
+git clone https://github.com/zhaorui-bi/Ariadne.git
 cd Ariadne
 conda env create -f environment.yml
 conda activate ariadne
@@ -329,7 +329,7 @@ Ariadne/
   author       = {Jiang, Zhaorui},
   title        = {Ariadne: A coral-centered terpene synthase discovery and CeeSs prioritization platform},
   year         = {2026},
-  url          = {https://github.com/zhaoruijiang26/Ariadne},
+  url          = {https://github.com/zhaorui-bi/Ariadne},
   version      = {1.0.0}
 }
 ```

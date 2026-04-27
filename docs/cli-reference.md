@@ -235,6 +235,6 @@ Build a directory of per-clade TPS HMMs from named alignment files.
 - Global flags (`--verbose`, `--log-file`) must be placed **before** the subcommand: `ariadne --verbose run ...`
 - If `TPS/TPS.xlsx` is present and the optional ESM stack is installed, `ariadne classify` and `ariadne run` automatically add a CeeSs scoring pass after HMM classification. Use `--skip-ceess-model` to suppress it.
 - `--skip-phylogeny` is useful for fast iteration when only candidate ranking and embeddings are needed.
-- The CeeSs head requires optional ESM dependencies. Install with `pip install 'ariadne-tps[esm]'` or `pip install torch transformers`.
+- The CeeSs head requires optional ESM dependencies. From a local checkout, install with `pip install -e '.[esm]'`; for manual environments, install `torch` and `transformers`.
 - `--ceess-classifier contrastive` activates the Barlow Twins variant; the three `--ceess-barlow-*` flags are only used in this mode.
 - `--ceess-mlp-checkpoint` loads a previously saved `.pt` file and skips all training; useful for reproducible inference.

@@ -1,8 +1,8 @@
 site_name: Ariadne
 site_description: Tree-native terpene synthase discovery, feature-space classification, and phylogeny documentation.
 site_author: Zhaorui Jiang
-repo_url: https://github.com/zhaoruijiang26/Ariadne
-repo_name: zhaoruijiang26/Ariadne
+repo_url: https://github.com/zhaorui-bi/Ariadne
+repo_name: zhaorui-bi/Ariadne
 edit_uri: edit/main/docs/
 docs_dir: docs
 site_dir: site
@@ -10,8 +10,8 @@ site_dir: site
 theme:
   name: material
   language: en
-  logo: assets/ariadne_icon.svg
-  favicon: assets/ariadne_icon.svg
+  logo: assets/logo.png
+  favicon: assets/logo.png
   features:
     - navigation.tabs
     - navigation.sections
