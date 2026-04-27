@@ -9,9 +9,9 @@ This design is particularly useful for coral TPS mining and CeeSs prioritization
 ## Overview figure
 
 <figure class="paper-figure">
-  <img src="assets/framework.png" alt="Ariadne pipeline method figure">
+  <img src="assets/framework.png" alt="Ariadne method overview">
   <figcaption>
-    Figure 1. Ariadne uses a four-stage workflow driven by a single multi-clade TPS reference directory.
+    Figure 1. Ariadne uses a four-stage, tree-native workflow. The same <code>tree/</code> reference collection is reused across discovery, classification, and phylogeny.
   </figcaption>
 </figure>
 
