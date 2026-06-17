@@ -20,4 +20,4 @@ The site follows the README workflow:
 
 ## Asset Policy
 
-The current logo lives at `docs/fig/logo.png`. Do not reference the old `docs/assets/` SVG files unless they are restored.
+The current logo lives at `docs/logo.png`. Do not reference the old `docs/assets/` SVG files unless they are restored.

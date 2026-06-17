@@ -53,6 +53,18 @@ pre {
   background: rgba(11, 19, 43, 0.92);
 }
 
+.md-header__button.md-logo,
+.md-nav__button.md-logo {
+  width: auto;
+}
+
+.md-header__button.md-logo img,
+.md-nav__button.md-logo img {
+  width: auto;
+  height: 1.55rem;
+  object-fit: contain;
+}
+
 .hero-panel {
   display: grid;
   grid-template-columns: 1.1fr 0.9fr;

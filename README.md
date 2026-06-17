@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/fig/logo.png" alt="Ariadne logo" width="520">
+  <img src="docs/logo.png" alt="Ariadne logo" width="520">
 </p>
 
 <h1 align="center">Ariadne</h1>
@@ -203,7 +203,7 @@ Ariadne/
 │   └── cli.py         # command-line interface
 ├── TPS.xlsx           # optional CeeSs training workbook
 ├── docs/              # documentation site
-├── docs/fig/          # logo and documentation figures
+├── docs/logo.png      # README and documentation logo
 ├── tutorial/          # runnable script and notebook tutorial
 ├── environment.yml
 └── pyproject.toml

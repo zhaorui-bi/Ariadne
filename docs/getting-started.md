@@ -56,7 +56,7 @@ python -m pip install -e '.[esm]'
 | `reference_fastas/` | user-provided reference FASTA directory |
 | `TPS.xlsx` | optional CeeSs training workbook |
 | `tutorial/` | runnable script and notebook tutorial |
-| `docs/fig/logo.png` | current logo |
+| `docs/logo.png` | current logo |
 | `ariadne/` | Python package and CLI implementation |
 
 The reference FASTA directory is input data, not a generated HMM output directory.

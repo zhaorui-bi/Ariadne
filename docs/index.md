@@ -16,7 +16,7 @@
     </div>
   </div>
   <div class="hero-visual">
-    <img src="fig/logo.png" alt="Ariadne logo">
+    <img src="logo.png" alt="Ariadne logo">
   </div>
 </div>
 

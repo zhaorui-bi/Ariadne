@@ -10,8 +10,8 @@ site_dir: site
 theme:
   name: material
   language: en
-  logo: fig/logo.png
-  favicon: fig/logo.png
+  logo: logo.png
+  favicon: logo.png
   features:
     - navigation.tabs
     - navigation.sections
