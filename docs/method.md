@@ -2,131 +2,96 @@
 
 ## Conceptual framing
 
-Ariadne is organized around a simple biological and computational premise: the same curated reference collection should support candidate discovery, candidate interpretation, and final phylogenetic placement. In the current release, that shared reference backbone is the `tree/` directory.
+Ariadne is built on a single premise: **the same curated reference collection should support candidate discovery, candidate interpretation, and final phylogenetic placement.** In the current release that shared backbone is the `tree/` directory — a multi-clade collection of TPS reference sequences (coral, insect, plant, fungi, bacteria).
 
-This design is particularly useful for coral TPS mining and CeeSs prioritization, because it prevents the discovery stage, the classification stage, and the phylogeny stage from drifting apart in terms of biological context.
-
-## Overview figure
+Coupling all stages to one reference universe keeps the discovery query, the classification feature space, and the phylogenetic background biologically consistent, which is what makes downstream interpretation tractable for coral TPS mining and CeeSs prioritization.
 
 <figure class="paper-figure">
   <img src="assets/overview_pipeline.svg" alt="Ariadne pipeline method figure">
   <figcaption>
-    Figure 1. Ariadne uses a four-stage workflow driven by a single multi-clade TPS reference directory.
+    Figure 1. Ariadne is a four-stage workflow driven by a single multi-clade TPS reference directory.
   </figcaption>
 </figure>
 
-## Design principle: one reference backbone
-
 The tree-native design has three direct consequences:
 
-- the discovery query HMM and the classification feature space remain coupled to the same reference universe
-- the final phylogeny is reconstructed against the same multi-clade background that informed screening
-- output interpretation becomes easier, because nearest-neighbor assignments and phylogenetic placement can be compared within a consistent context
+- the discovery query HMM and the classification feature space are derived from the same reference universe;
+- the final phylogeny is reconstructed against the same multi-clade background that informed screening;
+- nearest-neighbor assignments and phylogenetic placement can be compared within one consistent context.
 
-## Stage I. Discovery
+## Stage I — Discovery
 
-The first stage focuses on sensitivity: Ariadne builds a discovery HMM from the default coral reference under `tree/` unless a prebuilt `--query-hmm` is explicitly supplied.
+The first stage is tuned for sensitivity. Unless a prebuilt `--query-hmm` is supplied, Ariadne builds a discovery profile HMM from the coral reference in `tree/`. Two entry modes are supported:
 
-Two entry modes are supported:
+- **protein mode** (`--protein-folder`) — input proteins are searched directly;
+- **transcriptome mode** (`--transcriptomes`) — ORFs are first predicted with Pyrodigal (meta mode), then the translated proteins are searched.
 
-- protein FASTA mode with `--protein-folder`
-- transcriptome FASTA mode with `--transcriptomes`
+Profile-HMM search (via `pyhmmer`) yields the candidate universe refined downstream. Optional `--discovery-min-score` and `--discovery-max-evalue` cutoffs gate the hits.
 
-In transcriptome mode, Ariadne first predicts ORFs with `pyrodigal`, then searches the translated proteins against the query HMM. In protein mode, the input proteins are searched directly.
+**Primary outputs:** `candidates.protein.faa`, `candidates.orf.fna`, `candidates.hits.tsv`.
 
-Primary outputs:
+## Stage II — Filtering
 
-- `candidates.protein.faa`
-- `candidates.orf.fna`
-- `candidates.hits.tsv`
+The second stage enforces candidate quality without imposing biological interpretation. It applies, in order:
 
-These files define the candidate universe that will be refined downstream.
+1. **coverage filtering** (default ≥ 10×, parsed from the FASTA header);
+2. **minimum-length filtering** (default ≥ 300 aa);
+3. **near-duplicate collapsing** at 95% identity, using a bounded edit-distance test so that long sequences are compared efficiently.
 
-## Stage II. Filtering
+Candidates with ≥ 95% identity to any reference in `tree/` are **retained** in `candidates.filtered.faa`; their matches are recorded in `reference_matches.tsv` for traceability. This is deliberate — novel alleles and species-specific variants of known coral TPS genes proceed through classification and CeeSs scoring rather than being silently discarded.
 
-The second stage focuses on candidate quality rather than biological interpretation.
+The stage is conservative and transparent: rather than hiding decisions inside a single score, Ariadne exports per-candidate reports that make selection and deduplication explicit.
 
-It applies:
+**Primary outputs:** `candidates.filtered.faa`, `filter_report.tsv`, `dedupe_clusters.tsv`, `reference_matches.tsv`, `manual_review.tsv`.
 
-- coverage filtering (default ≥ 10×)
-- minimum protein length filtering (default ≥ 300 aa)
-- near-duplicate collapsing at 95% sequence identity
+## Stage III — Classification
 
-Reference-matched candidates (sequences with ≥95% identity to any reference in `tree/`) are **retained** in `candidates.filtered.faa`. Their reference matches are logged in `reference_matches.tsv` for downstream traceability — this allows novel alleles or species-specific variants of known coral TPS genes to proceed through classification and CeeSs scoring rather than being silently discarded.
+The third stage is the interpretive core of the workflow. It places every filtered candidate into a TPS feature space defined by the reference collection, in four steps:
 
-This stage is deliberately conservative and transparent. Rather than hiding filtering decisions inside a monolithic score, Ariadne exports reports that make the reasons for representative selection and deduplication explicit.
+1. **Feature construction.** All filtered candidates and all reference sequences are scored against a multi-clade TPS profile-HMM library derived from `tree/`. Each sequence becomes a feature vector of per-profile bit scores.
+2. **Normalization.** The feature matrix is z-scored across profiles so that no single HMM dominates the geometry.
+3. **Low-dimensional embedding.** The matrix is projected to 3-D by supervised linear discriminant analysis (LDA), using *k*-means subclustering of the large coral reference set to define discriminative classes; principal component analysis (PCA) is used as a fallback when supervision is degenerate.
+4. **Nearest-reference label transfer.** Each candidate is assigned a label by *k*-nearest-neighbor voting (`--top-k`, default 5) over reference neighbors in the embedding, and a local context tree is built from its `--tree-neighbors` (default 12) nearest references.
 
-Primary outputs:
+The result is not a single label but a structured evidence layer: embedding coordinates, nearest neighbors, local and global context trees, and the per-sequence feature matrix.
 
-- `candidates.filtered.faa`
-- `filter_report.tsv`
-- `dedupe_clusters.tsv`
-- `reference_matches.tsv`
-- `manual_review.tsv`
+**Primary outputs:** `tps_features.tsv`, `embedding.tsv`, `classification.tsv`, `nearest_neighbors.tsv`, `candidate_cluster_context.tsv`, `embedding.svg`, `embedding_3d_sections.svg`, `global_context_tree.nwk`.
 
-## Stage III. Classification
+### Optional ESM2 CeeSs scoring
 
-The third stage is the interpretive core of the workflow.
+When `TPS/TPS.xlsx` and the optional ESM dependencies are available, classification is followed by a protein-language-model scoring pass over the coral-like candidates:
 
-All filtered candidates and all reference sequences are scored against a TPS HMM library derived from `tree/`. Ariadne then constructs a joint feature space and performs:
+1. compute frozen, mean-pooled ESM2 embeddings for the labeled training proteins and the candidates;
+2. train a lightweight head — an MLP (default), logistic regression, or a Barlow Twins contrastive variant — on the training embeddings while keeping the ESM2 backbone frozen;
+3. predict a fine-grained TPS type for each candidate;
+4. aggregate `P(CeeSs)` as the summed probability over all workbook-defined CeeSs-positive labels and apply `--ceess-threshold`.
 
-1. feature-matrix construction
-2. score normalization
-3. low-dimensional embedding
-4. nearest-reference voting
+This places candidates inside the broader TPS landscape *before* phylogenetic reconstruction. The full scoring design and output schema are documented in [CeeSs Classifier](esm-type.md).
 
-The result is not merely a label, but a structured evidence layer that includes embedding coordinates, nearest neighbors, local context trees, and a global context tree.
+## Stage IV — Phylogeny
 
-Primary outputs:
+The fourth stage converts the screened candidate set into a phylogeny-ready analysis object. Filtered candidates are merged with the references loaded from `tree/`, deduplicated, and then:
 
-- `tps_features.tsv`
-- `embedding.tsv`
-- `classification.tsv`
-- `nearest_neighbors.tsv`
-- `candidate_cluster_context.tsv`
-- `embedding.svg`
-- `embedding_3d_sections.svg`
-- `global_context_tree.nwk`
+1. aligned with **MAFFT** (`--mafft-mode`, default `--auto`);
+2. reconstructed into a maximum-likelihood tree with **IQ-TREE** (`--iqtree-model`, default `LG`; optional ultrafast bootstrap via `--iqtree-bootstrap`).
 
-This stage is especially useful for CeeSs-oriented prioritization because it places candidate sequences inside the broader TPS landscape before phylogenetic reconstruction.
+A compact SVG preview is rendered directly from the resulting Newick tree, providing the bridge from candidate discovery to evolutionary interpretation.
 
-## Stage IV. Phylogeny
+**Primary outputs:** `phylogeny_input.fasta`, `phylogeny_alignment.fasta`, `phylogeny_sequence_map.tsv`, `iqtree.treefile`, `iqtree.iqtree`, `phylogeny_preview.svg`.
 
-The fourth stage converts the screened candidate set into a phylogeny-ready analysis object.
-
-Filtered candidates are merged with the reference sequences loaded from `tree/`, then processed with:
-
-1. MAFFT for multiple sequence alignment
-2. IQ-TREE for phylogenetic inference
-
-This stage provides the bridge from candidate discovery to evolutionary interpretation.
-
-Primary outputs:
-
-- `phylogeny_input.fasta`
-- `phylogeny_alignment.fasta`
-- `phylogeny_sequence_map.tsv`
-- `iqtree.treefile`
-- `iqtree.iqtree`
-
-## Why the current structure is effective
+## Why this structure works
 
 <div class="card-grid">
   <div class="paper-card">
     <h3>Reference consistency</h3>
-    <p>The same tree-native reference collection is reused across discovery, classification, and phylogeny, which improves interpretability.</p>
+    <p>One tree-native reference collection is reused across discovery, classification, and phylogeny, so evidence from each stage is directly comparable.</p>
   </div>
   <div class="paper-card">
     <h3>Screening-to-evolution continuity</h3>
-    <p>Ariadne keeps nearest-neighbor evidence, embeddings, and phylogenetic outputs within one coherent result directory.</p>
+    <p>Nearest-neighbor evidence, embeddings, and phylogenetic outputs live in one coherent result directory, end to end.</p>
   </div>
 </div>
 
 ## Scope of the current release
 
-The active release intentionally excludes:
-
-- motif-centric post-filtering
-- benchmark-versus-expected FASTA comparison
-
-Those paths were removed so the current implementation remains focused on a stable and interpretable four-stage workflow.
+The active release intentionally focuses on a stable, interpretable four-stage pipeline and excludes two earlier experimental paths: motif-centric post-filtering, and benchmark-versus-expected FASTA comparison. Removing them keeps the implementation focused and the outputs straightforward to reason about.

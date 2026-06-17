@@ -1,5 +1,7 @@
 # CLI Reference
 
+Ariadne exposes one command per pipeline stage plus the full end-to-end `run`, and a small set of helpers for building references and HMMs. Every command is also available as `python -m ariadne …`. Required parameters are marked **required**; everything else has the default shown.
+
 ## Command map
 
 | Command | Purpose |

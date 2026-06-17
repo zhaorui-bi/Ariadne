@@ -1,89 +1,57 @@
 # Documentation Site
 
-## Why MkDocs + Material?
+## Stack
 
-This documentation site is designed to feel closer to a modern conference project page than a plain API manual.
+This documentation is built to read like a modern conference project page rather than a plain API manual:
 
-The stack is:
-
-- MkDocs
-- Material for MkDocs
-- custom CSS for the Ariadne visual identity
+- [MkDocs](https://www.mkdocs.org/)
+- [Material for MkDocs](https://squidfunk.github.io/mkdocs-material/)
+- custom CSS for the Ariadne visual identity (`docs/stylesheets/extra.css`)
 - Read the Docs deployment configuration
 
 ## Local preview
 
-Install documentation dependencies:
-
 ```bash
 python -m pip install -r docs/requirements.txt
-```
-
-Start a local dev server:
-
-```bash
-mkdocs serve
-```
-
-The site will be available locally at:
-
-```text
-http://127.0.0.1:8000/
+mkdocs serve     # serves at http://127.0.0.1:8000/
 ```
 
 ## Production build
 
-To build the static site locally:
-
 ```bash
-mkdocs build
+mkdocs build     # static site written to site/
 ```
 
-The generated site will be written to:
+## Read the Docs
 
-```text
-site/
-```
-
-## Read the Docs configuration
-
-The repository includes:
+The repository includes everything Read the Docs needs once the project is connected:
 
 - `.readthedocs.yaml`
 - `mkdocs.yml`
 - `docs/requirements.txt`
 
-This is enough for a standard Read the Docs build once the repository is connected to an RTD project.
-
 ## Site structure
 
-The English documentation site currently includes:
-
-- `Home`
-- `Getting Started`
-- `Method`
-- `Tutorials`
-- `CLI Reference`
-- `Outputs`
-- `Documentation Site`
-- `FAQ`
-- `Citation`
+| Page | Purpose |
+|---|---|
+| Home | overview and quick start |
+| Getting Started | installation and first run |
+| Method | the four-stage design, stage by stage |
+| ESM Type Model | the ESM2 CeeSs classifier |
+| Tutorials | practical analysis pathways |
+| CLI Reference | every command and parameter |
+| Outputs | every artifact the pipeline produces |
+| Documentation Site | this page |
+| FAQ | common questions |
+| Citation | how to cite Ariadne |
 
 ## Design goals
 
-This documentation site intentionally emphasizes:
+The site deliberately emphasizes clean project-page aesthetics, a stage-by-stage method narrative, a figure-friendly layout, concrete command examples, and explicit guidance on interpreting results.
 
-- clean project-page aesthetics
-- stage-by-stage method explanation
-- figure-friendly layout
-- practical command examples
-- explicit result interpretation guidance
+## Possible extensions
 
-## Suggested future extensions
-
-If you want to evolve this documentation further, strong next additions would be:
-
-- a gallery page with real `embedding.svg` and tree previews
-- auto-generated API documentation for internal Python helpers
-- dataset preparation guidelines for building new `tree/` reference collections
-- versioned documentation releases
+- a gallery page with real `embedding.svg` and tree previews;
+- auto-generated API documentation for the Python helpers;
+- guidelines for building new `tree/` reference collections;
+- versioned documentation releases.

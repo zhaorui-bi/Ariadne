@@ -2,16 +2,16 @@
 
 ## Motivation
 
-The `TPS/TPS.xlsx` spreadsheet provides a small but highly relevant supervised dataset for coral TPS representation learning:
+The `TPS/TPS.xlsx` workbook is a small but high-quality supervised dataset for coral TPS representation learning. Each row pairs a sequence with its type annotation:
 
-- column 1: `Name`
-- column 2: `Protein`
-- column 3: `Type`
-- column 4: `Species`
+| Column | Field |
+|---|---|
+| 1 | `Name` |
+| 2 | `Protein` (sequence) |
+| 3 | `Type` |
+| 4 | `Species` |
 
-Because the protein sequence and the type annotation are already paired in the same table, this dataset is a natural entry point for an ESM-based CeeSs classification workflow.
-
-In the current Ariadne design, this module (`ariadne.model`) is used as an integrated second-stage CeeSs head inside `ariadne classify` and `ariadne run`.
+Because sequence and label are already paired, the workbook is a natural entry point for an ESM2-based CeeSs classifier. In the current design, `ariadne.model` serves as an integrated second-stage CeeSs head inside `ariadne classify` and `ariadne run`, and is also callable directly via the Python API for standalone analysis (`ariadne.analyze_tps_types_with_esm`).
 
 ## Design
 

@@ -2,44 +2,24 @@
 
 ## Why is `tree/` so important?
 
-`tree/` is the canonical reference directory in the current Ariadne release. It is reused for:
+`tree/` is the canonical reference directory and the backbone of the whole pipeline. The same collection is reused for:
 
-- discovery query-HMM generation
-- TPS HMM library generation
-- classification background sequences
-- phylogeny background sequences
+- discovery query-HMM generation;
+- TPS HMM library generation;
+- classification background sequences;
+- phylogeny background sequences.
 
-## Does Ariadne still use `Alignment.fasta`?
+Keeping every stage anchored to one reference universe is what makes Ariadne's outputs comparable across stages.
 
-No. The current workflow is tree-native and no longer depends on the old `Alignment.fasta` entrypoints.
+## What inputs does Ariadne accept?
 
-## Does Ariadne still include motif analysis?
-
-No. Motif-based post-processing was intentionally removed from the current release.
-
-## Does Ariadne still include benchmark mode?
-
-No. Benchmark-vs-expected FASTA comparison was also removed from the active workflow.
-
-## Which outputs should I inspect first?
-
-For most users:
-
-1. `classification.tsv`
-2. `embedding.svg`
-3. `iqtree.treefile`
-4. `iqtree.iqtree`
+Either predicted proteins (`--protein-folder`, recursive `.faa` / `.fa` / `.fasta`) or transcriptome assemblies (`--transcriptomes`), in which case ORFs are predicted with Pyrodigal before HMM search.
 
 ## What if I already have my own HMMs?
 
-You can pass:
-
-- `--query-hmm` for a prebuilt discovery HMM
-- `--tps-hmm-dir` for a prebuilt TPS HMM library
+Pass `--query-hmm` for a prebuilt discovery HMM and/or `--tps-hmm-dir` for a prebuilt TPS HMM library. Otherwise Ariadne uses the bundled HMMs in `ariadne/hmm/`, falling back to building them from `tree/`.
 
 ## What if I only want classification?
-
-Use:
 
 ```bash
 ariadne classify \
@@ -50,17 +30,21 @@ ariadne classify \
 
 ## What if MAFFT or IQ-TREE is not installed?
 
-Discovery, filtering, and classification can still run, but the phylogeny stage requires:
-
-- `mafft`
-- `iqtree` or `iqtree2`
-
-You can temporarily skip the final tree stage with:
+Discovery, filtering, and classification still run; only the phylogeny stage requires `mafft` and `iqtree`/`iqtree2`. Skip the tree with `--skip-phylogeny`:
 
 ```bash
-ariadne run \
-  --protein-folder input/ \
-  --reference-dir tree/ \
-  --skip-phylogeny \
-  --output-dir results_no_tree/
+ariadne run --protein-folder input/ --reference-dir tree/ \
+  --skip-phylogeny --output-dir results_no_tree/
 ```
+
+## Do I need a GPU for CeeSs scoring?
+
+No. The ESM2 backbone runs on CPU, just more slowly. Select a device explicitly with `--ceess-device cuda:0` or `--ceess-device cpu`; by default Ariadne auto-detects.
+
+## Which outputs should I inspect first?
+
+For most users: `classification.tsv`, then `embedding.svg`, then `iqtree.treefile` and `iqtree.iqtree`.
+
+## Does Ariadne still use `Alignment.fasta`, motif analysis, or benchmark mode?
+
+No. The current release is tree-native and no longer depends on the old `Alignment.fasta` entrypoints; motif-based post-processing and benchmark-versus-expected comparison were both removed to keep the workflow focused (see [Method → Scope](method.md#scope-of-the-current-release)).

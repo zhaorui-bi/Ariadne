@@ -68,11 +68,11 @@ dev = [
 ariadne = "ariadne.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/zhaoruijiang26/Ariadne"
-Documentation = "https://github.com/zhaoruijiang26/Ariadne/tree/main/docs"
-Repository = "https://github.com/zhaoruijiang26/Ariadne"
-Issues = "https://github.com/zhaoruijiang26/Ariadne/issues"
-Changelog = "https://github.com/zhaoruijiang26/Ariadne/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/zhaorui-bi/Ariadne"
+Documentation = "https://github.com/zhaorui-bi/Ariadne/tree/main/docs"
+Repository = "https://github.com/zhaorui-bi/Ariadne"
+Issues = "https://github.com/zhaorui-bi/Ariadne/issues"
+Changelog = "https://github.com/zhaorui-bi/Ariadne/blob/main/CHANGELOG.md"
 
 [tool.setuptools]
 packages = ["ariadne"]

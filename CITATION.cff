@@ -14,8 +14,8 @@ authors:
 version: 1.1.0
 date-released: "2026-06-17"
 license: MIT
-repository-code: "https://github.com/zhaoruijiang26/Ariadne"
-url: "https://github.com/zhaoruijiang26/Ariadne"
+repository-code: "https://github.com/zhaorui-bi/Ariadne"
+url: "https://github.com/zhaorui-bi/Ariadne"
 keywords:
   - bioinformatics
   - terpene synthase

@@ -36,7 +36,7 @@ from typing import TYPE_CHECKING
 __version__     = "1.1.0"
 __author__      = "Zhaorui Jiang"
 __description__ = "Coral TPS Discovery, Candidate CeeSs Prioritization & Phylogeny Platform"
-__url__         = "https://github.com/zhaoruijiang26/Ariadne"
+__url__         = "https://github.com/zhaorui-bi/Ariadne"
 
 # Public API: exported name -> submodule that defines it. Resolved lazily on
 # first access (see ``__getattr__``) so importing ``ariadne`` never eagerly pulls

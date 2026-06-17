@@ -1,12 +1,12 @@
 # Contributing to Ariadne
 
-Thanks for your interest in improving Ariadne! This document explains how to set
-up a development environment, run the checks, and submit changes.
+Thank you for your interest in improving Ariadne. This guide covers how to set up
+a development environment, run the static checks, and submit changes.
 
 ## Development setup
 
 ```bash
-git clone https://github.com/zhaoruijiang26/Ariadne.git
+git clone https://github.com/zhaorui-bi/Ariadne.git
 cd Ariadne
 
 # Create and activate a virtual environment (Python 3.9+)
@@ -17,42 +17,38 @@ source .venv/bin/activate
 pip install -e ".[dev]"
 ```
 
-The optional ESM2 CeeSs scoring stage and the phylogeny stage require extra
-software:
+Two stages depend on additional software that is **not** required for everyday
+development:
 
-- ESM2 scoring: `pip install -e ".[esm]"` (PyTorch + Transformers).
-- Phylogeny: `mafft` and `iqtree`/`iqtree2` on your `PATH`.
+- **CeeSs scoring** — `pip install -e ".[esm]"` (PyTorch + Transformers).
+- **Phylogeny** — `mafft` and `iqtree`/`iqtree2` on your `PATH`.
 
-These are **not** required to run the test suite.
-
-## Running the checks
+## Static checks
 
 ```bash
-# Lint
-ruff check ariadne tests
-
-# Tests (with coverage)
-pytest --cov=ariadne --cov-report=term-missing
+ruff check ariadne
 ```
 
-Tests that depend on optional components (PyTorch, MAFFT, IQ-TREE) are skipped
-automatically when those components are unavailable, so the suite runs anywhere.
+The maintained unit-test suite runs against the optional, lazily-imported
+components and is exercised by the maintainers before each release. If your
+change touches behaviour, please describe how you verified it in the pull
+request (a minimal reproduction or an example command is ideal).
 
 ## Pull request guidelines
 
 1. Create a topic branch off `main`.
-2. Keep changes focused; one logical change per pull request.
-3. Add or update tests for any behaviour you change.
-4. Make sure `ruff check` and `pytest` pass locally.
-5. Update `CHANGELOG.md` under the `[Unreleased]` heading.
-6. Follow the existing code style: type hints, descriptive docstrings, and the
-   project's `typing.Optional`/`typing.Union` conventions (the codebase targets
-   Python 3.9).
+2. Keep changes focused — one logical change per pull request.
+3. Make sure `ruff check ariadne` passes locally.
+4. Update `CHANGELOG.md` under the `[Unreleased]` heading.
+5. Follow the existing style: type hints, descriptive docstrings, and the
+   project's `typing.Optional` / `typing.Union` conventions (the codebase
+   targets Python 3.9).
 
 ## Reporting bugs and requesting features
 
-Please use the GitHub issue templates. Include the Ariadne version
-(`ariadne --version`), your platform, and a minimal reproduction when possible.
+Please open a [GitHub issue](https://github.com/zhaorui-bi/Ariadne/issues) and
+include the Ariadne version (`ariadne --version`), your platform, and a minimal
+reproduction whenever possible.
 
 ## Code of conduct
 

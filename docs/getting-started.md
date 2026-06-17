@@ -1,33 +1,36 @@
 # Getting Started
 
-## Installation philosophy
+Ariadne is designed to be reproducible in a research setting: one environment, one reference root, and one command that takes you from raw protein inputs to a phylogeny-ready result directory.
 
-Ariadne is intended to be easy to reproduce in a research setting: one environment, one reference root, and one command that can take you from raw protein inputs to a phylogeny-ready result directory.
+## Requirements
 
-The current release depends on:
+Core dependencies (installed automatically with the package):
 
-- Python `>= 3.9`
+- Python `≥ 3.9`
+- `numpy ≥ 1.24`
+- `openpyxl ≥ 3.1`
+- `pyhmmer ≥ 0.12.0`
+- `pyrodigal ≥ 3.7.0`
+- `scikit-learn ≥ 1.4`
+
+External tools required only for the phylogeny stage:
+
 - `mafft`
 - `iqtree` or `iqtree2`
-- `numpy >= 1.24`
-- `openpyxl >= 3.1`
-- `pyhmmer >= 0.12.0`
-- `pyrodigal >= 3.7.0`
-- `scikit-learn >= 1.4`
 
-Optional for the integrated coral CeeSs classifier:
+Optional, for the ESM2 CeeSs classifier (`pip install -e '.[esm]'`):
 
-- `torch >= 2.2`
-- `transformers >= 4.44`
+- `torch ≥ 2.2`
+- `transformers ≥ 4.44`
 
-The recommended setup is the bundled conda environment, because it keeps the bioinformatics dependencies reproducible across platforms.
+## Installation
 
-## Recommended installation
+### Conda (recommended)
 
-### Conda
+The bundled Conda environment keeps the bioinformatics dependencies reproducible across platforms.
 
 ```bash
-git clone https://github.com/zhaoruijiang26/Ariadne.git
+git clone https://github.com/zhaorui-bi/Ariadne.git
 cd Ariadne
 conda env create -f environment.yml
 conda activate ariadne
@@ -37,7 +40,7 @@ pip install -e .
 ### Local virtual environment
 
 ```bash
-git clone https://github.com/zhaoruijiang26/Ariadne.git
+git clone https://github.com/zhaorui-bi/Ariadne.git
 cd Ariadne
 python -m venv .venv
 source .venv/bin/activate
@@ -45,30 +48,26 @@ python -m pip install -U pip
 python -m pip install -e .
 ```
 
-If you want Ariadne to run the ESM-based CeeSs head during `classify` and `run`, add:
+To enable the ESM-based CeeSs head during `classify` and `run`:
 
 ```bash
 python -m pip install -e '.[esm]'
 ```
 
-## Minimal project assumptions
+## Project layout
 
-The active Ariadne workflow assumes a tree-native repository structure:
+The Ariadne workflow assumes a tree-native repository structure:
 
-- `input/`
-  protein FASTA inputs for standard discovery
-- `TPS/`
-  optional labeled coral TPS workbook used to train the CeeSs classifier inside the classification stage
-- `tree/`
-  the multi-clade TPS reference collection used across discovery, classification, and phylogeny
-- `ariadne/hmm/`
-  bundled default discovery and TPS-library HMMs generated from the current `tree/` dataset
-- `output/`
-  a historical example-output directory that is no longer required by the current workflow
+| Path | Role |
+|---|---|
+| `input/` | example protein FASTA inputs for discovery |
+| `tree/` | the multi-clade TPS reference collection — the reference backbone of the whole pipeline |
+| `TPS/` | optional labeled coral TPS workbook (`TPS.xlsx`) used to train the CeeSs classifier |
+| `ariadne/hmm/` | bundled discovery and TPS-library HMMs built from the current `tree/` dataset |
 
-The key conceptual shift is that `tree/` is not just a phylogeny folder. It is the reference backbone of the whole pipeline.
+The key conceptual point is that `tree/` is **not** just a phylogeny folder — it is the reference backbone reused by every stage.
 
-## First end-to-end run
+## Your first run
 
 The simplest complete run is:
 
@@ -79,18 +78,18 @@ ariadne run \
   --output-dir results/
 ```
 
-This command executes the full four-stage workflow:
+This executes the full four-stage workflow:
 
-1. discovery by HMM-guided screening
-2. filtering and near-duplicate removal
-3. TPS feature-space classification
-4. MAFFT alignment and IQ-TREE reconstruction
+1. HMM-guided discovery;
+2. coverage / length filtering and near-duplicate removal;
+3. TPS feature-space classification;
+4. MAFFT alignment and IQ-TREE reconstruction.
 
-If `TPS/TPS.xlsx` is available, Ariadne can also attach a second-stage ESM classifier during stage 3:
+If `TPS/TPS.xlsx` is present and the ESM dependencies are installed, the classification stage additionally:
 
-1. keep only `coral-like` candidates from the normal HMM-based classification layer
-2. train a small ESM type classifier from the labeled coral TPS workbook
-3. prioritize `cembrene A / cembrene B` as final CeeSs candidates
+1. keeps the `coral-like` candidates from the HMM classification layer;
+2. trains a small ESM2 type classifier on the labeled coral TPS workbook;
+3. shortlists `cembrene A / cembrene B` candidates as the final CeeSs set.
 
 The expected output layout is:
 
@@ -105,7 +104,7 @@ results/
 
 ## Transcriptome mode
 
-If your starting point is transcriptome FASTA rather than predicted proteins, Ariadne can infer ORFs before HMM search:
+If your starting point is transcriptome FASTA rather than predicted proteins, Ariadne predicts ORFs with Pyrodigal before HMM search:
 
 ```bash
 ariadne run \
@@ -114,11 +113,9 @@ ariadne run \
   --output-dir results_from_transcriptomes/
 ```
 
-In this mode, `pyrodigal` is used upstream of the discovery step.
+## Sanity checks
 
-## Sanity checks after installation
-
-These commands should succeed once the environment is ready:
+Once the environment is ready, these commands should succeed:
 
 ```bash
 ariadne --help
@@ -126,27 +123,23 @@ ariadne run --help
 ariadne classify --help
 ```
 
-If you are working inside the local project virtual environment:
+Inside the local project virtual environment, the equivalents are:
 
 ```bash
 .venv/bin/python -m ariadne --help
 .venv/bin/python -m ariadne run --help
-.venv/bin/python -m ariadne classify --help
 ```
 
-## Practical assumptions worth remembering
+## Defaults worth remembering
 
-- If `--query-hmm` is omitted, Ariadne first uses the bundled `ariadne/hmm/query.hmm`; if that directory is unavailable, it falls back to building a discovery HMM from the coral reference in `tree/`.
-- If `--tps-hmm-dir` is omitted, Ariadne first uses the bundled `ariadne/hmm/` library and only builds a fresh TPS HMM library from `tree/` as a fallback.
-- The active workflow proceeds directly from classification to alignment and phylogeny.
-- If `TPS/TPS.xlsx` is present and the ESM dependencies are installed, the classification stage also writes `ceess_predictions.tsv`, `ceess_candidates.tsv`, and `ceess_candidates.fasta`.
-- The software is currently framed around coral TPS mining and CeeSs prioritization, but the underlying reference logic is still cross-clade.
+- If `--query-hmm` is omitted, Ariadne uses the bundled `ariadne/hmm/query.hmm`, falling back to building a discovery HMM from the coral reference in `tree/`.
+- If `--tps-hmm-dir` is omitted, Ariadne uses the bundled `ariadne/hmm/` library, falling back to building a fresh TPS HMM library from `tree/`.
+- Classification flows directly into alignment and phylogeny; use `--skip-phylogeny` to stop after classification.
+- When `TPS/TPS.xlsx` is present and the ESM stack is installed, classification also writes `ceess_predictions.tsv`, `ceess_candidates.tsv`, and `ceess_candidates.fasta`.
 
-## Suggested reading order for new users
+## Suggested reading order
 
-If this is your first time using Ariadne, the most productive next sequence is:
-
-1. read [Method](method.md) to understand the four-stage design
-2. run the bundled example from [Tutorials](tutorials.md)
-3. inspect `classification.tsv`, `embedding.svg`, and `iqtree.treefile`
-4. keep [CLI Reference](cli-reference.md) open while tuning parameters
+1. read [Method](method.md) to understand the four-stage design;
+2. run the bundled example from [Tutorials](tutorials.md);
+3. inspect `classification.tsv`, `embedding.svg`, and `iqtree.treefile`;
+4. keep the [CLI Reference](cli-reference.md) open while tuning parameters.
