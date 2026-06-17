@@ -2,7 +2,7 @@
 
 ## Motivation
 
-The `TPS/TPS.xlsx` workbook is a small but high-quality supervised dataset for coral TPS representation learning. Each row pairs a sequence with its type annotation:
+The root-level `TPS.xlsx` workbook is a small but high-quality supervised dataset for coral TPS representation learning. Each row pairs a sequence with its type annotation:
 
 | Column | Field |
 |---|---|
@@ -43,13 +43,13 @@ Because the Cembrene A / B probabilities now come from the same multi-class head
 ```bash
 ariadne classify \
   --candidates results/02_filtering/candidates.filtered.faa \
-  --reference-dir tree/ \
+  --reference-dir reference_fastas/ \
   --output-dir results_classification/
 ```
 
-When `TPS/TPS.xlsx` is present and the optional ESM dependencies are installed, Ariadne automatically:
+When `TPS.xlsx` is present and the optional ESM dependencies are installed, Ariadne automatically:
 
-1. keeps only `coral-like` candidates from the normal HMM-based classification stage
+1. keeps only `coral-like` candidates from the normal feature-space classification stage
 2. trains a multi-class ESM-based classifier on the labeled coral TPS workbook
 3. predicts a detailed TPS type for every coral-like candidate
 4. sums the probabilities of all workbook-defined CeeSs-positive labels into `P(CeeSs)` and applies `--ceess-threshold`
@@ -76,7 +76,7 @@ The `classification.tsv` produced by stage 3 also carries the CeeSs fields for e
 
 | column | description |
 | --- | --- |
-| `is_coral_like` | `yes` / `no` — did the HMM feature space assign this candidate near coral references |
+| `is_coral_like` | `yes` / `no` — did the feature space assign this candidate near coral references |
 | `esm_type_prediction` | top predicted TPS type from the multi-class ESM head |
 | `esm_ceess_label` | compatibility column carrying the same top predicted TPS type |
 | `esm_ceess_probability` | aggregated P(CeeSs) computed from all workbook-defined positive labels |

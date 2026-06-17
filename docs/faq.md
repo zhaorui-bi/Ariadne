@@ -1,50 +1,47 @@
 # FAQ
 
-## Why is `tree/` so important?
+## What Should I Use For `--reference-dir`?
 
-`tree/` is the canonical reference directory and the backbone of the whole pipeline. The same collection is reused for:
+Use a directory containing your curated multi-clade TPS reference FASTAs. The optional root-level `TPS.xlsx` workbook is used for CeeSs scoring when ESM dependencies are installed.
 
-- discovery query-HMM generation;
-- TPS HMM library generation;
-- classification background sequences;
-- phylogeny background sequences.
+The reference FASTA directory is input data. Users do not need to generate a separate HMM directory from it for the documented workflow.
 
-Keeping every stage anchored to one reference universe is what makes Ariadne's outputs comparable across stages.
+## What Inputs Does Ariadne Accept?
 
-## What inputs does Ariadne accept?
+Either predicted proteins (`--protein-folder`, recursive `.faa` / `.fa` / `.fasta`) or transcriptome assemblies (`--transcriptomes`), in which case ORFs are predicted with Pyrodigal.
 
-Either predicted proteins (`--protein-folder`, recursive `.faa` / `.fa` / `.fasta`) or transcriptome assemblies (`--transcriptomes`), in which case ORFs are predicted with Pyrodigal before HMM search.
-
-## What if I already have my own HMMs?
-
-Pass `--query-hmm` for a prebuilt discovery HMM and/or `--tps-hmm-dir` for a prebuilt TPS HMM library. Otherwise Ariadne uses the bundled HMMs in `ariadne/hmm/`, falling back to building them from `tree/`.
-
-## What if I only want classification?
+## What If I Only Want Classification And Visualization?
 
 ```bash
 ariadne classify \
   --candidates my_candidates.faa \
-  --reference-dir tree/ \
+  --reference-dir reference_fastas/ \
+  --ceess-xlsx TPS.xlsx \
   --output-dir results_classification/
 ```
 
-## What if MAFFT or IQ-TREE is not installed?
+## What If I Do Not Want The Old Tree Output?
 
-Discovery, filtering, and classification still run; only the phylogeny stage requires `mafft` and `iqtree`/`iqtree2`. Skip the tree with `--skip-phylogeny`:
+Use `--skip-phylogeny` with `ariadne run`:
 
 ```bash
-ariadne run --protein-folder input/ --reference-dir tree/ \
-  --skip-phylogeny --output-dir results_no_tree/
+ariadne run \
+  --protein-folder my_proteins/ \
+  --reference-dir reference_fastas/ \
+  --skip-phylogeny \
+  --output-dir results/
 ```
 
-## Do I need a GPU for CeeSs scoring?
+The README workflow ends at classification plus PCA/LDA visualization.
 
-No. The ESM2 backbone runs on CPU, just more slowly. Select a device explicitly with `--ceess-device cuda:0` or `--ceess-device cpu`; by default Ariadne auto-detects.
+## Do I Need A GPU For CeeSs Scoring?
 
-## Which outputs should I inspect first?
+No. The ESM2 backbone can run on CPU, just more slowly. Select a device explicitly with `--ceess-device cuda:0` or `--ceess-device cpu`; by default Ariadne auto-detects.
 
-For most users: `classification.tsv`, then `embedding.svg`, then `iqtree.treefile` and `iqtree.iqtree`.
+## Which Outputs Should I Inspect First?
 
-## Does Ariadne still use `Alignment.fasta`, motif analysis, or benchmark mode?
+For most users: `classification.tsv`, then `nearest_neighbors.tsv`, then `embedding.svg` and `embedding_3d_sections.svg`. If ESM scoring is enabled, inspect `ceess_candidates.tsv` after that.
 
-No. The current release is tree-native and no longer depends on the old `Alignment.fasta` entrypoints; motif-based post-processing and benchmark-versus-expected comparison were both removed to keep the workflow focused (see [Method → Scope](method.md#scope-of-the-current-release)).
+## Does Ariadne Still Use `Alignment.fasta`, Motif Analysis, Or Benchmark Mode?
+
+No. The current release focuses on candidate discovery, filtering, classification, PCA/LDA visualization, and optional CeeSs prioritization.

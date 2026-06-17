@@ -1,11 +1,11 @@
 <p align="center">
-  <img src="docs/assets/ariadne_icon.svg" alt="Ariadne" width="120">
+  <img src="docs/fig/logo.png" alt="Ariadne logo" width="520">
 </p>
 
 <h1 align="center">Ariadne</h1>
 
 <p align="center">
-  <strong>A tree-native platform for coral terpene synthase discovery<br>and cembrene-class synthase (CeeSs) prioritization</strong>
+  <strong>Terpene synthase discovery platform for coral TPS mining<br>and cembrene-class synthase (CeeSs) prioritization</strong>
 </p>
 
 <p align="center">
@@ -19,66 +19,51 @@
   <img alt="Python" src="https://img.shields.io/badge/Python-%E2%89%A53.9-0b132b?style=flat-square&logo=python&logoColor=white">
   <img alt="Version" src="https://img.shields.io/badge/Version-1.1.0-0f766e?style=flat-square">
   <img alt="License" src="https://img.shields.io/badge/License-MIT-c2410c?style=flat-square">
-  <img alt="ESM2" src="https://img.shields.io/badge/Optional-ESM2%20CeeSs-2563eb?style=flat-square">
-  <img alt="MAFFT + IQ-TREE" src="https://img.shields.io/badge/Phylogeny-MAFFT%20%2B%20IQ--TREE-334155?style=flat-square">
-  <a href="./docs/index.md"><img alt="Docs" src="https://img.shields.io/badge/Docs-Read%20the%20Docs-1d4ed8?style=flat-square&logo=readthedocs&logoColor=white"></a>
+  <img alt="Visualization" src="https://img.shields.io/badge/Stage%204-PCA%2FLDA%20visualization-2563eb?style=flat-square">
+  <img alt="ESM2" src="https://img.shields.io/badge/Optional-ESM2%20CeeSs-7c3aed?style=flat-square">
+  <a href="./docs/index.md"><img alt="Docs" src="https://img.shields.io/badge/Docs-MkDocs-1d4ed8?style=flat-square"></a>
 </p>
 
 ---
 
 ## Abstract
 
-Terpene synthases (TPSs) generate the largest and most structurally diverse family of natural products, yet assigning a specific TPS gene to the metabolite it produces remains substantially harder than discovering new TPS genes. This product-assignment problem is acute in corals (Cnidaria), whose genomes encode hundreds of candidate TPSs but whose cembrene-type diterpenoids — central to coral chemical ecology — have few experimentally characterized synthases.
+Terpene synthases (TPSs) generate one of the largest and most chemically diverse families of natural products. Coral genomes encode many candidate TPS proteins, but assigning candidates to specific cembrene-class diterpenoid products remains difficult.
 
-**Ariadne** is a tree-native, four-stage platform for coral TPS mining and the prioritization of **cembrene-class synthases (CeeSs)**. Starting from transcriptomes or predicted proteomes, it performs profile-HMM-guided discovery, coverage- and length-aware filtering, classification in a TPS profile-HMM feature space with supervised dimensionality reduction, and an optional ESM2-based scoring layer that ranks coral-like candidates by their cembrene probability `P(CeeSs)`. A single curated reference directory (`tree/`) anchors every stage, so candidate discovery, feature-space interpretation, and the final maximum-likelihood phylogeny share one consistent biological frame of reference.
+**Ariadne** is a four-stage platform for coral TPS discovery and **cembrene-class synthase (CeeSs)** prioritization. The current README workflow ends with candidate classification, PCA/LDA visualization, and optional ESM2 CeeSs scoring. It no longer treats a final phylogenetic tree as the last stage.
+
+The current repository no longer ships a generated `data/` or HMM bundle. Provide a reference FASTA directory with `--reference-dir`, and use the optional root-level `TPS.xlsx` workbook for the ESM2 scoring layer. Users do **not** need to generate or maintain a separate HMM directory for the workflow described here.
 
 ## Contributions
 
-- **One reference backbone, four stages.** A single `tree/` directory drives discovery, classification, and phylogeny, eliminating the bookkeeping and biological drift that arise when each stage uses a different reference set.
-- **An interpretable feature space.** Candidates are scored against a multi-clade TPS profile-HMM library, embedded by supervised LDA (PCA fallback), and assigned reference labels by *k*-nearest-neighbor voting — producing geometry, neighbors, and labels rather than an opaque score.
-- **CeeSs scoring with protein language models.** When labeled data (`TPS/TPS.xlsx`) and the optional ESM stack are available, a frozen ESM2 backbone with a lightweight trainable head (MLP, logistic regression, or a Barlow Twins contrastive variant) ranks each coral-like candidate for cembrene A / B.
-- **Reproducible, auditable outputs.** Each run emits SVG embedding and tree figures, a MAFFT alignment, an IQ-TREE phylogeny, and a complete TSV audit trail from raw input to final shortlist.
+- **One reference directory, four analysis stages.** A user-supplied reference FASTA directory supports discovery, filtering, classification, and visualization.
+- **Interpretable classification.** Candidates are placed in a multi-clade TPS feature space, assigned nearest-reference labels, and reported with supporting neighbors rather than only a single opaque score.
+- **PCA/LDA visual interpretation.** Stage 4 focuses on `embedding.svg`, `embedding_3d_sections.svg`, `embedding.tsv`, `embedding_variance.tsv`, and cluster-context tables for candidate triage.
+- **CeeSs scoring with protein language models.** When `TPS.xlsx` and the optional ESM stack are available, Ariadne ranks coral-like candidates by `P(CeeSs)`.
+- **Auditable outputs.** Each run emits TSV tables and SVG figures that track candidates from raw input through final prioritization.
 
 ## Method
 
-<p align="center">
-  <img src="docs/assets/overview_pipeline.svg" alt="Ariadne pipeline overview" width="100%">
-</p>
-
-Ariadne runs as a sequential, four-stage pipeline; each stage is also exposed as a standalone command.
+Ariadne runs as a sequential four-stage workflow. The visualization stage is generated from the classification output, so it lives under `03_classification/` rather than a separate tree directory.
 
 | Stage | Command | Input | Key output |
 |---|---|---|---|
-| 1 · Discovery | `ariadne discover` | Transcriptomes / protein FASTAs | `candidates.protein.faa` |
-| 2 · Filtering | `ariadne filter` | Candidate FASTA | `candidates.filtered.faa` |
-| 3 · Classification | `ariadne classify` | Filtered FASTA + `tree/` | `classification.tsv`, `embedding.svg` |
-| 4 · Phylogeny | `ariadne phylogeny` | Filtered FASTA + `tree/` | `iqtree.treefile`, `phylogeny_preview.svg` |
+| 1 · Discovery | `ariadne run` | Transcriptomes / protein FASTAs | `candidates.protein.faa` |
+| 2 · Filtering | `ariadne filter` or `ariadne run` | Candidate FASTA | `candidates.filtered.faa` |
+| 3 · Classification | `ariadne classify` or `ariadne run` | Filtered FASTA + references | `classification.tsv`, `nearest_neighbors.tsv` |
+| 4 · PCA/LDA visualization | `ariadne classify` or `ariadne run` | Classification feature space | `embedding.svg`, `embedding_3d_sections.svg`, `embedding_variance.tsv` |
 
-**Stage 1 — Discovery.** ORFs are predicted from transcriptome assemblies with Pyrodigal (meta mode) and translated proteins are searched with a profile HMM built from the coral reference alignment. When protein FASTAs are supplied directly, ORF prediction is skipped.
+**Stage 1 - Discovery.** Ariadne starts from transcriptome assemblies or predicted protein FASTAs. Transcriptome mode predicts ORFs with Pyrodigal; protein mode uses the supplied protein FASTAs directly.
 
-**Stage 2 — Filtering.** Candidates are filtered by coverage (default ≥ 10×) and minimum length (default ≥ 300 aa), and near-duplicates are collapsed at 95% identity using a bounded edit-distance test. Candidates matching a reference sequence are **retained** in `candidates.filtered.faa` and logged in `reference_matches.tsv`, so novel alleles of known coral TPSs are never silently discarded.
+**Stage 2 - Filtering.** Candidates are filtered by coverage and minimum length, and near-duplicates are collapsed at 95% identity. Reference matches are logged in `reference_matches.tsv` but retained in `candidates.filtered.faa`, which keeps known-like coral TPS alleles visible for downstream interpretation.
 
-**Stage 3 — Classification.** All references and candidates are scored against the TPS HMM library to form a per-sequence feature vector. The matrix is z-scored and projected to 3-D by supervised LDA (with *k*-means subclustering of the large coral reference set) or PCA as a fallback. Each candidate receives a nearest-reference label by *k*-NN voting. When `TPS/TPS.xlsx` and the ESM stack are present, an ESM2 sub-stage scores coral-like candidates and reports `P(CeeSs)`.
+**Stage 3 - Classification.** Filtered candidates and reference sequences are represented in a multi-clade TPS feature space. Ariadne normalizes the feature matrix, assigns nearest-reference labels by *k*-nearest-neighbor voting, and writes the main prediction table.
 
-**Stage 4 — Phylogeny.** Filtered candidates and references are merged into a deduplicated FASTA, aligned with MAFFT, and a maximum-likelihood tree is inferred with IQ-TREE. A compact SVG preview is rendered from the resulting Newick tree.
-
-## Results
-
-<p align="center">
-  <img src="docs/assets/latest_embedding.svg" alt="TPS feature-space embedding" width="100%">
-</p>
-
-<p align="center">
-  <em>TPS profile-HMM feature-space embedding from a representative run: 100 candidates discovered → 36 retained after filtering → 36 classified as coral-like → 5 CeeSs candidates shortlisted at <code>P(CeeSs) ≥ 0.9</code> (ESM2-650M, MLP head).</em>
-</p>
-
-<p align="center">
-  <img src="docs/assets/latest_embedding_3d_sections.svg" alt="3D embedding sections" width="100%">
-</p>
+**Stage 4 - PCA/LDA visualization.** The same feature space is projected for visual inspection. Ariadne prefers supervised LDA when the reference labels support it and falls back to PCA when needed. The primary artifacts are the 2-D embedding, the three-section 3-D view, variance table, and candidate cluster context.
 
 ## Installation
 
-**Recommended** — Python 3.11 with the bundled Conda environment:
+**Recommended** - Python 3.11 with the bundled Conda environment:
 
 ```bash
 git clone https://github.com/zhaorui-bi/Ariadne.git
@@ -88,11 +73,10 @@ conda activate ariadne
 pip install -e .
 ```
 
-**Minimal** — core dependencies only:
+**Minimal** - core dependencies only:
 
 ```bash
 pip install -e .
-# Phylogeny stage additionally requires mafft and iqtree (or iqtree2) on PATH
 ```
 
 **With ESM2 CeeSs scoring:**
@@ -101,28 +85,33 @@ pip install -e .
 pip install -e '.[esm]'   # adds torch, transformers, tqdm
 ```
 
-Core dependencies: `numpy ≥ 1.24`, `pyhmmer ≥ 0.12.0`, `pyrodigal ≥ 3.7.0`, `scikit-learn ≥ 1.4`, `openpyxl ≥ 3.1`.
+Core dependencies: `numpy >= 1.24`, `pyhmmer >= 0.12.0`, `pyrodigal >= 3.7.0`, `scikit-learn >= 1.4`, `openpyxl >= 3.1`.
 
 ## Quick Start
 
-### Full pipeline from protein FASTAs
+### Full README workflow from protein FASTAs
+
+Place your predicted protein FASTA files in a directory such as `my_proteins/`, then run:
 
 ```bash
 ariadne run \
-  --protein-folder input/ \
-  --reference-dir tree/ \
+  --protein-folder my_proteins/ \
+  --reference-dir reference_fastas/ \
+  --ceess-xlsx TPS.xlsx \
+  --skip-phylogeny \
   --output-dir results/
 ```
+
+`--skip-phylogeny` keeps `ariadne run` aligned with the current README workflow, where Stage 4 is PCA/LDA visualization rather than tree reconstruction.
 
 Output layout:
 
 ```text
 results/
-├── 01_discovery/          # HMM hits, per-sample protein FASTAs
+├── 01_discovery/          # discovery hits and per-sample protein FASTAs
 ├── 02_filtering/          # filtered FASTA, filter_report.tsv, dedupe_clusters.tsv
-├── 03_classification/     # classification.tsv, embedding.svg, per-candidate trees
-│                          #   (+ ceess_* outputs when TPS/TPS.xlsx is present)
-├── 04_phylogeny/          # iqtree.treefile, phylogeny_preview.svg
+├── 03_classification/     # classification, nearest neighbors, PCA/LDA SVGs
+│                          #   (+ ceess_* outputs when TPS.xlsx is used)
 └── pipeline_summary.tsv
 ```
 
@@ -131,53 +120,53 @@ results/
 ```bash
 ariadne run \
   --transcriptomes sample1.fasta sample2.fasta \
-  --reference-dir tree/ \
-  --output-dir results/
+  --reference-dir reference_fastas/ \
+  --ceess-xlsx TPS.xlsx \
+  --skip-phylogeny \
+  --output-dir results_from_transcriptomes/
 ```
 
-### Single stages
+### Single-stage classification and visualization
 
 ```bash
-ariadne classify  --candidates results/02_filtering/candidates.filtered.faa --reference-dir tree/ --output-dir results/03_classification/
-ariadne phylogeny --candidates results/02_filtering/candidates.filtered.faa --reference-dir tree/ --output-dir results/04_phylogeny/
+ariadne classify \
+  --candidates results/02_filtering/candidates.filtered.faa \
+  --reference-dir reference_fastas/ \
+  --ceess-xlsx TPS.xlsx \
+  --output-dir results/03_classification/
 ```
 
 ### From Python or a notebook
 
-The pipeline stages are re-exported at the package top level, so Ariadne can be
-driven directly from a script or notebook. A bare `import ariadne` stays light —
-heavy optional dependencies are imported lazily on first use (PEP 562).
+The pipeline stages are re-exported at the package top level, so Ariadne can be driven directly from a script or notebook. A bare `import ariadne` stays light because heavy optional dependencies are imported lazily on first use.
 
 ```python
 import ariadne as ad
 
-discovery = ad.discover_candidates_from_proteins(
-    ad.collect_protein_files("input/"), "ariadne/hmm/query.hmm", "results/01_discovery",
-)
 filtering = ad.filter_candidates(
-    discovery["candidate_proteins"], "results/02_filtering", reference_dir="tree/",
+    "candidate_tps.faa",
+    "results/02_filtering",
+    reference_dir="reference_fastas/",
 )
 classification = ad.classify_candidates(
-    filtering["filtered_fasta"], reference_dir="tree/",
+    filtering["filtered_fasta"],
+    reference_dir="reference_fastas/",
     output_dir="results/03_classification",
-    hmm_dir="ariadne/hmm",   # bundled TPS HMM library
-    ceess_xlsx=None,         # set to "TPS/TPS.xlsx" to enable ESM2 CeeSs scoring
+    ceess_xlsx="TPS.xlsx",
 )
 ```
 
-See [`examples/tutorial.ipynb`](examples/tutorial.ipynb) for a runnable, end-to-end
-walkthrough that renders the embedding inline and needs no external tools, and run
-`python -c "import ariadne; print(ariadne.__all__)"` to list the public API.
+See [`tutorial/tutorial.ipynb`](tutorial/tutorial.ipynb) for a notebook walkthrough and [`tutorial/run_example.sh`](tutorial/run_example.sh) for a command-line smoke test.
 
 ## CeeSs Scoring (Optional)
 
-When `TPS/TPS.xlsx` is present and the ESM stack is installed, `ariadne run` and `ariadne classify` attach an ESM2 scoring pass after HMM classification:
+When `TPS.xlsx` is present and the ESM stack is installed, `ariadne run` and `ariadne classify` attach an ESM2 scoring pass after feature-space classification:
 
 1. Load labeled TPS sequences from `TPS.xlsx` (`Name` / `Protein` / `Type` / `Species`).
-2. Compute frozen, mean-pooled ESM2 embeddings for the training sequences and the coral-like candidates.
+2. Compute frozen, mean-pooled ESM2 embeddings for training sequences and coral-like candidates.
 3. Train a lightweight classifier head on the training embeddings.
-4. Score each candidate; `P(CeeSs)` is the summed probability over all CeeSs-positive type labels.
-5. Candidates above `--ceess-threshold` (default 0.9) are written to `ceess_candidates.{tsv,fasta}`.
+4. Score each candidate; `P(CeeSs)` is the summed probability over CeeSs-positive type labels.
+5. Write candidates above `--ceess-threshold` (default `0.9`) to `ceess_candidates.{tsv,fasta}`.
 
 | `--ceess-classifier` | Head |
 |---|---|
@@ -191,78 +180,68 @@ Key files: `ceess_predictions.tsv`, `ceess_candidates.{tsv,fasta}`, `ceess_embed
 
 | Command | Purpose |
 |---|---|
-| `ariadne run` | Full end-to-end pipeline (stages 1–4) |
-| `ariadne discover` | Stage 1 — HMM-guided candidate discovery |
-| `ariadne filter` | Stage 2 — coverage / length filtering and deduplication |
-| `ariadne classify` | Stage 3 — feature-space embedding and classification |
-| `ariadne phylogeny` | Stage 4 — MAFFT alignment + IQ-TREE phylogeny |
-| `ariadne prepare-references` | Build reference FASTA files from source data |
-| `ariadne build-hmm` | Build a single profile HMM from an alignment |
-| `ariadne build-tps-hmm-library` | Build a TPS HMM library from multiple alignments |
+| `ariadne run` | End-to-end workflow through classification and PCA/LDA visualization |
+| `ariadne filter` | Stage 2 - coverage / length filtering and deduplication |
+| `ariadne classify` | Stages 3-4 - feature-space classification plus visualization |
+| `ariadne prepare-references` | Build clean reference FASTA files from source data |
 
-> Global flags (`--verbose`, `--log-file`) must precede the subcommand: `ariadne --verbose run …`
+> Global flags (`--verbose`, `--log-file`) must precede the subcommand: `ariadne --verbose run ...`
 
-The full parameter tables for every command live in the
-**[CLI Reference](./docs/cli-reference.md)**.
+The main workflow parameter tables live in the **[CLI Reference](./docs/cli-reference.md)**.
 
 ## Repository Layout
 
 ```text
 Ariadne/
 ├── ariadne/           # core package
-│   ├── search.py      # Stage 1 — HMM construction and candidate discovery
-│   ├── filter.py      # Stage 2 — coverage, length, and near-duplicate filtering
-│   ├── embed.py       # Stage 3 — HMM feature matrix, embedding, classification
-│   ├── model.py       # ESM2 CeeSs scoring (MLP, logistic regression, Barlow Twins)
-│   ├── tree.py        # Stage 4 — MAFFT alignment, IQ-TREE phylogeny, SVG preview
-│   ├── data.py        # reference data management (coral, insect, plant, fungi, bacteria)
+│   ├── search.py      # Stage 1 - candidate discovery
+│   ├── filter.py      # Stage 2 - coverage, length, and near-duplicate filtering
+│   ├── embed.py       # Stages 3-4 - classification and PCA/LDA visualization
+│   ├── model.py       # optional ESM2 CeeSs scoring
+│   ├── data.py        # reference data management
 │   ├── utils.py       # logging, FASTA/TSV I/O, sequence utilities
-│   ├── cli.py         # command-line interface
-│   └── hmm/           # bundled query HMM and TPS HMM library
-├── docs/              # documentation site (MkDocs + Material)
-├── examples/          # runnable example script and tutorial notebook
-├── input/             # example protein inputs
-├── tree/              # default multi-clade reference FASTA collection
-├── TPS/               # labeled coral TPS workbook (TPS.xlsx) for CeeSs scoring
+│   └── cli.py         # command-line interface
+├── TPS.xlsx           # optional CeeSs training workbook
+├── docs/              # documentation site
+├── docs/fig/          # logo and documentation figures
+├── tutorial/          # runnable script and notebook tutorial
 ├── environment.yml
 └── pyproject.toml
 ```
 
 ## Documentation
 
-The full documentation site (MkDocs + Material) is in [`docs/`](./docs/index.md):
+The full documentation site is in [`docs/`](./docs/index.md):
 
-- [Getting Started](./docs/getting-started.md) — installation and your first run
-- [Method](./docs/method.md) — the four-stage design, stage by stage
-- [Tutorials](./docs/tutorials.md) — practical analysis pathways
-- [CLI Reference](./docs/cli-reference.md) — every command and parameter
-- [Outputs](./docs/outputs.md) — every artifact the pipeline produces
-- [CeeSs Classifier](./docs/esm-type.md) — the ESM2 scoring layer
+- [Getting Started](./docs/getting-started.md) - installation and your first run
+- [Method](./docs/method.md) - the four-stage design
+- [Tutorials](./docs/tutorials.md) - practical analysis pathways
+- [CLI Reference](./docs/cli-reference.md) - every command and parameter
+- [Outputs](./docs/outputs.md) - every artifact the pipeline produces
+- [CeeSs Classifier](./docs/esm-type.md) - the ESM2 scoring layer
 - [Citation](./docs/citation.md)
 
 ## Example
 
-A minimal, self-contained run on the bundled example data (`input/` + `tree/`):
+A minimal local smoke test can be run with:
 
 ```bash
-bash examples/run_example.sh                  # discovery → filtering → classification
-RUN_PHYLOGENY=1 bash examples/run_example.sh  # also build the MAFFT + IQ-TREE phylogeny
-RUN_CEESS=1     bash examples/run_example.sh  # also run the ESM2 CeeSs scoring stage
+bash tutorial/run_example.sh results/ my_proteins/ reference_fastas/
+RUN_CEESS=1 bash tutorial/run_example.sh results/ my_proteins/ reference_fastas/
 ```
+
+The script requires an input protein directory and a reference FASTA directory, and keeps the workflow focused on classification plus PCA/LDA visualization.
 
 ## Development
 
 ```bash
 git clone https://github.com/zhaorui-bi/Ariadne.git
 cd Ariadne
-python -m venv .venv && source .venv/bin/activate
+python -m venv .venv
+source .venv/bin/activate
 pip install -e ".[dev]"
-
 ruff check ariadne
 ```
-
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for the contributor guide and
-[CHANGELOG.md](./CHANGELOG.md) for release notes.
 
 ## Citation
 

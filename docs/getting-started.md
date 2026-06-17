@@ -1,33 +1,28 @@
 # Getting Started
 
-Ariadne is designed to be reproducible in a research setting: one environment, one reference root, and one command that takes you from raw protein inputs to a phylogeny-ready result directory.
+Ariadne is designed for a reproducible research workflow: one environment, one reference FASTA directory, and one command that takes protein or transcriptome inputs through classification and PCA/LDA visualization.
 
 ## Requirements
 
-Core dependencies (installed automatically with the package):
+Core dependencies installed with the package:
 
-- Python `≥ 3.9`
-- `numpy ≥ 1.24`
-- `openpyxl ≥ 3.1`
-- `pyhmmer ≥ 0.12.0`
-- `pyrodigal ≥ 3.7.0`
-- `scikit-learn ≥ 1.4`
-
-External tools required only for the phylogeny stage:
-
-- `mafft`
-- `iqtree` or `iqtree2`
+- Python `>= 3.9`
+- `numpy >= 1.24`
+- `openpyxl >= 3.1`
+- `pyhmmer >= 0.12.0`
+- `pyrodigal >= 3.7.0`
+- `scikit-learn >= 1.4`
 
 Optional, for the ESM2 CeeSs classifier (`pip install -e '.[esm]'`):
 
-- `torch ≥ 2.2`
-- `transformers ≥ 4.44`
+- `torch >= 2.2`
+- `transformers >= 4.44`
+
+No separate HMM preparation step is required for the documented workflow.
 
 ## Installation
 
-### Conda (recommended)
-
-The bundled Conda environment keeps the bioinformatics dependencies reproducible across platforms.
+### Conda (Recommended)
 
 ```bash
 git clone https://github.com/zhaorui-bi/Ariadne.git
@@ -37,7 +32,7 @@ conda activate ariadne
 pip install -e .
 ```
 
-### Local virtual environment
+### Local Virtual Environment
 
 ```bash
 git clone https://github.com/zhaorui-bi/Ariadne.git
@@ -54,68 +49,64 @@ To enable the ESM-based CeeSs head during `classify` and `run`:
 python -m pip install -e '.[esm]'
 ```
 
-## Project layout
-
-The Ariadne workflow assumes a tree-native repository structure:
+## Project Layout
 
 | Path | Role |
 |---|---|
-| `input/` | example protein FASTA inputs for discovery |
-| `tree/` | the multi-clade TPS reference collection — the reference backbone of the whole pipeline |
-| `TPS/` | optional labeled coral TPS workbook (`TPS.xlsx`) used to train the CeeSs classifier |
-| `ariadne/hmm/` | bundled discovery and TPS-library HMMs built from the current `tree/` dataset |
+| `reference_fastas/` | user-provided reference FASTA directory |
+| `TPS.xlsx` | optional CeeSs training workbook |
+| `tutorial/` | runnable script and notebook tutorial |
+| `docs/fig/logo.png` | current logo |
+| `ariadne/` | Python package and CLI implementation |
 
-The key conceptual point is that `tree/` is **not** just a phylogeny folder — it is the reference backbone reused by every stage.
+The reference FASTA directory is input data, not a generated HMM output directory.
 
-## Your first run
+## Your First Run
 
-The simplest complete run is:
+Place predicted protein FASTA files in `my_proteins/`, then run:
 
 ```bash
 ariadne run \
-  --protein-folder input/ \
-  --reference-dir tree/ \
+  --protein-folder my_proteins/ \
+  --reference-dir reference_fastas/ \
+  --ceess-xlsx TPS.xlsx \
+  --skip-phylogeny \
   --output-dir results/
 ```
 
-This executes the full four-stage workflow:
+This executes the README-aligned workflow:
 
-1. HMM-guided discovery;
+1. candidate discovery;
 2. coverage / length filtering and near-duplicate removal;
 3. TPS feature-space classification;
-4. MAFFT alignment and IQ-TREE reconstruction.
+4. PCA/LDA visualization under `03_classification/`.
 
-If `TPS/TPS.xlsx` is present and the ESM dependencies are installed, the classification stage additionally:
+If `TPS.xlsx` is present and the ESM dependencies are installed, the classification stage also writes CeeSs predictions and candidate shortlists.
 
-1. keeps the `coral-like` candidates from the HMM classification layer;
-2. trains a small ESM2 type classifier on the labeled coral TPS workbook;
-3. shortlists `cembrene A / cembrene B` candidates as the final CeeSs set.
-
-The expected output layout is:
+Expected output layout:
 
 ```text
 results/
 ├── 01_discovery/
 ├── 02_filtering/
 ├── 03_classification/
-├── 04_phylogeny/
 └── pipeline_summary.tsv
 ```
 
-## Transcriptome mode
+## Transcriptome Mode
 
-If your starting point is transcriptome FASTA rather than predicted proteins, Ariadne predicts ORFs with Pyrodigal before HMM search:
+If your starting point is transcriptome FASTA rather than predicted proteins, Ariadne predicts ORFs with Pyrodigal before candidate screening:
 
 ```bash
 ariadne run \
   --transcriptomes sample1.fasta sample2.fasta \
-  --reference-dir tree/ \
+  --reference-dir reference_fastas/ \
+  --ceess-xlsx TPS.xlsx \
+  --skip-phylogeny \
   --output-dir results_from_transcriptomes/
 ```
 
-## Sanity checks
-
-Once the environment is ready, these commands should succeed:
+## Sanity Checks
 
 ```bash
 ariadne --help
@@ -123,23 +114,22 @@ ariadne run --help
 ariadne classify --help
 ```
 
-Inside the local project virtual environment, the equivalents are:
+Inside the local project virtual environment:
 
 ```bash
 .venv/bin/python -m ariadne --help
 .venv/bin/python -m ariadne run --help
 ```
 
-## Defaults worth remembering
+## Defaults Worth Remembering
 
-- If `--query-hmm` is omitted, Ariadne uses the bundled `ariadne/hmm/query.hmm`, falling back to building a discovery HMM from the coral reference in `tree/`.
-- If `--tps-hmm-dir` is omitted, Ariadne uses the bundled `ariadne/hmm/` library, falling back to building a fresh TPS HMM library from `tree/`.
-- Classification flows directly into alignment and phylogeny; use `--skip-phylogeny` to stop after classification.
-- When `TPS/TPS.xlsx` is present and the ESM stack is installed, classification also writes `ceess_predictions.tsv`, `ceess_candidates.tsv`, and `ceess_candidates.fasta`.
+- `--reference-dir reference_fastas/` points Ariadne at your reference FASTA directory.
+- Use `--skip-phylogeny` with `ariadne run` to keep the workflow focused on classification and PCA/LDA visualization.
+- When `TPS.xlsx` is present and the ESM stack is installed, classification also writes `ceess_predictions.tsv`, `ceess_candidates.tsv`, and `ceess_candidates.fasta`.
 
-## Suggested reading order
+## Suggested Reading Order
 
 1. read [Method](method.md) to understand the four-stage design;
-2. run the bundled example from [Tutorials](tutorials.md);
-3. inspect `classification.tsv`, `embedding.svg`, and `iqtree.treefile`;
+2. run the smoke test from [Tutorials](tutorials.md);
+3. inspect `classification.tsv`, `nearest_neighbors.tsv`, and `embedding.svg`;
 4. keep the [CLI Reference](cli-reference.md) open while tuning parameters.
