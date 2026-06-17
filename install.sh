@@ -5,8 +5,10 @@ ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PYTHON_BIN="${PYTHON_BIN:-}"
 VENV_DIR="${VENV_DIR:-$ROOT_DIR/.venv}"
 INSTALL_BIN_DIR="${INSTALL_BIN_DIR:-$HOME/.local/bin}"
-PIP_INDEX_URL="${PIP_INDEX_URL:-https://pypi.tuna.tsinghua.edu.cn/simple}"
-PIP_TRUSTED_HOST="${PIP_TRUSTED_HOST:-pypi.tuna.tsinghua.edu.cn}"
+# Default to the standard PyPI index. Users behind a faster mirror can override,
+# e.g. PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple bash install.sh
+PIP_INDEX_URL="${PIP_INDEX_URL:-https://pypi.org/simple}"
+PIP_TRUSTED_HOST="${PIP_TRUSTED_HOST:-}"
 
 pick_python() {
   local candidate

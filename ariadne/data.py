@@ -71,14 +71,22 @@ def prepare_insect_reference(
     if header_row_index is None:
         raise ValueError(f"Could not find the sequence table header in sheet '{sheet_name}'.")
 
+    def optional_cell(row: tuple, column_name: str) -> Optional[object]:
+        """Return a cell value by column name, or None when the column is absent/empty."""
+        index = header_map.get(column_name)
+        if index is None:
+            return None
+        value = row[index]
+        return value if value not in (None, "") else None
+
     records: list[FastaRecord] = []
     for row in sheet.iter_rows(min_row=header_row_index + 1, values_only=True):
         sequence = row[header_map["Sequence"]]
         if not sequence:
             continue
-        sequence_id = row[header_map.get("Accession", -1)] or row[header_map["Sequence ID"]]
-        species = row[header_map.get("Species", -1)] or "unknown_species"
-        clade = row[header_map.get("Clade", -1)] or "unknown_clade"
+        sequence_id = optional_cell(row, "Accession") or row[header_map["Sequence ID"]]
+        species = optional_cell(row, "Species") or "unknown_species"
+        clade = optional_cell(row, "Clade") or "unknown_clade"
         original_id = row[header_map["Sequence ID"]]
         accession = str(sequence_id).strip()
         header = f"{accession} {species} [{clade}]"

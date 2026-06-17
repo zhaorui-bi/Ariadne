@@ -27,7 +27,7 @@ import re
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Iterable, Iterator, Optional, Union
+from typing import Iterable, Optional, Union
 
 PathLike = Union[str, Path]
 
@@ -135,8 +135,25 @@ class _ColourFormatter(logging.Formatter):
         return f"[{level}] [{module}] {record.getMessage()}"
 
 
-def setup_logging(verbose: bool = False) -> None:
-    """Configure the *ariadne* logger hierarchy."""
+class _PlainFormatter(logging.Formatter):
+    """Log formatter without ANSI colours, used for log files."""
+
+    def format(self, record: logging.LogRecord) -> str:
+        module = record.name.split(".")[-1]
+        return f"[{record.levelname}] [{module}] {record.getMessage()}"
+
+
+def setup_logging(verbose: bool = False, log_file: Optional[PathLike] = None) -> None:
+    """Configure the *ariadne* logger hierarchy.
+
+    Parameters
+    ----------
+    verbose:
+        When ``True``, emit ``DEBUG`` level records; otherwise ``INFO``.
+    log_file:
+        Optional path. When provided, log records are additionally written
+        (without ANSI colours) to this file.
+    """
     level = logging.DEBUG if verbose else logging.INFO
     handler = logging.StreamHandler(sys.stderr)
     handler.setFormatter(_ColourFormatter())
@@ -144,6 +161,13 @@ def setup_logging(verbose: bool = False) -> None:
     root.setLevel(level)
     root.handlers.clear()
     root.addHandler(handler)
+    if log_file is not None:
+        file_path = Path(log_file)
+        if file_path.parent and not file_path.parent.exists():
+            file_path.parent.mkdir(parents=True, exist_ok=True)
+        file_handler = logging.FileHandler(file_path, encoding="utf-8")
+        file_handler.setFormatter(_PlainFormatter())
+        root.addHandler(file_handler)
     root.propagate = False
 
 
@@ -244,8 +268,13 @@ def read_fasta(path: PathLike, *, keep_gaps: bool = False) -> list[FastaRecord]:
 
 
 def write_fasta(records: Iterable[FastaRecord], path: PathLike, *, width: int = 80) -> Path:
-    """Write FASTA records using wrapped sequence lines."""
+    """Write FASTA records using wrapped sequence lines.
+
+    The parent directory is created automatically when it does not yet exist.
+    """
     target = Path(path)
+    if target.parent and not target.parent.exists():
+        target.parent.mkdir(parents=True, exist_ok=True)
     with target.open("w") as handle:
         for record in records:
             handle.write(f">{record.header}\n")
@@ -286,6 +315,8 @@ def write_tsv(rows: Iterable[dict[str, object]], path: PathLike) -> Path:
     """Write a list of dictionaries to a tab-separated table."""
     rows = list(rows)
     target = Path(path)
+    if target.parent and not target.parent.exists():
+        target.parent.mkdir(parents=True, exist_ok=True)
     if not rows:
         target.write_text("")
         return target

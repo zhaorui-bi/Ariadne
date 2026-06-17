@@ -4,10 +4,42 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ariadne-tps"
-version = "1.0.0"
-description = "Ariadne platform for coral TPS discovery, candidate CeeSs prioritization, and phylogeny."
+version = "1.1.0"
+description = "Tree-native platform for coral terpene synthase (TPS) discovery, candidate CeeSs prioritization, and phylogeny."
 readme = "README.md"
 requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [
+  { name = "Zhaorui Jiang" },
+]
+maintainers = [
+  { name = "Zhaorui Jiang" },
+]
+keywords = [
+  "bioinformatics",
+  "terpene synthase",
+  "TPS",
+  "coral",
+  "phylogenetics",
+  "HMM",
+  "ESM2",
+  "protein discovery",
+]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Environment :: Console",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: POSIX :: Linux",
+  "Operating System :: MacOS",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering :: Bio-Informatics",
+  "Typing :: Typed",
+]
 dependencies = [
   "numpy>=1.24",
   "openpyxl>=3.1",
@@ -22,12 +54,64 @@ esm = [
   "transformers>=4.44",
   "tqdm>=4.66",
 ]
+test = [
+  "pytest>=7.4",
+  "pytest-cov>=4.1",
+]
+dev = [
+  "ariadne-tps[test]",
+  "ruff>=0.5",
+  "build>=1.2",
+]
 
 [project.scripts]
 ariadne = "ariadne.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/zhaoruijiang26/Ariadne"
+Documentation = "https://github.com/zhaoruijiang26/Ariadne/tree/main/docs"
+Repository = "https://github.com/zhaoruijiang26/Ariadne"
+Issues = "https://github.com/zhaoruijiang26/Ariadne/issues"
+Changelog = "https://github.com/zhaoruijiang26/Ariadne/blob/main/CHANGELOG.md"
 
 [tool.setuptools]
 packages = ["ariadne"]
 
 [tool.setuptools.package-data]
-ariadne = ["hmm/*.hmm"]
+ariadne = ["hmm/*.hmm", "py.typed"]
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+addopts = "-ra -q"
+filterwarnings = [
+  "ignore::DeprecationWarning",
+]
+
+[tool.coverage.run]
+source = ["ariadne"]
+omit = ["ariadne/__main__.py"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+
+[tool.ruff]
+line-length = 120
+target-version = "py39"
+
+[tool.ruff.lint]
+# The codebase deliberately targets Python 3.9 and uses typing.Optional/Union
+# consistently, so the pyupgrade (UP) rule family is intentionally not enabled.
+select = ["E", "F", "W", "I", "B"]
+ignore = [
+  "E501",  # line length handled separately; long SVG/format strings are intentional
+  "B008",  # function calls in argument defaults are used intentionally for path discovery
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["B", "E402"]
+# The package __init__ is a lazy re-export hub (PEP 562): public names are listed
+# in __all__ and resolved on demand, and the TYPE_CHECKING block re-imports them
+# only so IDEs / type checkers see the real symbols. Both read as unused to ruff.
+"ariadne/__init__.py" = ["F401"]

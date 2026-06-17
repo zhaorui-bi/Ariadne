@@ -236,13 +236,13 @@ def _existing_path_or_none(value: Optional[PathLike], *, label: str) -> Optional
 
 def cmd_prepare_references(args: argparse.Namespace) -> int:
     """Prepare reference FASTA files and metadata tables."""
-    from ariadne.utils import ensure_directory
     from ariadne.data import (
         prepare_coral_reference,
         prepare_extra_reference,
         prepare_insect_reference,
         write_reference_metadata,
     )
+    from ariadne.utils import ensure_directory
 
     output_dir = ensure_directory(args.output_dir)
     all_records = []
@@ -416,10 +416,10 @@ def cmd_classify(args: argparse.Namespace) -> int:
 def cmd_run(args: argparse.Namespace) -> int:
     """Execute the full Ariadne workflow end to end."""
     from ariadne.embed import classify_candidates
-    from ariadne.search import collect_protein_files, discover_candidates, discover_candidates_from_proteins
-    from ariadne.utils import ensure_directory, write_tsv
     from ariadne.filter import filter_candidates
+    from ariadne.search import collect_protein_files, discover_candidates, discover_candidates_from_proteins
     from ariadne.tree import build_phylogeny
+    from ariadne.utils import ensure_directory, write_tsv
 
     root = ensure_directory(args.output_dir)
     discovery_dir = ensure_directory(root / "01_discovery")
@@ -553,12 +553,75 @@ def cmd_phylogeny(args: argparse.Namespace) -> int:
     return 0
 
 
+def _add_classification_arguments(parser: argparse.ArgumentParser) -> None:
+    """Add the classification knobs shared by the ``classify`` and ``run`` subcommands."""
+    group = parser.add_argument_group("classification")
+    group.add_argument("--tps-hmm-dir", default=None, type=Path, help="Optional directory containing TPS HMM profiles (*.hmm). When omitted, Ariadne builds them from --reference-dir.")
+    group.add_argument("--top-k", type=int, default=5, help="Number of nearest reference neighbours reported per candidate.")
+    group.add_argument("--tree-neighbors", type=int, default=12, help="Neighbours used when building each candidate's local context tree.")
+
+
+def _add_ceess_arguments(parser: argparse.ArgumentParser) -> None:
+    """Add the optional ESM2 CeeSs scoring flags shared by ``classify`` and ``run``.
+
+    The flags are split into a small "everyday" group and an "advanced tuning"
+    group so ``--help`` stays readable; the defaults are tuned for the bundled
+    coral TPS workbook.
+    """
+    from ariadne.model import DEFAULT_ESM_MODEL_NAME, esm_model_help_text
+
+    group = parser.add_argument_group(
+        "CeeSs ESM scoring (optional)",
+        "Frozen-ESM2 prioritization of candidate cembrane synthases. Needs the '[esm]' "
+        "extra (torch, transformers); pass --skip-ceess-model to skip this stage entirely.",
+    )
+    group.add_argument("--skip-ceess-model", action="store_true", help="Skip the optional ESM-based CeeSs scoring stage.")
+    group.add_argument("--ceess-classifier", choices=["mlp", "logreg", "contrastive"], default="mlp", help="Classifier pipeline used on top of frozen ESM embeddings.")
+    group.add_argument("--ceess-model-name", default=DEFAULT_ESM_MODEL_NAME, help=esm_model_help_text())
+    group.add_argument("--ceess-threshold", type=float, default=0.9, help="Probability threshold used to keep predicted CeeSs candidates.")
+    group.add_argument("--ceess-device", default=None, help="Optional torch device for the ESM CeeSs model, for example cpu or cuda.")
+    group.add_argument("--ceess-xlsx", type=Path, default=_default_tps_xlsx(), help="Optional coral TPS workbook used to train the ESM CeeSs model. Defaults to TPS/TPS.xlsx when present.")
+
+    advanced = parser.add_argument_group(
+        "CeeSs advanced tuning",
+        "Rarely-changed hyperparameters for the CeeSs classifier head and ESM embedding step.",
+    )
+    advanced.add_argument("--ceess-batch-size", type=int, default=4, help="ESM embedding batch size.")
+    advanced.add_argument("--ceess-max-length", type=int, default=2048, help="Maximum residue length fed to ESM.")
+    advanced.add_argument("--ceess-cv-folds", type=int, default=5, help="Cross-validation folds used for the reported metrics.")
+    advanced.add_argument("--ceess-random-state", type=int, default=0, help="Random seed for reproducible training.")
+    advanced.add_argument("--ceess-epochs", type=int, default=200, help="Training epochs for the MLP CeeSs head.")
+    advanced.add_argument("--ceess-hidden-dim", type=int, default=128, help="Hidden layer width for the MLP CeeSs head.")
+    advanced.add_argument("--ceess-barlow-representation-dim", type=int, default=None, help="Optional encoded representation width for the Barlow Twins CeeSs pipeline.")
+    advanced.add_argument("--ceess-barlow-projection-dim", type=int, default=None, help="Optional projection-head output width for the Barlow Twins CeeSs pipeline.")
+    advanced.add_argument("--ceess-barlow-redundancy-weight", type=float, default=0.005, help="Off-diagonal redundancy penalty used when --ceess-classifier=contrastive.")
+    advanced.add_argument("--ceess-dropout", type=float, default=0.1, help="Dropout rate for the MLP CeeSs head.")
+    advanced.add_argument("--ceess-learning-rate", type=float, default=1e-3, help="Learning rate for the MLP CeeSs head.")
+    advanced.add_argument("--ceess-weight-decay", type=float, default=1e-4, help="Weight decay for the MLP CeeSs head.")
+    advanced.add_argument("--ceess-train-batch-size", type=int, default=8, help="Training batch size for the MLP CeeSs head.")
+    advanced.add_argument("--ceess-mlp-checkpoint", type=Path, default=None, help="Optional pretrained Torch MLP checkpoint (.pt) for --ceess-classifier mlp. When provided, Ariadne skips final MLP training and loads this classifier directly.")
+
+
+def _add_phylogeny_arguments(parser: argparse.ArgumentParser, *, include_skip: bool) -> None:
+    """Add the MAFFT + IQ-TREE flags shared by the ``phylogeny`` and ``run`` subcommands."""
+    group = parser.add_argument_group("phylogeny (MAFFT + IQ-TREE)")
+    if include_skip:
+        group.add_argument("--skip-phylogeny", action="store_true", help="Skip the MAFFT + IQ-TREE phylogeny step.")
+    group.add_argument("--mafft-bin", default=None, help="Path or executable name for MAFFT.")
+    group.add_argument("--mafft-mode", default="--auto", help="MAFFT mode flag, for example --auto or --localpair.")
+    group.add_argument("--iqtree-bin", default=None, help="Path or executable name for IQ-TREE.")
+    group.add_argument("--iqtree-model", default="LG", help="IQ-TREE substitution model setting.")
+    group.add_argument("--iqtree-threads", default="AUTO", help="IQ-TREE thread setting, for example AUTO or 8.")
+    group.add_argument("--iqtree-bootstrap", type=int, default=None, help="Optional IQ-TREE ultrafast bootstrap replicates.")
+    group.add_argument(
+        "--no-iqtree-fast",
+        action="store_true",
+        help="Disable IQ-TREE fast mode. By default Ariadne uses --fast for practical end-to-end runs.",
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Create the top-level parser and all Ariadne subcommands."""
-    from ariadne.model import (
-        DEFAULT_ESM_MODEL_NAME,
-        esm_model_help_text,
-    )
 
     parser = argparse.ArgumentParser(
         prog="ariadne",
@@ -574,6 +637,12 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         default=False,
         help="Enable verbose (DEBUG level) logging.",
+    )
+    parser.add_argument(
+        "--log-file",
+        type=Path,
+        default=None,
+        help="Optional path to also write logs to (without colour codes).",
     )
     subparsers = parser.add_subparsers(dest="command", required=False)
 
@@ -638,29 +707,8 @@ def build_parser() -> argparse.ArgumentParser:
     classify.add_argument("--candidates", required=True, type=Path)
     classify.add_argument("--reference-dir", required=True, type=Path)
     classify.add_argument("--output-dir", required=True, type=Path)
-    classify.add_argument("--tps-hmm-dir", default=None, type=Path, help="Optional directory containing TPS HMM profiles (*.hmm). When omitted, Ariadne builds them from --reference-dir.")
-    classify.add_argument("--top-k", type=int, default=5)
-    classify.add_argument("--tree-neighbors", type=int, default=12)
-    classify.add_argument("--ceess-xlsx", type=Path, default=_default_tps_xlsx(), help="Optional coral TPS workbook used to train the ESM CeeSs model. Defaults to TPS/TPS.xlsx when present.")
-    classify.add_argument("--skip-ceess-model", action="store_true", help="Skip the optional ESM-based CeeSs scoring stage.")
-    classify.add_argument("--ceess-threshold", type=float, default=0.9, help="Probability threshold used to keep predicted CeeSs candidates.")
-    classify.add_argument("--ceess-classifier", choices=["mlp", "logreg", "contrastive"], default="mlp", help="Classifier pipeline used on top of frozen ESM embeddings.")
-    classify.add_argument("--ceess-model-name", default=DEFAULT_ESM_MODEL_NAME, help=esm_model_help_text())
-    classify.add_argument("--ceess-batch-size", type=int, default=4)
-    classify.add_argument("--ceess-max-length", type=int, default=2048)
-    classify.add_argument("--ceess-device", default=None, help="Optional torch device for the ESM CeeSs model, for example cpu or cuda.")
-    classify.add_argument("--ceess-cv-folds", type=int, default=5)
-    classify.add_argument("--ceess-random-state", type=int, default=0)
-    classify.add_argument("--ceess-epochs", type=int, default=200, help="Training epochs for the MLP CeeSs head.")
-    classify.add_argument("--ceess-hidden-dim", type=int, default=128, help="Hidden layer width for the MLP CeeSs head.")
-    classify.add_argument("--ceess-barlow-representation-dim", type=int, default=None, help="Optional encoded representation width for the Barlow Twins CeeSs pipeline.")
-    classify.add_argument("--ceess-barlow-projection-dim", type=int, default=None, help="Optional projection-head output width for the Barlow Twins CeeSs pipeline.")
-    classify.add_argument("--ceess-barlow-redundancy-weight", type=float, default=0.005, help="Off-diagonal redundancy penalty used when --ceess-classifier=contrastive.")
-    classify.add_argument("--ceess-dropout", type=float, default=0.1, help="Dropout rate for the MLP CeeSs head.")
-    classify.add_argument("--ceess-learning-rate", type=float, default=1e-3, help="Learning rate for the MLP CeeSs head.")
-    classify.add_argument("--ceess-weight-decay", type=float, default=1e-4, help="Weight decay for the MLP CeeSs head.")
-    classify.add_argument("--ceess-train-batch-size", type=int, default=8, help="Training batch size for the MLP CeeSs head.")
-    classify.add_argument("--ceess-mlp-checkpoint", type=Path, default=None, help="Optional pretrained Torch MLP checkpoint (.pt) for --ceess-classifier mlp. When provided, Ariadne skips final MLP training and loads this classifier directly.")
+    _add_classification_arguments(classify)
+    _add_ceess_arguments(classify)
     classify.set_defaults(func=cmd_classify)
 
     run = subparsers.add_parser("run", help="Execute Ariadne end-to-end: discovery, filtering, classification, and optional phylogeny.")
@@ -681,58 +729,16 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--min-coverage", type=float, default=10.0)
     run.add_argument("--min-length", type=int, default=300)
     run.add_argument("--identity-threshold", type=float, default=0.95)
-    run.add_argument("--tps-hmm-dir", default=None, type=Path, help="Optional directory containing TPS HMM profiles (*.hmm). When omitted, Ariadne builds them from --reference-dir.")
-    run.add_argument("--top-k", type=int, default=5)
-    run.add_argument("--tree-neighbors", type=int, default=12)
-    run.add_argument("--ceess-xlsx", type=Path, default=_default_tps_xlsx(), help="Optional coral TPS workbook used to train the ESM CeeSs model. Defaults to TPS/TPS.xlsx when present.")
-    run.add_argument("--skip-ceess-model", action="store_true", help="Skip the optional ESM-based CeeSs scoring stage.")
-    run.add_argument("--ceess-threshold", type=float, default=0.9, help="Probability threshold used to keep predicted CeeSs candidates.")
-    run.add_argument("--ceess-classifier", choices=["mlp", "logreg", "contrastive"], default="mlp", help="Classifier pipeline used on top of frozen ESM embeddings.")
-    run.add_argument("--ceess-model-name", default=DEFAULT_ESM_MODEL_NAME, help=esm_model_help_text())
-    run.add_argument("--ceess-batch-size", type=int, default=4)
-    run.add_argument("--ceess-max-length", type=int, default=2048)
-    run.add_argument("--ceess-device", default=None, help="Optional torch device for the ESM CeeSs model, for example cpu or cuda.")
-    run.add_argument("--ceess-cv-folds", type=int, default=5)
-    run.add_argument("--ceess-random-state", type=int, default=0)
-    run.add_argument("--ceess-epochs", type=int, default=200, help="Training epochs for the MLP CeeSs head.")
-    run.add_argument("--ceess-hidden-dim", type=int, default=128, help="Hidden layer width for the MLP CeeSs head.")
-    run.add_argument("--ceess-barlow-representation-dim", type=int, default=None, help="Optional encoded representation width for the Barlow Twins CeeSs pipeline.")
-    run.add_argument("--ceess-barlow-projection-dim", type=int, default=None, help="Optional projection-head output width for the Barlow Twins CeeSs pipeline.")
-    run.add_argument("--ceess-barlow-redundancy-weight", type=float, default=0.005, help="Off-diagonal redundancy penalty used when --ceess-classifier=contrastive.")
-    run.add_argument("--ceess-dropout", type=float, default=0.1, help="Dropout rate for the MLP CeeSs head.")
-    run.add_argument("--ceess-learning-rate", type=float, default=1e-3, help="Learning rate for the MLP CeeSs head.")
-    run.add_argument("--ceess-weight-decay", type=float, default=1e-4, help="Weight decay for the MLP CeeSs head.")
-    run.add_argument("--ceess-train-batch-size", type=int, default=8, help="Training batch size for the MLP CeeSs head.")
-    run.add_argument("--ceess-mlp-checkpoint", type=Path, default=None, help="Optional pretrained Torch MLP checkpoint (.pt) for --ceess-classifier mlp. When provided, Ariadne skips final MLP training and loads this classifier directly.")
-    run.add_argument("--skip-phylogeny", action="store_true", help="Skip the MAFFT + IQ-TREE phylogeny step.")
-    run.add_argument("--mafft-bin", default=None, help="Path or executable name for MAFFT.")
-    run.add_argument("--mafft-mode", default="--auto", help="MAFFT mode flag, for example --auto or --localpair.")
-    run.add_argument("--iqtree-bin", default=None, help="Path or executable name for IQ-TREE.")
-    run.add_argument("--iqtree-model", default="LG", help="IQ-TREE substitution model setting.")
-    run.add_argument("--iqtree-threads", default="AUTO", help="IQ-TREE thread setting, for example AUTO or 8.")
-    run.add_argument("--iqtree-bootstrap", type=int, default=None, help="Optional IQ-TREE ultrafast bootstrap replicates.")
-    run.add_argument(
-        "--no-iqtree-fast",
-        action="store_true",
-        help="Disable IQ-TREE fast mode. By default Ariadne uses --fast for practical end-to-end runs.",
-    )
+    _add_classification_arguments(run)
+    _add_ceess_arguments(run)
+    _add_phylogeny_arguments(run, include_skip=True)
     run.set_defaults(func=cmd_run)
 
     phylogeny = subparsers.add_parser("phylogeny", help="Build a MAFFT alignment and IQ-TREE phylogeny from candidates plus references.")
     phylogeny.add_argument("--candidates", required=True, type=Path)
     phylogeny.add_argument("--reference-dir", required=True, type=Path)
     phylogeny.add_argument("--output-dir", required=True, type=Path)
-    phylogeny.add_argument("--mafft-bin", default=None, help="Path or executable name for MAFFT.")
-    phylogeny.add_argument("--mafft-mode", default="--auto", help="MAFFT mode flag, for example --auto or --localpair.")
-    phylogeny.add_argument("--iqtree-bin", default=None, help="Path or executable name for IQ-TREE.")
-    phylogeny.add_argument("--iqtree-model", default="LG", help="IQ-TREE substitution model setting.")
-    phylogeny.add_argument("--iqtree-threads", default="AUTO", help="IQ-TREE thread setting, for example AUTO or 8.")
-    phylogeny.add_argument("--iqtree-bootstrap", type=int, default=None, help="Optional IQ-TREE ultrafast bootstrap replicates.")
-    phylogeny.add_argument(
-        "--no-iqtree-fast",
-        action="store_true",
-        help="Disable IQ-TREE fast mode. By default Ariadne uses --fast for practical end-to-end runs.",
-    )
+    _add_phylogeny_arguments(phylogeny, include_skip=False)
     phylogeny.set_defaults(func=cmd_phylogeny)
 
     return parser
@@ -743,7 +749,10 @@ def main(argv: Optional[list[str]] = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
 
-    _log.setup_logging(verbose=getattr(args, "verbose", False))
+    _log.setup_logging(
+        verbose=getattr(args, "verbose", False),
+        log_file=getattr(args, "log_file", None),
+    )
 
     if not hasattr(args, "func"):
         # No subcommand supplied: print banner + help then exit cleanly.

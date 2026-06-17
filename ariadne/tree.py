@@ -10,8 +10,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional, Union
 
-from ariadne.utils import FastaRecord, ensure_directory, slugify, write_fasta, write_tsv
 from ariadne.data import load_reference_records
+from ariadne.utils import FastaRecord, ensure_directory, slugify, write_fasta, write_tsv
 
 PathLike = Union[str, Path]
 
@@ -386,9 +386,15 @@ def run_iqtree(
         "-T",
         str(threads),
     ]
-    if fast:
+    use_bootstrap = bootstrap is not None and bootstrap > 0
+    if fast and use_bootstrap:
+        logger.info(
+            "IQ-TREE --fast is incompatible with ultrafast bootstrap (-B); "
+            "disabling --fast for this run."
+        )
+    if fast and not use_bootstrap:
         command.append("--fast")
-    if bootstrap is not None and bootstrap > 0:
+    if use_bootstrap:
         command.extend(["-B", str(bootstrap)])
     logger.info("Running IQ-TREE: %s", " ".join(command))
     subprocess.run(command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)

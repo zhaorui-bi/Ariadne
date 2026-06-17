@@ -7,8 +7,8 @@ import math
 from pathlib import Path
 from typing import Optional, Union
 
-from ariadne.utils import FastaRecord, parse_coverage, read_fasta, write_fasta, write_tsv
 from ariadne.data import load_reference_records
+from ariadne.utils import FastaRecord, parse_coverage, read_fasta, write_fasta, write_tsv
 
 PathLike = Union[str, Path]
 

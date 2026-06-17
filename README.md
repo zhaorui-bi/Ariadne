@@ -7,8 +7,9 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/zhaoruijiang26/Ariadne/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/zhaoruijiang26/Ariadne/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="Python" src="https://img.shields.io/badge/Python-%3E%3D3.9-0F172A?style=flat-square&logo=python&logoColor=white">
-  <img alt="Version" src="https://img.shields.io/badge/Version-1.0.0-0F766E?style=flat-square">
+  <img alt="Version" src="https://img.shields.io/badge/Version-1.1.0-0F766E?style=flat-square">
   <img alt="License" src="https://img.shields.io/badge/License-MIT-C2410C?style=flat-square">
   <img alt="ESM2" src="https://img.shields.io/badge/Optional-ESM2%20CeeSs-7C3AED?style=flat-square">
   <img alt="MAFFT" src="https://img.shields.io/badge/Requires-MAFFT%20%2B%20IQ--TREE-14532D?style=flat-square">
@@ -159,6 +160,34 @@ ariadne phylogeny \
   --output-dir results/04_phylogeny/
 ```
 
+### From Python / a notebook
+
+The pipeline stages are re-exported at the package top level, so Ariadne can be
+driven directly from a script or notebook (a bare `import ariadne` stays light —
+heavy optional dependencies are loaded lazily on first use):
+
+```python
+import ariadne as ad
+
+# discovery -> filtering -> classification on predicted proteins
+discovery = ad.discover_candidates_from_proteins(
+    ad.collect_protein_files("input/"), "ariadne/hmm/query.hmm", "results/01_discovery",
+)
+filtering = ad.filter_candidates(
+    discovery["candidate_proteins"], "results/02_filtering", reference_dir="tree/",
+)
+classification = ad.classify_candidates(
+    filtering["filtered_fasta"], reference_dir="tree/",
+    output_dir="results/03_classification",
+    hmm_dir="ariadne/hmm",   # bundled TPS HMM library
+    ceess_xlsx=None,         # set to TPS/TPS.xlsx to enable ESM2 CeeSs scoring
+)
+```
+
+See [`examples/tutorial.ipynb`](examples/tutorial.ipynb) for a runnable, end-to-end
+walkthrough that renders the embedding inline and needs no external tools. Run
+`python -c "import ariadne; print(ariadne.__all__)"` to list the public API.
+
 ---
 
 ## CeeSs Scoring (Optional)
@@ -204,7 +233,6 @@ ariadne/
 ├── embed.py       # Stage 3: HMM feature matrix, embedding, classification
 ├── model.py       # ESM2 CeeSs scoring (MLP, logistic regression, Barlow Twins)
 ├── tree.py        # Stage 4: MAFFT alignment, IQ-TREE phylogeny, SVG preview
-├── demo.py        # demo workspace generator
 ├── cli.py         # command-line interface
 ├── __init__.py
 ├── __main__.py
@@ -381,6 +409,36 @@ Full CLI documentation: [docs/cli-reference.md](./docs/cli-reference.md)
 
 ---
 
+## Example
+
+A minimal, self-contained run on the bundled example data (`input/` + `tree/`):
+
+```bash
+bash examples/run_example.sh           # discovery -> filtering -> classification
+RUN_PHYLOGENY=1 bash examples/run_example.sh   # also build the MAFFT + IQ-TREE phylogeny
+RUN_CEESS=1     bash examples/run_example.sh   # also run the ESM2 CeeSs scoring stage
+```
+
+---
+
+## Development
+
+```bash
+git clone https://github.com/zhaoruijiang26/Ariadne.git
+cd Ariadne
+python -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
+
+ruff check ariadne tests          # lint
+pytest --cov=ariadne              # tests (PyTorch/MAFFT/IQ-TREE tests auto-skip)
+```
+
+Continuous integration runs `ruff` and `pytest` on Python 3.9–3.12. See
+[CONTRIBUTING.md](./CONTRIBUTING.md) for the full contributor guide and
+[CHANGELOG.md](./CHANGELOG.md) for release notes.
+
+---
+
 ## Citation
 
 ```bibtex
@@ -389,6 +447,6 @@ Full CLI documentation: [docs/cli-reference.md](./docs/cli-reference.md)
   title     = {Ariadne: A Coral-Centered Terpene Synthase Discovery and CeeSs Prioritization Platform},
   year      = {2026},
   url       = {https://github.com/zhaoruijiang26/Ariadne},
-  version   = {1.0.0}
+  version   = {1.1.0}
 }
 ```

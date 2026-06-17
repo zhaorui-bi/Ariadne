@@ -19,9 +19,9 @@ import pyhmmer
 from sklearn.cluster import KMeans
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 
-from ariadne.utils import FastaRecord, ensure_directory, read_fasta, sanitize_newick_name, write_fasta, write_tsv
 from ariadne.data import load_reference_records
 from ariadne.model import DEFAULT_ESM_MODEL_NAME
+from ariadne.utils import FastaRecord, ensure_directory, read_fasta, sanitize_newick_name, write_fasta, write_tsv
 
 PathLike = Union[str, Path]
 
@@ -812,8 +812,10 @@ def _render_3d_sections(
         # 5 % padding around data extent
         xpad = (dxhi - dxlo) * 0.05 or 0.5
         ypad = (dyhi - dylo) * 0.05 or 0.5
-        dxlo -= xpad;  dxhi += xpad
-        dylo -= ypad;  dyhi += ypad
+        dxlo -= xpad
+        dxhi += xpad
+        dylo -= ypad
+        dyhi += ypad
 
         svgx, svgy = _make_scalers(dxlo, dxhi, dylo, dyhi,
                                    plot_x0, plot_y0, plot_y1, PLOT_W, PLOT_H)

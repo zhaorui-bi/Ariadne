@@ -11,6 +11,7 @@ TPS groups.
 from __future__ import annotations
 
 import logging
+import math
 import re
 from collections import Counter
 from dataclasses import dataclass
@@ -129,7 +130,7 @@ def load_tps_xlsx(
         "sequence": sequence_column,
         "label": label_column,
     }
-    for field, column_name in required.items():
+    for column_name in required.values():
         if column_name not in header_map:
             raise ValueError(
                 f"Missing required column '{column_name}' in worksheet '{target_sheet}'. "
@@ -380,7 +381,7 @@ class _TorchMLPClassifier(BaseEstimator, ClassifierMixin):
             if owns_progress
             else range(self.training_epochs_)
         )
-        for epoch_index in epoch_iterator:
+        for _epoch_index in epoch_iterator:
             self.model_.train()
             running_loss = 0.0
             step_count = 0
@@ -946,7 +947,6 @@ def analyze_tps_types_with_esm(
     fitted = clone(classifier).fit(embeddings, labels)
     full_predictions = fitted.predict(embeddings)
     full_probabilities = fitted.predict_proba(embeddings)
-    classes = _classifier_classes(fitted)
 
     coords, projection_method = _projection_coordinates(embeddings, labels)
     output_root = ensure_directory(output_dir)
@@ -1210,8 +1210,8 @@ def classify_ceess_candidates_with_esm(
             }
         )
 
-    for i, (record, coords, probabilities, raw_scores, top_prediction) in enumerate(
-        zip(candidate_records, query_coords, query_probabilities, query_raw_scores, query_predictions)
+    for record, coords, probabilities, raw_scores, top_prediction in zip(
+        candidate_records, query_coords, query_probabilities, query_raw_scores, query_predictions
     ):
         ceess_probability = float(
             sum(float(probabilities[class_to_index[label]]) for label in ceess_positive_labels if label in class_to_index)
@@ -1343,7 +1343,6 @@ def classify_ceess_candidates_with_esm(
 # Barlow Twins contrastive learning variant (from ceess_supcon)
 # ---------------------------------------------------------------------------
 
-import math
 
 class _BarlowProjectionNetwork:
     """Encoder plus projector adapted from the official Barlow Twins design."""
@@ -1441,26 +1440,6 @@ def _save_supcon_checkpoint(path: Path, network: _BarlowProjectionNetwork, *, co
     for module_name, module_state in state_dict.items():
         cpu_state_dict[module_name] = {key: value.detach().cpu() for key, value in module_state.items()}
     torch.save({"config": config, "state_dict": cpu_state_dict}, path)
-
-
-def _save_mlp_classifier_checkpoint(path: Path, fitted: _TorchMLPClassifier):
-    torch = _load_torch()
-    state_dict = {key: value.detach().cpu() for key, value in fitted.model_.state_dict().items()}
-    torch.save(
-        {
-            "classes": [str(value) for value in fitted.classes_],
-            "mean": np.asarray(fitted.mean_, dtype=np.float32),
-            "scale": np.asarray(fitted.scale_, dtype=np.float32),
-            "hidden_dim": int(fitted.hidden_dim),
-            "dropout": float(fitted.dropout),
-            "training_epochs": int(fitted.training_epochs_),
-            "learning_rate": float(fitted.learning_rate),
-            "weight_decay": float(fitted.weight_decay),
-            "batch_size": int(fitted.batch_size),
-            "state_dict": state_dict,
-        },
-        path,
-    )
 
 
 class _LARS:
