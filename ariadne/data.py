@@ -1,4 +1,10 @@
-"""Utilities for turning heterogeneous reference sources into Ariadne inputs."""
+"""Reference-data preparation utilities for Ariadne.
+
+Reference FASTA files are the stable boundary between user data and the
+classification workflow. This module normalizes heterogeneous sources into a
+small directory of FASTA files plus an optional ``metadata.tsv`` table. Later
+stages consume that directory through :func:`load_reference_records`.
+"""
 
 from __future__ import annotations
 
@@ -33,7 +39,11 @@ def prepare_coral_reference(
     filename: str = "coral.fasta",
     limit: Optional[int] = None,
 ) -> tuple[Path, list[FastaRecord]]:
-    """Prepare coral TPS references from a FASTA alignment/source file."""
+    """Prepare coral TPS references from a FASTA alignment or source file.
+
+    Gaps and terminal stop symbols are removed from the output FASTA, while
+    source metadata is retained on the in-memory records returned to callers.
+    """
     destination = ensure_directory(output_dir)
     records = [_prepare_record(record, source="coral") for record in read_fasta(input_fasta, keep_gaps=True)]
     if limit is not None:
@@ -51,7 +61,12 @@ def prepare_insect_reference(
     sheet_name: str = "Protein Science",
     limit: Optional[int] = None,
 ) -> tuple[Path, list[FastaRecord]]:
-    """Extract insect TPS references from the curated Excel workbook."""
+    """Extract insect TPS references from the curated Excel workbook.
+
+    The workbook parser searches for the row containing ``Sequence ID`` and
+    ``Sequence`` so modest header offsets in curated spreadsheets do not break
+    reference preparation.
+    """
     try:
         import openpyxl
     except ImportError as exc:
@@ -130,7 +145,13 @@ def write_reference_metadata(records: list[FastaRecord], output_dir: PathLike, *
 
 
 def load_reference_records(reference_dir: PathLike) -> list[FastaRecord]:
-    """Load prepared reference FASTA files and merge metadata when present."""
+    """Load prepared reference FASTA files and merge metadata when present.
+
+    Each ``*.fa*`` file contributes records whose default ``source`` is derived
+    from the filename stem. When ``metadata.tsv`` exists, matching rows override
+    or extend the record metadata, preserving labels created by
+    ``prepare-references``.
+    """
     directory = Path(reference_dir)
     metadata_map: dict[str, dict[str, str]] = {}
     metadata_path = directory / "metadata.tsv"

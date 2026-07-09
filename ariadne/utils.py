@@ -1,4 +1,4 @@
-"""Shared logging, terminal output, and sequence utility helpers for Ariadne.
+"""Shared logging, FASTA/TSV I/O, and sequence helpers for Ariadne.
 
 This module consolidates two formerly separate concerns:
 
@@ -182,7 +182,13 @@ COVERAGE_PATTERN = re.compile(r"cov_([0-9]+(?:\.[0-9]+)?)", re.IGNORECASE)
 
 @dataclass
 class FastaRecord:
-    """Simple in-memory FASTA record used across the pipeline."""
+    """Simple in-memory FASTA record used across pipeline stages.
+
+    ``header`` is preserved exactly for round-tripping to FASTA. The ``id`` and
+    ``description`` properties provide convenient access to the first token and
+    remaining text, while ``metadata`` carries stage-specific annotations that
+    should not be serialized into the FASTA header automatically.
+    """
 
     header: str
     sequence: str
@@ -232,6 +238,7 @@ _logger = logging.getLogger(__name__)
 
 
 def _record_from_header_and_chunks(header: str, chunks: list[str], *, keep_gaps: bool) -> FastaRecord:
+    """Create one FASTA record and recover a common header-embedded sequence error."""
     if chunks:
         sequence = clean_sequence("".join(chunks), keep_gaps=keep_gaps)
         return FastaRecord(header=header, sequence=sequence)
@@ -246,7 +253,12 @@ def _record_from_header_and_chunks(header: str, chunks: list[str], *, keep_gaps:
 
 
 def read_fasta(path: PathLike, *, keep_gaps: bool = False) -> list[FastaRecord]:
-    """Parse a FASTA file into :class:`FastaRecord` objects."""
+    """Parse a FASTA file into :class:`FastaRecord` objects.
+
+    Empty lines are ignored. By default alignment gaps are removed; pass
+    ``keep_gaps=True`` when reading reference alignments that still need to be
+    consumed by alignment-aware tools.
+    """
     records: list[FastaRecord] = []
     header: Optional[str] = None
     chunks: list[str] = []
@@ -312,7 +324,12 @@ def first_existing(*paths: PathLike) -> Optional[Path]:
 
 
 def write_tsv(rows: Iterable[dict[str, object]], path: PathLike) -> Path:
-    """Write a list of dictionaries to a tab-separated table."""
+    """Write dictionaries to a tab-separated table with stable column order.
+
+    Columns are ordered by first appearance across rows. Empty row collections
+    still create an empty file so downstream pipeline summaries can reference a
+    concrete path.
+    """
     rows = list(rows)
     target = Path(path)
     if target.parent and not target.parent.exists():

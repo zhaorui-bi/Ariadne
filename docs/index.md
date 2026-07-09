@@ -134,6 +134,11 @@ Tune thresholds, switch CeeSs classifier heads, reuse checkpoints, and design ma
 </div>
 
 <div class="evidence-card" markdown>
+### [Software Architecture](software-architecture.md)
+Review package structure, public API contracts, dependency boundaries, and release checks.
+</div>
+
+<div class="evidence-card" markdown>
 ### [Outputs](outputs.md)
 Interpret every table and figure emitted by the pipeline, including CeeSs and embedding artifacts.
 </div>

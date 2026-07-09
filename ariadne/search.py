@@ -1,9 +1,13 @@
-"""Stage 1: build query HMMs and discover candidate TPS proteins.
+"""Stage 1: build profile HMMs and discover candidate TPS proteins.
 
 This module supports two discovery modes:
 1. start from transcript FASTA files, predict ORFs with ``pyrodigal``, then
    search translated proteins with a profile HMM;
 2. start from precomputed protein FASTA files and search them directly.
+
+All public functions return paths to materialized FASTA/TSV artifacts instead
+of keeping large intermediate objects in memory. This keeps the command-line
+workflow reproducible and makes every stage independently inspectable.
 """
 
 from __future__ import annotations
@@ -51,7 +55,8 @@ def build_hmm(alignment_fasta: PathLike, output_hmm: PathLike, *, name: Optional
     """Build a profile HMM from an aligned FASTA/MSA file.
 
     If the input FASTA is not a valid multiple sequence alignment, Ariadne
-    temporarily aligns it with MAFFT before running ``hmmbuild``.
+    temporarily aligns it with MAFFT before constructing the profile with
+    pyhmmer. The returned path always points to the written HMM file.
     """
     alignment_path = Path(alignment_fasta)
     alphabet = pyhmmer.easel.Alphabet.amino()
@@ -122,7 +127,12 @@ def search_proteins_with_hmm(
     min_score: Optional[float] = None,
     max_evalue: Optional[float] = None,
 ) -> list[dict[str, object]]:
-    """Search proteins against one or more HMMs and keep the best hit per ID."""
+    """Search proteins against one or more HMM profiles.
+
+    The result is a stable list of best hits, one row per sequence id. Optional
+    bit-score and E-value filters are applied before the best-hit reduction so
+    downstream stages receive only candidates that meet the discovery contract.
+    """
     alphabet = pyhmmer.easel.Alphabet.amino()
     background = pyhmmer.plan7.Background(alphabet)
     pipeline = pyhmmer.plan7.Pipeline(alphabet, background=background)
@@ -165,7 +175,13 @@ def discover_candidates(
     min_score: Optional[float] = None,
     max_evalue: Optional[float] = None,
 ) -> dict[str, Path]:
-    """Run discovery from transcript FASTA files all the way to candidate hits."""
+    """Run transcriptome-mode discovery and persist all stage-1 artifacts.
+
+    Parameters are intentionally close to the CLI flags. Each transcriptome is
+    translated with Pyrodigal, searched against ``hmm_path``, and written to a
+    sample-level subdirectory. Combined candidate FASTA and hit TSV files are
+    returned for stage-2 filtering.
+    """
     root = ensure_directory(output_dir)
     combined_proteins: list[FastaRecord] = []
     combined_hits_proteins: list[FastaRecord] = []
@@ -213,7 +229,11 @@ def collect_protein_files(
     *,
     protein_glob: Sequence[str] = ("*.faa", "*.fa", "*.fasta", "*.pep", "*.prot"),
 ) -> list[Path]:
-    """Recursively collect protein FASTA files from a directory."""
+    """Recursively collect protein FASTA files from a directory.
+
+    Multiple glob patterns can be supplied so projects with mixed FASTA suffixes
+    can be passed directly to ``ariadne run --protein-folder``.
+    """
     root = Path(protein_dir)
     if not root.exists():
         raise FileNotFoundError(f"Protein directory does not exist: {root}")
@@ -251,7 +271,12 @@ def discover_candidates_from_proteins(
     min_score: Optional[float] = None,
     max_evalue: Optional[float] = None,
 ) -> dict[str, Path]:
-    """Run discovery directly from protein FASTA files."""
+    """Run protein-mode discovery and persist all stage-1 artifacts.
+
+    Sequence identifiers are prefixed with their sample/file stem before HMM
+    search. This prevents collisions when different input FASTA files reuse
+    common identifiers such as ``contig_1`` or ``protein_0001``.
+    """
     root = ensure_directory(output_dir)
     combined_proteins: list[FastaRecord] = []
     combined_hits_proteins: list[FastaRecord] = []

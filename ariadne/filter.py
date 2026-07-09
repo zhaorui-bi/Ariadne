@@ -1,4 +1,10 @@
-"""Stage 2: candidate quality filtering and near-duplicate collapsing."""
+"""Stage 2: candidate quality filtering and near-duplicate collapsing.
+
+The filtering stage is deliberately transparent: every retained or removed
+sequence is represented in a TSV report, and de-duplication clusters are written
+separately from the filtered FASTA. This makes threshold tuning auditable during
+manuscript preparation and downstream candidate selection.
+"""
 
 from __future__ import annotations
 
@@ -44,7 +50,12 @@ def _edit_distance_with_limit(sequence_a: str, sequence_b: str, max_edits: int) 
 
 
 def near_duplicate(sequence_a: str, sequence_b: str, identity_threshold: float) -> bool:
-    """Return ``True`` when two sequences meet the configured identity cutoff."""
+    """Return ``True`` when two sequences meet the configured identity cutoff.
+
+    Identity is approximated with a bounded edit distance rather than a full
+    alignment. The bounded implementation is fast enough for near-duplicate
+    filtering and exits early when two sequences cannot meet the cutoff.
+    """
     if not sequence_a and not sequence_b:
         return True
     max_length = max(len(sequence_a), len(sequence_b))
@@ -104,7 +115,13 @@ def filter_candidates(
     identity_threshold: float = 0.95,
     reference_dir: Optional[PathLike] = None,
 ) -> dict[str, Path]:
-    """Apply basic QC, near-duplicate clustering, and manual-review summaries."""
+    """Apply QC, near-duplicate clustering, and manual-review summaries.
+
+    The returned dictionary contains the filtered FASTA plus the TSV audit files
+    consumed by documentation and downstream triage:
+    ``filter_report.tsv``, ``dedupe_clusters.tsv``,
+    ``manual_review.tsv``, and ``reference_matches.tsv``.
+    """
     records = read_fasta(input_fasta)
     reference_records = load_reference_records(reference_dir) if reference_dir is not None else []
     reference_sequences = {reference.id: reference.sequence for reference in reference_records}

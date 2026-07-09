@@ -1,9 +1,13 @@
-"""Ariadne — coral terpene synthase (TPS) discovery, CeeSs prioritization & phylogeny.
+"""Ariadne — terpene synthase discovery and CeeSs candidate prioritization.
 
 Ariadne ships both a command-line interface (``ariadne ...`` / ``python -m
-ariadne``) and an importable Python API. The most useful pipeline functions are
-re-exported at the package top level so the platform can be driven directly from
-a script or a notebook::
+ariadne``) and an importable Python API. The primary workflow is a four-stage
+screening pipeline: HMM-based candidate discovery, quality filtering,
+profile-space classification, and PCA/LDA visualization. Optional ESM2 scoring
+adds a supervised CeeSs prioritization layer for coral-like candidates.
+
+The most useful pipeline functions are re-exported at the package top level so
+the platform can be driven directly from a script or a notebook::
 
     import ariadne as ad
 
@@ -22,10 +26,10 @@ a script or a notebook::
     ad.classify_candidates("results/02_filtering/candidates.filtered.faa",
                            reference_dir="tree", output_dir="results/03_classification")
 
-Heavy, optional dependencies (PyTorch, pyhmmer, pyrodigal) are imported lazily,
-so a bare ``import ariadne`` always succeeds even in a minimal environment. The
-underlying submodule is imported only the first time you access a function that
-needs it (PEP 562). The names available on the package are listed in ``__all__``.
+Heavy dependencies are imported lazily where possible. A bare ``import
+ariadne`` therefore stays lightweight, while functions that need pyhmmer,
+pyrodigal, or the optional ESM stack import those libraries only when called
+(PEP 562). The names available on the package are listed in ``__all__``.
 """
 
 from __future__ import annotations
@@ -35,7 +39,7 @@ from typing import TYPE_CHECKING
 
 __version__     = "1.1.0"
 __author__      = "Zhaorui Jiang"
-__description__ = "Coral TPS Discovery, Candidate CeeSs Prioritization & Phylogeny Platform"
+__description__ = "Terpene synthase discovery, CeeSs prioritization, and feature-space visualization platform"
 __url__         = "https://github.com/zhaorui-bi/Ariadne"
 
 # Public API: exported name -> submodule that defines it. Resolved lazily on

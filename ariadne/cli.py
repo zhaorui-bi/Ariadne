@@ -1,7 +1,9 @@
 """Command-line interface for the Ariadne TPS discovery pipeline.
 
-The CLI is organised around the current four-stage workflow:
-discovery -> filtering -> classification -> phylogeny.
+The default release workflow is organised around four computational stages:
+discovery -> filtering -> classification -> visualization. A separate
+``phylogeny`` subcommand remains available for users who want MAFFT/IQ-TREE
+tree building after candidate triage.
 """
 
 from __future__ import annotations
@@ -97,7 +99,7 @@ def _default_plant() -> Optional[Path]:
 
 
 def _default_reference_dir() -> Optional[Path]:
-    """Locate the default tree/reference directory when present."""
+    """Locate the default prepared reference directory when present."""
     return _first_existing_path(
         Path.cwd() / "tree",
         _repo_root() / "tree",
@@ -113,7 +115,7 @@ def _default_tps_xlsx() -> Optional[Path]:
 
 
 def _default_reference_alignment(reference_dir: Optional[PathLike] = None) -> Optional[Path]:
-    """Locate the default coral reference FASTA under ``tree/`` when available."""
+    """Locate the default coral reference FASTA in a prepared reference directory."""
     candidates: list[Path] = []
     if reference_dir is not None:
         directory = Path(reference_dir)
@@ -625,7 +627,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     parser = argparse.ArgumentParser(
         prog="ariadne",
-        description="Ariadne — Terpene Synthase Discovery & Annotation Pipeline.",
+        description="Ariadne - terpene synthase discovery, CeeSs prioritization, and PCA/LDA visualization.",
     )
     parser.add_argument(
         "--version", "-V",
@@ -646,7 +648,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     subparsers = parser.add_subparsers(dest="command", required=False)
 
-    prepare_refs = subparsers.add_parser("prepare-references", help="Prepare clean reference FASTA files from the bundled coral and insect resources.")
+    prepare_refs = subparsers.add_parser("prepare-references", help="Prepare clean reference FASTA files and metadata tables.")
     prepare_refs.add_argument("--coral", default=_default_coral(), type=Path)
     prepare_refs.add_argument("--coral-limit", type=int, default=None)
     prepare_refs.add_argument("--insect-xlsx", default=_default_insect(), type=Path)
@@ -679,7 +681,7 @@ def build_parser() -> argparse.ArgumentParser:
     build_tps_lib.add_argument("--output-dir", required=True, type=Path)
     build_tps_lib.set_defaults(func=cmd_build_tps_hmm_library)
 
-    discover = subparsers.add_parser("discover", help="Predict ORFs from transcriptomes and search them with a HMM.")
+    discover = subparsers.add_parser("discover", help="Search transcriptome-derived or protein FASTAs with a query HMM.")
     discover.add_argument("--transcriptomes", nargs="+", default=None, type=Path)
     discover.add_argument("--protein-folder", type=Path, default=None, help="Folder containing Prodigal-predicted protein FASTA files.")
     discover.add_argument(
@@ -703,7 +705,7 @@ def build_parser() -> argparse.ArgumentParser:
     filter_parser.add_argument("--reference-dir", type=Path, default=None, help="Optional reference FASTA directory used to remove candidates that already match known references.")
     filter_parser.set_defaults(func=cmd_filter)
 
-    classify = subparsers.add_parser("classify", help="Classify TPS candidates in profile feature space.")
+    classify = subparsers.add_parser("classify", help="Classify TPS candidates and render PCA/LDA feature-space projections.")
     classify.add_argument("--candidates", required=True, type=Path)
     classify.add_argument("--reference-dir", required=True, type=Path)
     classify.add_argument("--output-dir", required=True, type=Path)
@@ -711,7 +713,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_ceess_arguments(classify)
     classify.set_defaults(func=cmd_classify)
 
-    run = subparsers.add_parser("run", help="Execute Ariadne end-to-end: discovery, filtering, classification, and optional phylogeny.")
+    run = subparsers.add_parser("run", help="Execute discovery, filtering, classification, visualization, and optional phylogeny.")
     run.add_argument("--transcriptomes", nargs="+", default=None, type=Path)
     run.add_argument("--protein-folder", type=Path, default=None, help="Preferred input mode: folder of predicted protein FASTA files.")
     run.add_argument(

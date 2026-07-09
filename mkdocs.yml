@@ -79,6 +79,7 @@ nav:
   - Method: method.md
   - ESM Type Model: esm-type.md
   - Advanced Usage: advanced-usage.md
+  - Software Architecture: software-architecture.md
   - Tutorials: tutorials.md
   - CLI Reference: cli-reference.md
   - Outputs: outputs.md

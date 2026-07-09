@@ -1,11 +1,12 @@
-"""ESM embedding workflow for coral TPS type separation from spreadsheet data.
+"""ESM2-based TPS type classification and CeeSs candidate prioritization.
 
-This module is intentionally kept separate from the main four-stage Ariadne
-pipeline because it targets a supervised analysis setting: a curated Excel file
-containing known coral TPS proteins and their type labels. The typical use case
-is to embed these proteins with ESM2, then evaluate how well the resulting
-representation separates product types such as CeeSs-related classes and other
-TPS groups.
+This module provides the optional supervised layer used after profile-space
+classification. A curated workbook (``TPS.xlsx``) supplies labeled coral TPS
+sequences; Ariadne embeds those proteins with ESM2, trains a lightweight
+classifier, and applies it to coral-like candidate sequences. The outputs are
+designed to be auditable: model metrics, confusion matrices, candidate
+probabilities, type-specific hit tables, FASTA exports, and SVG projections are
+all written to disk.
 """
 
 from __future__ import annotations
@@ -53,7 +54,7 @@ CEESS_POSITIVE_LABELS = frozenset({"cembrene A", "cembrene B"})
 
 
 def resolve_esm_model_name(model_name: str) -> str:
-    """Resolve user-facing ESM presets to concrete Hugging Face model ids."""
+    """Resolve user-facing ESM presets to concrete Hugging Face model IDs."""
     key = str(model_name).strip()
     preset = ESM_MODEL_PRESETS.get(key.upper())
     if preset is not None:
@@ -104,12 +105,10 @@ def load_tps_xlsx(
 ) -> list[TPSTypeRecord]:
     """Load coral TPS records from an Excel workbook.
 
-    The expected spreadsheet layout follows the current `TPS/TPS.xlsx`
-    convention:
-    - column 1: name
-    - column 2: protein sequence
-    - column 3: type label
-    - column 4: species
+    The default layout follows the project ``TPS.xlsx`` convention:
+    ``Name``, ``Protein``, ``Type``, and ``Species``. An optional
+    ``CeeSs_group``/``CeeSs`` column can explicitly mark positive examples; if
+    it is absent, Ariadne falls back to the legacy Cembrene A/B positive labels.
     """
     try:
         from openpyxl import load_workbook
@@ -253,7 +252,12 @@ def compute_esm_embeddings(
     max_length: int = 2048,
     device: Optional[str] = None,
 ) -> np.ndarray:
-    """Compute mean-pooled ESM2 embeddings for a set of protein sequences."""
+    """Compute mean-pooled ESM2 embeddings for protein sequences.
+
+    The ESM backbone is kept frozen. BOS/EOS tokens are excluded from the mean
+    whenever the tokenizer produces them, yielding one fixed-width embedding per
+    input sequence.
+    """
     model_name = resolve_esm_model_name(model_name)
     torch, tokenizer, model, runtime_device = _load_esm_components(model_name, device=device)
     all_embeddings: list[np.ndarray] = []
@@ -287,7 +291,7 @@ def compute_esm_embeddings(
 
 
 class _TorchMLPClassifier(BaseEstimator, ClassifierMixin):
-    """Small MLP classifier trained on frozen ESM embeddings."""
+    """Scikit-learn-compatible MLP trained on frozen ESM embeddings."""
 
     def __init__(
         self,
@@ -493,7 +497,12 @@ def _build_classifier(
     batch_size: int = 8,
     device: Optional[str] = None,
 ):
-    """Construct the requested small-sample type classifier."""
+    """Construct the requested small-sample type classifier.
+
+    All returned estimators expose ``fit``, ``predict``, and ``predict_proba``
+    so the evaluation and candidate-scoring code can treat sklearn and Torch
+    implementations uniformly.
+    """
     if classifier_kind == "logreg":
         return Pipeline(
             steps=[
@@ -903,7 +912,13 @@ def analyze_tps_types_with_esm(
     weight_decay: float = 1e-4,
     train_batch_size: int = 8,
 ) -> dict[str, Path]:
-    """Run a supervised ESM embedding workflow for coral TPS type separation."""
+    """Run a standalone supervised ESM2 analysis for labeled TPS records.
+
+    This function is useful for model diagnostics before candidate screening.
+    It computes embeddings for ``TPS.xlsx``, evaluates the chosen classifier by
+    stratified cross-validation, fits a final classifier on all records, and
+    writes metrics/projections under ``output_dir``.
+    """
     model_name = resolve_esm_model_name(model_name)
     records = load_tps_xlsx(xlsx_path, sheet_name=sheet_name)
     labels = [record.label for record in records]
@@ -1052,7 +1067,15 @@ def classify_ceess_candidates_with_esm(
     barlow_redundancy_weight: float = 0.005,
     classifier_checkpoint: Optional[PathLike] = None,
 ) -> CeessPredictionResult:
-    """Score coral-like candidates with a multi-class ESM classifier trained on TPS types."""
+    """Score coral-like candidates with a TPS-type classifier trained on ESM2 embeddings.
+
+    ``classifier_kind`` selects the supervised head: ``mlp`` for the default
+    Torch classifier, ``logreg`` for a lightweight baseline, or ``contrastive``
+    for the Barlow Twins representation path. The returned
+    :class:`CeessPredictionResult` contains both output paths and in-memory rows
+    used by ``ariadne.embed`` to merge CeeSs fields back into
+    ``classification.tsv``.
+    """
     if classifier_kind == "contrastive":
         if classifier_checkpoint is not None:
             raise ValueError(
@@ -1340,7 +1363,12 @@ def classify_ceess_candidates_with_esm(
     )
 
 # ---------------------------------------------------------------------------
-# Barlow Twins contrastive learning variant (from ceess_supcon)
+# Barlow Twins contrastive learning variant.
+#
+# This optional path learns a compact representation before fitting the final
+# supervised MLP head. It is exposed for advanced users who want a stronger
+# representation-learning baseline while preserving the same output schema as
+# the default CeeSs scorer.
 # ---------------------------------------------------------------------------
 
 

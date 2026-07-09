@@ -1,8 +1,17 @@
-"""Stage 3: classify candidates in TPS HMM feature space.
+"""Stages 3-4: classify candidates and render TPS feature-space projections.
 
 Each sequence is converted into a vector of HMM scores, normalised, embedded,
 and compared against reference sequences to infer a likely source group such as
 coral, insect, plant, fungal, or bacterial TPS collections.
+
+The module intentionally separates two concerns:
+
+* classification features, which drive nearest-reference assignment; and
+* visualization coordinates, which are post-processed for readable SVG output.
+
+The visual spreading step does not change assignment tables. It only prevents
+large reference clades and candidate groups from collapsing into an unreadable
+plot.
 """
 
 from __future__ import annotations
@@ -41,7 +50,12 @@ def sorted_hmm_paths(hmm_dir: PathLike) -> list[Path]:
 
 
 def _score_records_against_hmms(records: list[FastaRecord], hmm_paths: list[Path], *, missing_score: float = 5.0) -> tuple[np.ndarray, list[str]]:
-    """Score all records against all HMMs and build the raw feature matrix."""
+    """Score all records against all HMMs and build the raw feature matrix.
+
+    The final feature column is sequence length. Profiles with no hit receive a
+    small floor value rather than zero so downstream normalization remains
+    stable and missing profiles are still represented consistently.
+    """
     if not records:
         return np.zeros((0, len(hmm_paths) + 1), dtype=float), [path.stem for path in hmm_paths] + ["length"]
     alphabet = pyhmmer.easel.Alphabet.amino()
@@ -70,7 +84,7 @@ def _score_records_against_hmms(records: list[FastaRecord], hmm_paths: list[Path
 
 
 def _normalize_matrix(matrix: np.ndarray) -> np.ndarray:
-    """Normalise each feature column by its mean value."""
+    """Normalize each feature column by its mean value for distance scoring."""
     if matrix.size == 0:
         return matrix.copy()
     means = matrix.mean(axis=0)
@@ -149,10 +163,11 @@ def _stable_kmeans_labels(matrix: np.ndarray, *, prefix: str) -> list[str]:
 def _embedding_group_labels(matrix: np.ndarray, records: list[FastaRecord]) -> list[str]:
     """Build subclade-aware labels for the embedding stage.
 
-    The main goal is to stop the large coral reference collection from behaving
-    like one monolithic class. We therefore split coral references into small,
-    deterministic feature-space subclusters while keeping candidates grouped
-    together as one foreground layer.
+    The main goal is to stop a large coral reference collection from behaving
+    like one monolithic visual class. Coral references are split into
+    deterministic feature-space subclusters, while candidates remain grouped as
+    foreground layers. These labels are used for projection only; they do not
+    alter nearest-reference assignment.
     """
     labels = [_embedding_group_label(record) for record in records]
     coral_indices: list[int] = []
@@ -184,8 +199,9 @@ def _spread_group_coords(coords: np.ndarray, labels: list[str], *, within_scale:
     """Spread group centroids apart while preserving local within-group structure.
 
     This post-processing step is used only for the visual embedding so that
-    major reference clades and candidate groups no longer collapse onto the
-    same centroid in the final SVG.
+    major reference clades and candidate groups do not collapse onto the same
+    centroid in the final SVG. Assignment tables continue to use the original
+    normalized feature-space distances.
     """
     if len(coords) == 0:
         return coords.copy()
@@ -462,8 +478,9 @@ def _render_scatter(
     """Render a readable 2D embedding scatter plot for candidate classification.
 
     By default the standalone 2D SVG reuses the same projection as the middle
-    panel ("b") of ``embedding_3d_sections.svg`` so the two views stay
-    visually consistent.
+    panel ("b") of ``embedding_3d_sections.svg`` so the two views stay visually
+    consistent. Sequence IDs are intentionally omitted from the figure; the
+    machine-readable mapping lives in ``embedding.tsv`` and ``classification.tsv``.
     """
     target = Path(output_path)
     if len(records) == 0:
@@ -608,11 +625,14 @@ def _render_scatter(
 
 
 # ---------------------------------------------------------------------------
-# Publication-quality palette — AFPK_finder colour scheme
-# (script.r: scale_color_manual + theme_bw + no grid lines)
+# Publication-oriented palette and marker grammar.
+#
+# Colours are chosen to keep reference clades visually distinct on white
+# backgrounds and in exported SVG/PDF figures. Candidate groups use shape as
+# well as colour so printed or grayscale copies remain interpretable.
 # ---------------------------------------------------------------------------
 
-# Named source → fill colour (mirrors AFPK_finder 12-colour palette)
+# Named source -> fill colour.
 _SOURCE_FILL: dict[str, str] = {
     "coral":    "#EE6A50",   # coral-red
     "insect":   "#7B68EE",   # medium-slate-blue
@@ -620,10 +640,10 @@ _SOURCE_FILL: dict[str, str] = {
     "fungal":   "#49C3C3",   # teal
     "plant":    "#3A7D44",   # dark-green
 }
-# Fallback colours for unlisted sources (remaining AFPK palette entries)
+# Fallback colours for user-defined reference sources.
 _FILL_EXTRA = ["#87CEFA", "#FFC0CB", "#800080", "#191970", "#FF7F50", "#808080", "#FFD700"]
 
-# Candidate-group display configuration (shape + colour, NO text labels)
+# Candidate-group display configuration. Labels appear only in legends.
 _CANDIDATE_CFG: dict[str, dict] = {
     "candidate_ceess": {
         "label": "Candidate CeeSs",
@@ -703,17 +723,12 @@ def _render_3d_sections(
     component_labels: Optional[list[str]] = None,
     method: str = "embedding",
 ) -> Path:
-    """Render a publication-quality embedding-section figure (3 orthogonal projections).
+    """Render three orthogonal 2D sections of the embedding coordinates.
 
-    Visual style mirrors AFPK_finder (Lin *et al.*, Nat. Commun. 2024):
-
-    * Reference sequences coloured by clade (``theme_bw`` analogue — white
-      background, no grid, light axis lines).
-    * Candidate markers rendered as distinct shapes **without text labels**,
-      eliminating the visual clutter reported when sequence IDs overlap.
-    * Axis labels include the fraction of separation/variance explained by each axis.
-    * A two-row legend (reference clades / candidate groups) is placed below
-      the panels.
+    The figure is optimized for reports and manuscripts: reference sequences
+    are small background circles, candidates are larger foreground markers, and
+    candidate text labels are omitted to avoid overlap. Per-record coordinates
+    remain available in ``embedding.tsv``.
     """
     target = Path(output_path)
     if len(records) == 0:
@@ -724,7 +739,7 @@ def _render_3d_sections(
     if coords.shape[1] < 3:
         coords = np.pad(coords, ((0, 0), (0, 3 - coords.shape[1])))
 
-    # ── reference sources in appearance order ─────────────────────────────
+    # Preserve first-seen reference order so legends match the plotted layers.
     ref_sources: list[str] = []
     for rec in records:
         if rec.metadata.get("source") != "candidate":
@@ -733,7 +748,7 @@ def _render_3d_sections(
                 ref_sources.append(src)
     ref_colour = {src: _ref_source_fill(src, i) for i, src in enumerate(ref_sources)}
 
-    # candidate groups actually present in this dataset
+    # Only draw legend entries for candidate classes that are present.
     cand_groups_present = [
         g for g in _CANDIDATE_CFG
         if any(
@@ -743,7 +758,7 @@ def _render_3d_sections(
         )
     ]
 
-    # ── layout constants ──────────────────────────────────────────────────
+    # Layout constants are kept together so exported SVG dimensions remain stable.
     PW, PH   = 460, 420          # panel width, height
     PGAP     = 50                # gap between panels
     OL, OT   = 45, 40            # outer left / top margin
@@ -820,7 +835,7 @@ def _render_3d_sections(
         svgx, svgy = _make_scalers(dxlo, dxhi, dylo, dyhi,
                                    plot_x0, plot_y0, plot_y1, PLOT_W, PLOT_H)
 
-        # panel background (very light grey — theme_bw analogue)
+        # Panel background and plot border use print-friendly low-contrast lines.
         svg.append(
             f'<rect x="{px0}" y="{py0}" width="{PW}" height="{PH}"'
             f' fill="#F9FAFB" rx="4"/>',
@@ -831,7 +846,7 @@ def _render_3d_sections(
             f' fill="white" stroke="{GRID_COL}" stroke-width="1"/>',
         )
 
-        # faint dashed grid lines (panel.grid analogue — very subtle)
+        # Subtle grid lines improve coordinate reading without dominating points.
         for tv in _nice_ticks(dxlo, dxhi):
             if dxlo <= tv <= dxhi:
                 tx = svgx(tv)
@@ -908,8 +923,7 @@ def _render_3d_sections(
             f'{chr(ord("a") + pi)}</text>',
         )
 
-        # ── data points ─────────────────────────────────────────────────────
-        # paint references (background) before candidates (foreground)
+        # Paint references first so candidate markers remain visible.
         ref_pts: list[str] = []
         cand_pts: list[str] = []
         cand_overlay_points: dict[str, list[tuple[float, float]]] = {group: [] for group in cand_groups_present}
@@ -920,14 +934,14 @@ def _render_3d_sections(
             src = rec.metadata.get("source", "unknown")
 
             if src != "candidate":
-                # reference point: small filled circle, coloured by clade
+                # Reference point: small filled circle, coloured by clade.
                 col = ref_colour.get(src, "#9CA3AF")
                 ref_pts.append(
                     f'<circle cx="{cx:.2f}" cy="{cy:.2f}" r="3.5"'
                     f' fill="{col}" fill-opacity="0.55" stroke="none"/>',
                 )
             else:
-                # candidate: larger shape marker, NO text label
+                # Candidate point: larger shape marker, no inline text label.
                 grp = _candidate_group(rec)
                 cfg = _CANDIDATE_CFG.get(grp, _CANDIDATE_CFG["candidate"])
                 if grp in cand_overlay_points:
@@ -957,10 +971,10 @@ def _render_3d_sections(
         svg.extend(ref_pts)
         svg.extend(cand_pts)
 
-    # ── two-row legend ────────────────────────────────────────────────────
+    # Two-row legend keeps reference and candidate visual grammars separate.
     leg_y = PANELS_Y + PH + 24
 
-    # row 1 — reference clades
+    # Row 1: reference clades.
     svg.append(
         f'<text x="{OL}" y="{leg_y}"'
         f' font-size="12" font-weight="600" fill="#374151">'
@@ -979,7 +993,7 @@ def _render_3d_sections(
         )
         ix += max(66, 9 * len(src) + 28)
 
-    # row 2 — candidate groups
+    # Row 2: candidate groups.
     leg_y2 = leg_y + 30
     svg.append(
         f'<text x="{OL}" y="{leg_y2}"'
@@ -1043,7 +1057,14 @@ def classify_candidates(
     ceess_barlow_redundancy_weight: float = 0.005,
     ceess_mlp_checkpoint: Optional[PathLike] = None,
 ) -> dict[str, Path]:
-    """Assign each candidate to the dominant source of its nearest references."""
+    """Classify candidates, optionally score CeeSs probability, and render plots.
+
+    The function is the programmatic equivalent of ``ariadne classify``. It
+    writes feature tables, nearest-neighbor evidence, assignment summaries,
+    embedding coordinates, and SVG figures under ``output_dir``. When
+    ``ceess_xlsx`` is provided and the optional ESM stack is installed, coral-like
+    candidates receive additional ESM2 subtype and CeeSs-prioritization columns.
+    """
     references = load_reference_records(reference_dir)
     if not references:
         raise ValueError(f"No reference sequences were found in {reference_dir}.")
