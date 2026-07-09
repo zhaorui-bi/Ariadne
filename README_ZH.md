@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/logo.png" alt="Ariadne logo" width="520">
+  <img src="docs/logo.png" alt="Ariadne logo" width="300">
 </p>
 
 <h1 align="center">Ariadne</h1>
