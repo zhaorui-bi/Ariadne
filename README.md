@@ -2,12 +2,6 @@
   <img src="docs/logo.png" alt="Ariadne logo" width="300">
 </p>
 
-<h1 align="center">Ariadne</h1>
-
-<p align="center">
-  <strong>Terpene synthase discovery, CeeSs prioritization, and PCA/LDA visualization</strong>
-</p>
-
 <p align="center">
   <a href="./README_ZH.md">中文</a> &nbsp;·&nbsp;
   <a href="./docs/index.md">Documentation</a> &nbsp;·&nbsp;

@@ -2,12 +2,6 @@
   <img src="docs/logo.png" alt="Ariadne logo" width="300">
 </p>
 
-<h1 align="center">Ariadne</h1>
-
-<p align="center">
-  <strong>萜烯合成酶发现、CeeSs 候选优先级识别与 PCA/LDA 可视化</strong>
-</p>
-
 <p align="center">
   <a href="./README.md">English</a> &nbsp;·&nbsp;
   <a href="./docs/index.md">文档</a> &nbsp;·&nbsp;
