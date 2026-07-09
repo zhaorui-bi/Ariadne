@@ -2,6 +2,8 @@
 
 <section class="research-hero" markdown>
 <div markdown>
+<img src="logo.png" alt="Ariadne logo" class="research-hero__logo" />
+
 <span class="research-hero__eyebrow">TPS Discovery Framework</span>
 
 **Ariadne** is a four-stage computational framework for large-scale terpene synthase discovery, quality-controlled candidate reduction, subtype classification, and downstream CeeSs prioritization.

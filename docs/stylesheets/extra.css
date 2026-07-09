@@ -296,6 +296,13 @@ pre {
   text-transform: uppercase;
 }
 
+.research-hero__logo {
+  display: block;
+  width: min(12rem, 56vw);
+  height: auto;
+  margin: 0 0 1rem;
+}
+
 .research-hero h1,
 .hero-copy h1 {
   margin: 0 0 0.7rem;
