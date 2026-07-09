@@ -215,6 +215,7 @@ The full documentation site is in [`docs/`](./docs/index.md):
 
 - [Getting Started](./docs/getting-started.md) - installation and your first run
 - [Method](./docs/method.md) - the four-stage design
+- [Advanced Usage](./docs/advanced-usage.md) - threshold tuning, ESM2 heads, and reproducible runs
 - [Tutorials](./docs/tutorials.md) - practical analysis pathways
 - [CLI Reference](./docs/cli-reference.md) - every command and parameter
 - [Outputs](./docs/outputs.md) - every artifact the pipeline produces

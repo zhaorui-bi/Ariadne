@@ -1,72 +1,99 @@
-<div class="hero-panel">
-  <div class="hero-copy">
-    <h1>Ariadne</h1>
-    <p><strong>Terpene synthase discovery platform for coral TPS mining and cembrene-class synthase (CeeSs) prioritization.</strong></p>
-    <p>Ariadne turns a user-provided reference FASTA directory into a four-stage workflow: candidate discovery, quality filtering, feature-space classification, and PCA/LDA visualization. The current main workflow ends with interpretable candidate triage, not a final tree-building stage.</p>
-    <div class="hero-actions">
-      <a class="md-button md-button--primary" href="getting-started/">Get Started</a>
-      <a class="md-button" href="method/">Method</a>
-      <a class="md-button" href="https://github.com/zhaorui-bi/Ariadne">GitHub</a>
-    </div>
-    <div class="hero-meta">
-      <span class="hero-pill">Python 3.9+</span>
-      <span class="hero-pill">reference FASTA directory</span>
-      <span class="hero-pill">PCA/LDA visualization</span>
-      <span class="hero-pill">Optional ESM2 scoring</span>
-    </div>
-  </div>
-  <div class="hero-visual">
-    <img src="logo.png" alt="Ariadne logo">
-  </div>
+# Ariadne
+
+<section class="research-hero" markdown>
+<div markdown>
+<span class="research-hero__eyebrow">TPS Discovery Framework</span>
+
+**Ariadne** is a four-stage computational framework for large-scale terpene synthase discovery, quality-controlled candidate reduction, subtype classification, and downstream CeeSs prioritization.
+
+<div class="research-hero__subtitle" markdown>
+The documentation follows the project model used in the OUC-HWU guide: concise navigation, research-oriented pages, stable figures, and a restrained Times New Roman visual system.
 </div>
 
-## Background
-
-Terpene synthases (TPSs) produce a large and chemically diverse family of natural products. Coral genomes encode many candidate TPS proteins, while product-specific assignment remains difficult. Ariadne focuses on making this screening step traceable: every candidate is carried through filtering, nearest-reference classification, geometric visualization, and optional CeeSs scoring.
-
-## Design Principles
-
-<div class="card-grid card-grid--three">
-  <div class="paper-card">
-    <h3>Data-first workflow</h3>
-    <p>Use <code>--reference-dir</code> to provide reference FASTAs. Users do not need to generate separate HMM resources for the documented workflow.</p>
-  </div>
-  <div class="paper-card">
-    <h3>Feature-space aware</h3>
-    <p>Candidates are embedded with reference sequences, assigned nearest-reference labels, and reported with supporting neighbors.</p>
-  </div>
-  <div class="paper-card">
-    <h3>Visualization-led triage</h3>
-    <p>Stage 4 is PCA/LDA visualization: <code>embedding.svg</code>, <code>embedding_3d_sections.svg</code>, variance, and cluster context.</p>
-  </div>
+<div class="research-hero__meta" markdown>
+**Scope.** Transcriptome or protein FASTA input -> discovery -> filtering -> feature-space classification -> PCA/LDA visualization and optional ESM2 CeeSs scoring.
 </div>
 
-<div class="mini-kpi">
-  <div class="paper-card"><strong>4</strong><span>Pipeline Stages</span></div>
-  <div class="paper-card"><strong>1</strong><span>Reference Directory</span></div>
-  <div class="paper-card"><strong>5</strong><span>Reference Clades</span></div>
-  <div class="paper-card"><strong>0</strong><span>Required HMM Prep Steps</span></div>
+<div class="research-hero__actions" markdown>
+[Get Started](getting-started.md){ .md-button .md-button--primary }
+[Read Method](method.md){ .md-button }
+[Advanced Usage](advanced-usage.md){ .md-button }
+</div>
 </div>
 
-## Method At A Glance
+<div class="research-hero__panel" markdown>
+**Documentation Status**
 
-<div class="overview-grid">
-  <div class="paper-card">
-    <h3>1 · Discovery</h3>
-    <p>Start from protein FASTAs or transcriptomes. Transcriptome inputs are converted to protein candidates with Pyrodigal.</p>
-  </div>
-  <div class="paper-card">
-    <h3>2 · Filtering</h3>
-    <p>Apply coverage and minimum-length filters, collapse near-duplicates, and retain reference-like candidates with traceable logging.</p>
-  </div>
-  <div class="paper-card">
-    <h3>3 · Classification</h3>
-    <p>Place candidates in the multi-clade TPS feature space, transfer labels from nearest references, and optionally run ESM2 CeeSs scoring.</p>
-  </div>
-  <div class="paper-card">
-    <h3>4 · Visualization</h3>
-    <p>Render PCA/LDA views and supporting tables for candidate triage. No <code>04_phylogeny/</code> directory is part of the main workflow.</p>
-  </div>
+- Version baseline: `ariadne-tps 1.1.0`
+- Updated: 2026-07-09
+- Maintainer: Zhaorui Jiang
+- Primary outputs: TSV evidence tables and SVG projections
+- Repository: [zhaorui-bi/Ariadne](https://github.com/zhaorui-bi/Ariadne)
+</div>
+</section>
+
+<div class="metric-strip" markdown>
+<div markdown>
+**4**
+<span>Analysis stages</span>
+</div>
+<div markdown>
+**ESM2**
+<span>Optional scoring</span>
+</div>
+<div markdown>
+**PCA/LDA**
+<span>Projection layer</span>
+</div>
+<div markdown>
+**TSV/SVG**
+<span>Auditable output</span>
+</div>
+</div>
+
+## Algorithm Framework
+
+<figure class="algorithm-figure">
+  <img src="images/algorithm-framework.png" alt="Ariadne algorithm framework with discovery, filtering, classification, and visualization stages">
+  <figcaption><strong>Figure 1.</strong> Ariadne starts from transcriptomic or protein resources, screens sequence hits with profile-HMM evidence, filters candidates by quality and redundancy, extracts ESM2 and profile-space representations, and prioritizes subtypes for visualization and wet-lab follow-up.</figcaption>
+</figure>
+
+## Workflow At A Glance
+
+<div class="workflow-map workflow-map--four" markdown>
+
+<div class="workflow-step" markdown>
+<span class="stage-label">Stage I</span>
+### Discovery
+Search transcriptome-derived ORFs or predicted protein FASTAs with a query HMM. The result is a candidate sequence universe with traceable hit evidence.
+
+Primary artifact: `candidates.protein.faa`
+</div>
+
+<div class="workflow-step" markdown>
+<span class="stage-label">Stage II</span>
+### Filtering
+Apply coverage, minimum-length, and near-duplicate controls to build a compact, non-redundant candidate set.
+
+Primary artifact: `candidates.filtered.faa`
+</div>
+
+<div class="workflow-step" markdown>
+<span class="stage-label">Stage III</span>
+### Classification
+Represent candidates and references in the same TPS feature space, then report nearest-reference evidence and optional ESM2 CeeSs probabilities.
+
+Primary artifact: `classification.tsv`
+</div>
+
+<div class="workflow-step" markdown>
+<span class="stage-label">Stage IV</span>
+### Visualization
+Project the feature space with LDA or PCA so candidate placement can be inspected before experimental validation.
+
+Primary artifact: `embedding.svg`
+</div>
+
 </div>
 
 ## Quick Start
@@ -80,17 +107,38 @@ ariadne run \
   --output-dir results/
 ```
 
-This command will:
+This run produces:
 
-- discover and filter candidate TPS proteins;
-- classify retained candidates against the supplied reference FASTA directory;
-- write PCA/LDA visualization artifacts under `03_classification/`;
-- add CeeSs scoring when `TPS.xlsx` and the `[esm]` extra are available.
+- discovery and hit evidence under `01_discovery/`;
+- filtered, non-redundant sequences under `02_filtering/`;
+- subtype assignments, nearest-neighbor evidence, ESM2 scoring outputs, and projections under `03_classification/`;
+- a machine-readable `pipeline_summary.tsv` at the output root.
 
-## Where To Go Next
+## Documentation Map
 
-- **[Getting Started](getting-started.md)** - installation and your first run.
-- **[Method](method.md)** - a stage-by-stage explanation of the current workflow.
-- **[Tutorials](tutorials.md)** - practical command sequences and analysis pathways.
-- **[CLI Reference](cli-reference.md)** - main workflow commands and parameters.
-- **[Outputs](outputs.md)** - how to read every main artifact.
+<div class="evidence-grid" markdown>
+
+<div class="evidence-card" markdown>
+### [Getting Started](getting-started.md)
+Install Ariadne, prepare a reference FASTA directory, and run the first complete workflow.
+</div>
+
+<div class="evidence-card" markdown>
+### [Method](method.md)
+Read the staged algorithmic design behind discovery, filtering, classification, and visualization.
+</div>
+
+<div class="evidence-card" markdown>
+### [Advanced Usage](advanced-usage.md)
+Tune thresholds, switch CeeSs classifier heads, reuse checkpoints, and design manuscript-grade runs.
+</div>
+
+<div class="evidence-card" markdown>
+### [Outputs](outputs.md)
+Interpret every table and figure emitted by the pipeline, including CeeSs and embedding artifacts.
+</div>
+
+</div>
+
+!!! note "Current workflow boundary"
+    Ariadne prioritizes computational triage and visualization. Wet-lab validation is the downstream experimental step informed by the software outputs, not a step executed by the package.

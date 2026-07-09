@@ -132,4 +132,5 @@ Inside the local project virtual environment:
 1. read [Method](method.md) to understand the four-stage design;
 2. run the smoke test from [Tutorials](tutorials.md);
 3. inspect `classification.tsv`, `nearest_neighbors.tsv`, and `embedding.svg`;
-4. keep the [CLI Reference](cli-reference.md) open while tuning parameters.
+4. use [Advanced Usage](advanced-usage.md) when tuning thresholds or ESM2 classifier heads;
+5. keep the [CLI Reference](cli-reference.md) open while tuning parameters.

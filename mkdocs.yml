@@ -1,11 +1,12 @@
 site_name: Ariadne
-site_description: Terpene synthase discovery, feature-space classification, PCA/LDA visualization, and CeeSs prioritization documentation.
+site_description: Research documentation for Ariadne, a four-stage TPS discovery and CeeSs prioritization framework.
 site_author: Zhaorui Jiang
 repo_url: https://github.com/zhaorui-bi/Ariadne
 repo_name: zhaorui-bi/Ariadne
 edit_uri: edit/main/docs/
 docs_dir: docs
 site_dir: site
+copyright: "Copyright &copy; Zhaorui Jiang"
 
 theme:
   name: material
@@ -13,10 +14,14 @@ theme:
   logo: logo.png
   favicon: logo.png
   features:
+    - navigation.instant
+    - navigation.tracking
     - navigation.tabs
     - navigation.sections
     - navigation.top
     - navigation.indexes
+    - navigation.footer
+    - search.suggest
     - search.highlight
     - search.share
     - content.code.copy
@@ -24,12 +29,25 @@ theme:
     - content.action.edit
     - toc.follow
   palette:
-    - scheme: default
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
       primary: custom
       accent: custom
+      toggle:
+        icon: material/toggle-switch-off-outline
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/toggle-switch
+        name: Switch to light mode
 
 plugins:
-  - search
+  - search:
+      lang:
+        - en
 
 markdown_extensions:
   - admonition
@@ -60,6 +78,7 @@ nav:
   - Getting Started: getting-started.md
   - Method: method.md
   - ESM Type Model: esm-type.md
+  - Advanced Usage: advanced-usage.md
   - Tutorials: tutorials.md
   - CLI Reference: cli-reference.md
   - Outputs: outputs.md

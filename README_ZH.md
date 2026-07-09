@@ -215,6 +215,7 @@ Ariadne/
 
 - [Getting Started](./docs/getting-started.md) - 安装与首次运行
 - [Method](./docs/method.md) - 四阶段设计
+- [Advanced Usage](./docs/advanced-usage.md) - 阈值调参、ESM2 分类头与可复现实验配置
 - [Tutorials](./docs/tutorials.md) - 实用分析路径
 - [CLI Reference](./docs/cli-reference.md) - 全部命令与参数
 - [Outputs](./docs/outputs.md) - 流程产出的全部文件
