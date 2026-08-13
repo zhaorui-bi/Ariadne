@@ -114,12 +114,10 @@ mkdocs build --strict
 ## 引用
 
 ```bibtex
-@software{jiang2026ariadne,
-  author  = {Jiang, Zhaorui},
-  title   = {Ariadne: A Coral-Centered Terpene Synthase Discovery and CeeSs Prioritization Platform},
-  year    = {2026},
-  url      = {https://github.com/zhaorui-bi/Ariadne},
-  version = {1.1.0}
+@article{wang2026cembrene,
+  author  = {Wang, Yinhao and Yu, Mengmeng and Jiang, Zhaorui and Zhou, Chengyu and Feng, Wei and Yu, Ke and Ju, Jianhua and Li, Feng},
+  title   = {Identification of Cembrene Synthases from Coral Reveals the Polyphyletic Origins of Cembranoid Biosynthesis},
+  year    = {2026}
 }
 ```
 
