@@ -41,7 +41,6 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Topic :: Scientific/Engineering :: Bio-Informatics",
-  "Typing :: Typed",
 ]
 dependencies = [
   "numpy>=1.24",
@@ -79,9 +78,6 @@ Changelog = "https://github.com/zhaorui-bi/Ariadne/blob/main/CHANGELOG.md"
 
 [tool.setuptools]
 packages = ["ariadne"]
-
-[tool.setuptools.package-data]
-ariadne = ["py.typed"]
 
 [tool.pytest.ini_options]
 minversion = "7.0"

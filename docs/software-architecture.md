@@ -50,8 +50,7 @@ Ariadne keeps the core installation small:
 
 - core bioinformatics and table dependencies are declared in `pyproject.toml`;
 - ESM2 dependencies live behind the `[esm]` optional extra;
-- package-level imports are lazy where possible, so `import ariadne` remains lightweight;
-- `ariadne/py.typed` marks the package as type-checker aware for downstream users.
+- package-level imports are lazy where possible, so `import ariadne` remains lightweight.
 
 Install modes:
 
