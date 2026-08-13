@@ -22,4 +22,4 @@ The site follows a research-documentation model inspired by the OUC-HWU guide:
 
 ## Asset Policy
 
-Stable documentation images should live under `docs/images/` or next to the page that uses them. The current logo lives at `docs/logo.png`; the algorithm framework figure lives at `docs/images/algorithm-framework.png`; the LDA example (Figure S2) lives at `docs/images/figure-s2-lda.png` (with `figure-s2-lda.svg`). Working copies, recovery scripts, and unpublished drafts stay in the local `fig/` directory and are not committed. Do not reference temporary chat or WeChat image paths in committed docs.
+Stable documentation images should live under `docs/images/` or next to the page that uses them. The current logo lives at `docs/logo.png`; the algorithm framework figure lives at `docs/images/algorithm-framework.png`; the LDA example (Figure S2) lives at `docs/images/published_embedding_3d_sections.svg`. Working copies, recovery scripts, and unpublished drafts stay in the local `fig/` directory and are not committed. Do not reference temporary chat or WeChat image paths in committed docs.

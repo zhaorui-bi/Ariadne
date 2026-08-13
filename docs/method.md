@@ -181,7 +181,7 @@ The visualization layer is produced under `03_classification/`:
 `embedding_3d_sections.svg` is the manuscript-style summary: reference clades are colored by source lineage, candidate CeeSs are orange diamonds, and candidate non-CeeSs are teal squares.
 
 <figure class="paper-figure">
-  <img src="images/figure-s2-lda.png" alt="LDA projection of coral TPS references and coral-like candidates">
+  <img src="images/published_embedding_3d_sections.svg" alt="LDA projection of coral TPS references and coral-like candidates">
   <figcaption><strong>Figure S2.</strong> LDA projection of coral TPS references and coral-like candidates in HMM-derived feature space. Reference clades are colored by source lineage (bacteria, coral, fungi, insect and plant). Candidate CeeSs and candidate non-CeeSs are shown as orange diamonds and teal squares, respectively. (A) LD1 versus LD2, (B) LD1 versus LD3 and (C) LD2 versus LD3.</figcaption>
 </figure>
 
