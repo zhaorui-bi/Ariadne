@@ -213,4 +213,4 @@ SVG projections and tabular evidence can be archived with candidate FASTA files 
 
 ## Scope Of The Current Release
 
-The active release focuses on interpretable candidate discovery, quality control, profile-space classification, PCA/LDA visualization, and optional ESM2 CeeSs scoring. Tree building remains available as a CLI capability, but the primary documentation emphasizes the classification and visualization workflow used in the README.
+The active release focuses on interpretable candidate discovery, quality control, profile-space classification, PCA/LDA visualization, and optional ESM2 CeeSs scoring.

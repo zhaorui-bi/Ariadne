@@ -20,11 +20,11 @@ the platform can be driven directly from a script or a notebook::
 
     # 2. filtering
     ad.filter_candidates("results/01_discovery/candidates.protein.faa",
-                         reference_dir="tree", output_dir="results/02_filtering")
+                         reference_dir="reference_fastas", output_dir="results/02_filtering")
 
     # 3. classification (HMM profile feature space)
     ad.classify_candidates("results/02_filtering/candidates.filtered.faa",
-                           reference_dir="tree", output_dir="results/03_classification")
+                           reference_dir="reference_fastas", output_dir="results/03_classification")
 
 Heavy dependencies are imported lazily where possible. A bare ``import
 ariadne`` therefore stays lightweight, while functions that need pyhmmer,
@@ -79,12 +79,6 @@ _LAZY_EXPORTS = {
     "analyze_tps_types_with_esm": "model",
     "classify_ceess_candidates_with_esm": "model",
     "classify_ceess_candidates_with_supcon": "model",
-    # --- phylogeny (ariadne.tree) --------------------------------------------
-    "prepare_phylogeny_input": "tree",
-    "run_mafft": "tree",
-    "run_iqtree": "tree",
-    "build_phylogeny": "tree",
-    "render_phylogeny_preview": "tree",
 }
 
 __all__ = [
@@ -141,12 +135,5 @@ if TYPE_CHECKING:  # pragma: no cover - aids IDEs / type checkers only
         discover_candidates,
         discover_candidates_from_proteins,
         search_proteins_with_hmm,
-    )
-    from ariadne.tree import (
-        build_phylogeny,
-        prepare_phylogeny_input,
-        render_phylogeny_preview,
-        run_iqtree,
-        run_mafft,
     )
     from ariadne.utils import FastaRecord, as_text, read_fasta, setup_logging, write_fasta

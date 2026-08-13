@@ -70,7 +70,6 @@ ariadne run \
   --protein-folder my_proteins/ \
   --reference-dir reference_fastas/ \
   --ceess-xlsx TPS.xlsx \
-  --skip-phylogeny \
   --output-dir results/
 ```
 
@@ -102,7 +101,6 @@ ariadne run \
   --transcriptomes sample1.fasta sample2.fasta \
   --reference-dir reference_fastas/ \
   --ceess-xlsx TPS.xlsx \
-  --skip-phylogeny \
   --output-dir results_from_transcriptomes/
 ```
 
@@ -124,7 +122,6 @@ Inside the local project virtual environment:
 ## Defaults Worth Remembering
 
 - `--reference-dir reference_fastas/` points Ariadne at your reference FASTA directory.
-- Use `--skip-phylogeny` with `ariadne run` to keep the workflow focused on classification and PCA/LDA visualization.
 - When `TPS.xlsx` is present and the ESM stack is installed, classification also writes `ceess_predictions.tsv`, `ceess_candidates.tsv`, and `ceess_candidates.fasta`.
 
 ## Suggested Reading Order

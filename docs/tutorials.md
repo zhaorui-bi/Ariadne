@@ -88,15 +88,14 @@ ariadne run \
   --protein-folder my_proteins/ \
   --reference-dir reference_fastas/ \
   --ceess-xlsx TPS.xlsx \
-  --skip-phylogeny \
   --output-dir tmp_fast_iteration/
 ```
 
-This gives repeated access to `classification.tsv`, `nearest_neighbors.tsv`, and `embedding.svg` without producing a tree output directory.
+This gives repeated access to `classification.tsv`, `nearest_neighbors.tsv`, and `embedding.svg`.
 
 ## Suggested Workflow For Manuscript Preparation
 
-1. run `ariadne run` with `--skip-phylogeny`;
+1. run `ariadne run`;
 2. screen candidates using `classification.tsv` and `embedding.svg`;
 3. inspect the optional CeeSs shortlist;
 4. archive `pipeline_summary.tsv`, `classification.tsv`, neighbor evidence, and visualization SVGs (`embedding.svg`, `embedding_3d_sections.svg`).

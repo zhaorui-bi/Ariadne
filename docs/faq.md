@@ -20,20 +20,6 @@ ariadne classify \
   --output-dir results_classification/
 ```
 
-## What If I Do Not Want The Old Tree Output?
-
-Use `--skip-phylogeny` with `ariadne run`:
-
-```bash
-ariadne run \
-  --protein-folder my_proteins/ \
-  --reference-dir reference_fastas/ \
-  --skip-phylogeny \
-  --output-dir results/
-```
-
-The README workflow ends at classification plus PCA/LDA visualization.
-
 ## Do I Need A GPU For CeeSs Scoring?
 
 No. The ESM2 backbone can run on CPU, just more slowly. Select a device explicitly with `--ceess-device cuda:0` or `--ceess-device cpu`; by default Ariadne auto-detects.

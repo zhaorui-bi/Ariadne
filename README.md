@@ -69,7 +69,6 @@ ariadne run \
   --protein-folder my_proteins/ \
   --reference-dir reference_fastas/ \
   --ceess-xlsx TPS.xlsx \
-  --skip-phylogeny \
   --output-dir results/
 ```
 
@@ -79,7 +78,6 @@ Transcriptome mode:
 ariadne run \
   --transcriptomes sample1.fasta sample2.fasta \
   --reference-dir reference_fastas/ \
-  --skip-phylogeny \
   --output-dir results_from_transcriptomes/
 ```
 

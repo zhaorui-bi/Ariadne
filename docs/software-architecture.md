@@ -11,7 +11,6 @@ Ariadne is structured as a reusable Python package first and a command-line tool
 | `ariadne.embed` | Stages III-IV: profile-space classification, nearest-reference evidence, PCA/LDA visualization |
 | `ariadne.model` | Optional ESM2 CeeSs scoring and supervised TPS type diagnostics |
 | `ariadne.data` | Reference FASTA preparation and metadata loading |
-| `ariadne.tree` | Optional MAFFT/IQ-TREE phylogeny utilities |
 | `ariadne.utils` | Logging, FASTA/TSV I/O, and shared sequence helpers |
 | `ariadne.cli` | CLI argument parsing and stage orchestration |
 

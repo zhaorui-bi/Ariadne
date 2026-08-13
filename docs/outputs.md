@@ -10,8 +10,6 @@ results/
 └── pipeline_summary.tsv
 ```
 
-Use `--skip-phylogeny` with `ariadne run` to keep the output layout aligned with the current four-stage workflow.
-
 ## `01_discovery`
 
 | File | Contents |

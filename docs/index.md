@@ -105,7 +105,6 @@ ariadne run \
   --protein-folder my_proteins/ \
   --reference-dir reference_fastas/ \
   --ceess-xlsx TPS.xlsx \
-  --skip-phylogeny \
   --output-dir results/
 ```
 

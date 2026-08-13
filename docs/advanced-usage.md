@@ -11,7 +11,6 @@ ariadne run \
   --protein-folder my_proteins/ \
   --reference-dir reference_fastas/ \
   --ceess-xlsx TPS.xlsx \
-  --skip-phylogeny \
   --discovery-min-score 40 \
   --discovery-max-evalue 1e-5 \
   --min-coverage 10 \

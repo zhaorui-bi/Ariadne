@@ -50,7 +50,6 @@ End-to-end workflow through discovery, filtering, classification, and visualizat
 |---|---|---|
 | `--top-k INT` | `5` | number of nearest reference neighbors used for label voting |
 | `--tree-neighbors INT` | `12` | number of nearest references used for local candidate context summaries |
-| `--skip-phylogeny` | `False` | keep `run` aligned with the current README workflow by skipping the legacy tree step |
 
 ### CeeSs Scoring (Optional)
 
@@ -138,7 +137,6 @@ Prepare reference FASTA files from coral, insect, fungi, plant, bacterial, or ex
 - Use `--reference-dir reference_fastas/` or another directory containing your reference FASTAs.
 - No separate HMM generation step is required for the documented workflow.
 - Global flags (`--verbose`, `--log-file`) must be placed before the subcommand: `ariadne --verbose run ...`
-- Use `--skip-phylogeny` with `ariadne run` to keep outputs focused on `03_classification/`.
 - The CeeSs head requires optional ESM dependencies. Install with `pip install 'ariadne-tps[esm]'` or `pip install torch transformers`.
 - `--ceess-classifier contrastive` activates the Barlow Twins variant.
 - `--ceess-mlp-checkpoint` loads a previously saved `.pt` file and skips training.

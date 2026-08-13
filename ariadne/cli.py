@@ -1,9 +1,7 @@
 """Command-line interface for the Ariadne TPS discovery pipeline.
 
 The default release workflow is organised around four computational stages:
-discovery -> filtering -> classification -> visualization. A separate
-``phylogeny`` subcommand remains available for users who want MAFFT/IQ-TREE
-tree building after candidate triage.
+discovery -> filtering -> classification -> visualization.
 """
 
 from __future__ import annotations
@@ -434,14 +432,12 @@ def cmd_run(args: argparse.Namespace) -> int:
     """Execute the full Ariadne workflow end to end."""
     from ariadne.filter import filter_candidates
     from ariadne.search import collect_protein_files, discover_candidates, discover_candidates_from_proteins
-    from ariadne.tree import build_phylogeny
     from ariadne.utils import ensure_directory, write_tsv
 
     root = ensure_directory(args.output_dir)
     discovery_dir = ensure_directory(root / "01_discovery")
     filtering_dir = ensure_directory(root / "02_filtering")
     classification_dir = ensure_directory(root / "03_classification")
-    phylogeny_dir = ensure_directory(root / "04_phylogeny") if not args.skip_phylogeny else None
 
     hmm_path = _resolve_query_hmm(args, discovery_dir)
 
@@ -483,51 +479,16 @@ def cmd_run(args: argparse.Namespace) -> int:
         classification_dir,
         args,
     )
-    phylogeny_outputs = {}
-    if not args.skip_phylogeny:
-        phylogeny_outputs = build_phylogeny(
-            filtering_outputs["filtered_fasta"],
-            args.reference_dir,
-            phylogeny_dir,
-            mafft_bin=args.mafft_bin,
-            mafft_mode=args.mafft_mode,
-            iqtree_bin=args.iqtree_bin,
-            iqtree_model=args.iqtree_model,
-            iqtree_threads=args.iqtree_threads,
-            iqtree_bootstrap=args.iqtree_bootstrap,
-            iqtree_fast=not args.no_iqtree_fast,
-        )
     summary_rows = []
     for label, outputs in (
         ("discovery", discovery_outputs),
         ("filtering", filtering_outputs),
         ("classification", classification_outputs),
-        ("phylogeny", phylogeny_outputs),
     ):
         for key, value in outputs.items():
             summary_rows.append({"stage": label, "artifact": key, "path": value})
     summary_path = write_tsv(summary_rows, root / "pipeline_summary.tsv")
     logger.info("Pipeline completed. Summary: %s", summary_path)
-    return 0
-
-
-def cmd_phylogeny(args: argparse.Namespace) -> int:
-    """Build a MAFFT alignment and IQ-TREE phylogeny from candidates plus references."""
-    from ariadne.tree import build_phylogeny
-
-    outputs = build_phylogeny(
-        args.candidates,
-        args.reference_dir,
-        args.output_dir,
-        mafft_bin=args.mafft_bin,
-        mafft_mode=args.mafft_mode,
-        iqtree_bin=args.iqtree_bin,
-        iqtree_model=args.iqtree_model,
-        iqtree_threads=args.iqtree_threads,
-        iqtree_bootstrap=args.iqtree_bootstrap,
-        iqtree_fast=not args.no_iqtree_fast,
-    )
-    _log_outputs(outputs)
     return 0
 
 
@@ -578,24 +539,6 @@ def _add_ceess_arguments(parser: argparse.ArgumentParser) -> None:
     advanced.add_argument("--ceess-weight-decay", type=float, default=1e-4, help="Weight decay for the MLP CeeSs head.")
     advanced.add_argument("--ceess-train-batch-size", type=int, default=8, help="Training batch size for the MLP CeeSs head.")
     advanced.add_argument("--ceess-mlp-checkpoint", type=Path, default=None, help="Optional pretrained Torch MLP checkpoint (.pt) for --ceess-classifier mlp. When provided, Ariadne skips final MLP training and loads this classifier directly.")
-
-
-def _add_phylogeny_arguments(parser: argparse.ArgumentParser, *, include_skip: bool) -> None:
-    """Add the MAFFT + IQ-TREE flags shared by the ``phylogeny`` and ``run`` subcommands."""
-    group = parser.add_argument_group("phylogeny (MAFFT + IQ-TREE)")
-    if include_skip:
-        group.add_argument("--skip-phylogeny", action="store_true", help="Skip the MAFFT + IQ-TREE phylogeny step.")
-    group.add_argument("--mafft-bin", default=None, help="Path or executable name for MAFFT.")
-    group.add_argument("--mafft-mode", default="--auto", help="MAFFT mode flag, for example --auto or --localpair.")
-    group.add_argument("--iqtree-bin", default=None, help="Path or executable name for IQ-TREE.")
-    group.add_argument("--iqtree-model", default="LG", help="IQ-TREE substitution model setting.")
-    group.add_argument("--iqtree-threads", default="AUTO", help="IQ-TREE thread setting, for example AUTO or 8.")
-    group.add_argument("--iqtree-bootstrap", type=int, default=None, help="Optional IQ-TREE ultrafast bootstrap replicates.")
-    group.add_argument(
-        "--no-iqtree-fast",
-        action="store_true",
-        help="Disable IQ-TREE fast mode. By default Ariadne uses --fast for practical end-to-end runs.",
-    )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -689,7 +632,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_ceess_arguments(classify)
     classify.set_defaults(func=cmd_classify)
 
-    run = subparsers.add_parser("run", help="Execute discovery, filtering, classification, visualization, and optional phylogeny.")
+    run = subparsers.add_parser("run", help="Execute discovery, filtering, classification, and visualization.")
     run.add_argument("--transcriptomes", nargs="+", default=None, type=Path)
     run.add_argument("--protein-folder", type=Path, default=None, help="Preferred input mode: folder of predicted protein FASTA files.")
     run.add_argument(
@@ -709,15 +652,7 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--identity-threshold", type=float, default=0.95)
     _add_classification_arguments(run)
     _add_ceess_arguments(run)
-    _add_phylogeny_arguments(run, include_skip=True)
     run.set_defaults(func=cmd_run)
-
-    phylogeny = subparsers.add_parser("phylogeny", help="Build a MAFFT alignment and IQ-TREE phylogeny from candidates plus references.")
-    phylogeny.add_argument("--candidates", required=True, type=Path)
-    phylogeny.add_argument("--reference-dir", required=True, type=Path)
-    phylogeny.add_argument("--output-dir", required=True, type=Path)
-    _add_phylogeny_arguments(phylogeny, include_skip=False)
-    phylogeny.set_defaults(func=cmd_phylogeny)
 
     return parser
 

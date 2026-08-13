@@ -3,8 +3,7 @@
 # Minimal Ariadne README smoke test.
 #
 # Runs discovery -> filtering -> classification/visualization using a
-# user-provided protein input directory and reference FASTA directory. The
-# script does not run the old tree/phylogeny step.
+# user-provided protein input directory and reference FASTA directory.
 #
 # Set RUN_CEESS=1 to enable the optional ESM2 scoring layer.
 #
@@ -38,7 +37,6 @@ run_args=(
   run
   --protein-folder "$INPUT_DIR"
   --reference-dir "$REFERENCE_DIR"
-  --skip-phylogeny
   --output-dir "$OUTPUT_DIR"
 )
 
