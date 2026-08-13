@@ -40,7 +40,7 @@ No. The ESM2 backbone can run on CPU, just more slowly. Select a device explicit
 
 ## Which Outputs Should I Inspect First?
 
-For most users: `classification.tsv`, then `nearest_neighbors.tsv`, then `embedding.svg` and `embedding_3d_sections.svg`. The three-panel SVG uses the same visual grammar as [Figure S2](method.md#stage-iv---pcalda-visualization). If ESM scoring is enabled, inspect `ceess_candidates.tsv` after that.
+For most users: `classification.tsv`, then `nearest_neighbors.tsv`, then `embedding.svg` and `embedding_3d_sections.svg`. The three-panel SVG uses the same visual grammar as [Figure S2](method.md#stage-iv-pcalda-visualization). If ESM scoring is enabled, inspect `ceess_candidates.tsv` after that.
 
 ## Does Ariadne Still Use `Alignment.fasta`, Motif Analysis, Or Benchmark Mode?
 

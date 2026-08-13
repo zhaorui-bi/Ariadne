@@ -4,9 +4,9 @@
 
 Ariadne is organized as a sequential, evidence-preserving workflow for terpene synthase discovery. The design goal is not only to emit a final label, but to keep enough intermediate evidence for reruns, candidate auditing, manuscript reporting, and wet-lab selection.
 
-<figure class="algorithm-figure">
-  <img src="images/algorithm-framework.png" alt="Ariadne algorithm framework with four stages">
-  <figcaption><strong>Figure 1.</strong> The documented Ariadne workflow follows four computational stages: discovery, filtering, classification, and visualization. Optional ESM2 CeeSs scoring is attached to the classification layer.</figcaption>
+<figure class="algorithm-figure" markdown="1">
+![Ariadne algorithm framework with four stages](images/algorithm-framework.png)
+<figcaption><strong>Figure 1.</strong> The documented Ariadne workflow follows four computational stages: discovery, filtering, classification, and visualization. Optional ESM2 CeeSs scoring is attached to the classification layer.</figcaption>
 </figure>
 
 <div class="method-caption" markdown>
@@ -180,9 +180,9 @@ The visualization layer is produced under `03_classification/`:
 
 `embedding_3d_sections.svg` is the manuscript-style summary: reference clades are colored by source lineage, candidate CeeSs are orange diamonds, and candidate non-CeeSs are teal squares.
 
-<figure class="paper-figure">
-  <img src="images/published_embedding_3d_sections.svg" alt="LDA projection of coral TPS references and coral-like candidates">
-  <figcaption><strong>Figure S2.</strong> LDA projection of coral TPS references and coral-like candidates in HMM-derived feature space. Reference clades are colored by source lineage (bacteria, coral, fungi, insect and plant). Candidate CeeSs and candidate non-CeeSs are shown as orange diamonds and teal squares, respectively. (A) LD1 versus LD2, (B) LD1 versus LD3 and (C) LD2 versus LD3.</figcaption>
+<figure class="paper-figure" markdown="1">
+![LDA projection of coral TPS references and coral-like candidates](images/published_embedding_3d_sections.svg)
+<figcaption><strong>Figure S2.</strong> LDA projection of coral TPS references and coral-like candidates in HMM-derived feature space. Reference clades are colored by source lineage (bacteria, coral, fungi, insect and plant). Candidate CeeSs and candidate non-CeeSs are shown as orange diamonds and teal squares, respectively. (A) LD1 versus LD2, (B) LD1 versus LD3 and (C) LD2 versus LD3.</figcaption>
 </figure>
 
 ## Why This Structure Works

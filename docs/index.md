@@ -55,9 +55,9 @@ The documentation follows the project model used in the OUC-HWU guide: concise n
 
 ## Algorithm Framework
 
-<figure class="algorithm-figure">
-  <img src="images/algorithm-framework.png" alt="Ariadne algorithm framework with discovery, filtering, classification, and visualization stages">
-  <figcaption><strong>Figure 1.</strong> Ariadne starts from transcriptomic or protein resources, screens sequence hits with profile-HMM evidence, filters candidates by quality and redundancy, extracts ESM2 and profile-space representations, and prioritizes subtypes for visualization and wet-lab follow-up.</figcaption>
+<figure class="algorithm-figure" markdown="1">
+![Ariadne algorithm framework with discovery, filtering, classification, and visualization stages](images/algorithm-framework.png)
+<figcaption><strong>Figure 1.</strong> Ariadne starts from transcriptomic or protein resources, screens sequence hits with profile-HMM evidence, filters candidates by quality and redundancy, extracts ESM2 and profile-space representations, and prioritizes subtypes for visualization and wet-lab follow-up.</figcaption>
 </figure>
 
 ## Workflow At A Glance

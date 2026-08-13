@@ -49,7 +49,7 @@ Use `--skip-phylogeny` with `ariadne run` to keep the output layout aligned with
 
 **Inspect first:** `classification.tsv`, then `nearest_neighbors.tsv`, then `embedding.svg` and `embedding_3d_sections.svg`.
 
-The three-panel LDA layout matches the documented [Figure S2](method.md#stage-iv---pcalda-visualization): references by lineage, candidate CeeSs as orange diamonds, and candidate non-CeeSs as teal squares.
+The three-panel LDA layout matches the documented [Figure S2](method.md#stage-iv-pcalda-visualization): references by lineage, candidate CeeSs as orange diamonds, and candidate non-CeeSs as teal squares.
 
 ### Optional CeeSs Outputs
 
