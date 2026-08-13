@@ -365,12 +365,6 @@ def write_tsv(rows: Iterable[dict[str, object]], path: PathLike) -> Path:
     return target
 
 
-def sanitize_newick_name(name: str) -> str:
-    """Replace unsupported characters so a label is safe in a Newick tree."""
-    safe = re.sub(r"[^A-Za-z0-9_.-]+", "_", name)
-    return safe or "node"
-
-
 def pad_sequence(sequence: str, length: int, fill: str = "-") -> str:
     """Right-pad a sequence to a fixed length for simple comparisons."""
     if len(sequence) >= length:

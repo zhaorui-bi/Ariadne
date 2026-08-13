@@ -49,7 +49,6 @@ End-to-end workflow through discovery, filtering, classification, and visualizat
 | Parameter | Default | Description |
 |---|---|---|
 | `--top-k INT` | `5` | number of nearest reference neighbors used for label voting |
-| `--tree-neighbors INT` | `12` | number of nearest references used for local candidate context summaries |
 
 ### CeeSs Scoring (Optional)
 
@@ -105,7 +104,6 @@ Stages 3-4 standalone. Requires `--candidates`, `--reference-dir`, and `--output
 | `--reference-dir PATH` | **required** | reference FASTA directory |
 | `--output-dir PATH` | **required** | classification and visualization output directory |
 | `--top-k INT` | `5` | nearest-reference voting neighbors |
-| `--tree-neighbors INT` | `12` | local context neighbor count |
 
 ### CeeSs Scoring (Optional)
 

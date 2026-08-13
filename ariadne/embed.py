@@ -35,7 +35,6 @@ from ariadne.utils import (
     as_text,
     ensure_directory,
     read_fasta,
-    sanitize_newick_name,
     write_fasta,
     write_tsv,
 )
@@ -335,58 +334,6 @@ def _distance_matrix(features: np.ndarray) -> np.ndarray:
     distances = squared + squared.T - (2 * features @ features.T)
     np.maximum(distances, 0, out=distances)
     return np.sqrt(distances)
-
-
-def _upgma_newick(names: list[str], distances: np.ndarray) -> str:
-    """Build a simple UPGMA tree from a pairwise distance matrix."""
-    if len(names) == 1:
-        return f"{sanitize_newick_name(names[0])};"
-
-    def key(node_a: int, node_b: int) -> tuple[int, int]:
-        return (node_a, node_b) if node_a < node_b else (node_b, node_a)
-
-    active = list(range(len(names)))
-    sizes = {index: 1 for index in active}
-    heights = {index: 0.0 for index in active}
-    labels = {index: sanitize_newick_name(names[index]) for index in active}
-    distance_lookup = {
-        key(row, column): float(distances[row, column])
-        for row in range(len(names))
-        for column in range(row + 1, len(names))
-    }
-    next_index = len(names)
-
-    while len(active) > 1:
-        best_pair = None
-        best_distance = math.inf
-        for i, node_a in enumerate(active):
-            for node_b in active[i + 1 :]:
-                current_distance = distance_lookup[key(node_a, node_b)]
-                if current_distance < best_distance:
-                    best_distance = current_distance
-                    best_pair = (node_a, node_b)
-        assert best_pair is not None
-        node_a, node_b = best_pair
-        height = best_distance / 2
-        label_a = f"{labels[node_a]}:{max(height - heights[node_a], 0):.6f}"
-        label_b = f"{labels[node_b]}:{max(height - heights[node_b], 0):.6f}"
-        new_label = f"({label_a},{label_b})"
-        new_node = next_index
-        next_index += 1
-        for node_c in active:
-            if node_c in (node_a, node_b):
-                continue
-            distance_lookup[key(new_node, node_c)] = (
-                distance_lookup[key(node_a, node_c)] * sizes[node_a]
-                + distance_lookup[key(node_b, node_c)] * sizes[node_b]
-            ) / (sizes[node_a] + sizes[node_b])
-        active = [node for node in active if node not in (node_a, node_b)]
-        active.append(new_node)
-        sizes[new_node] = sizes[node_a] + sizes[node_b]
-        heights[new_node] = height
-        labels[new_node] = new_label
-
-    return labels[active[0]] + ";"
 
 
 def _candidate_group(record: FastaRecord) -> str:
@@ -1051,7 +998,6 @@ def classify_candidates(
     *,
     hmm_dir: PathLike,
     top_k: int = 5,
-    tree_neighbors: int = 12,
     ceess_xlsx: Optional[PathLike] = None,
     ceess_model_name: str = DEFAULT_ESM_MODEL_NAME,
     ceess_batch_size: int = 4,
@@ -1114,7 +1060,6 @@ def classify_candidates(
     candidate_rows: list[dict[str, object]] = []
     neighbor_rows: list[dict[str, object]] = []
     candidate_records_by_id: dict[str, FastaRecord] = {}
-    tree_dir = ensure_directory(output_root / "trees")
 
     for candidate_index in range(reference_count, len(all_records)):
         candidate = all_records[candidate_index]
@@ -1164,12 +1109,6 @@ def classify_candidates(
                     "distance": round(distance, 6),
                 }
             )
-        local_neighbor_indices = [neighbor_index for neighbor_index, _ in reference_distances[: max(2, tree_neighbors)]]
-        subset_indices = local_neighbor_indices + [candidate_index]
-        subset_names = [all_records[index].id for index in subset_indices]
-        subset_distances = distances[np.ix_(subset_indices, subset_indices)]
-        tree_path = tree_dir / f"{candidate.id}.nwk"
-        tree_path.write_text(_upgma_newick(subset_names, subset_distances) + "\n")
 
     classification_path = write_tsv(candidate_rows, output_root / "classification.tsv")
     neighbors_path = write_tsv(neighbor_rows, output_root / "nearest_neighbors.tsv")
@@ -1305,8 +1244,6 @@ def classify_candidates(
         component_labels=component_labels,
         method=embedding_method,
     )
-    global_tree_path = output_root / "global_context_tree.nwk"
-    global_tree_path.write_text(_upgma_newick([record.id for record in all_records], distances) + "\n")
     assignment_summary_rows = []
     grouped: dict[str, list[float]] = {}
     for row in candidate_rows:
@@ -1331,9 +1268,7 @@ def classify_candidates(
         "candidate_cluster_context": cluster_context_path,
         "embedding_svg": scatter_path,
         "embedding_3d_sections": sections_path,
-        "global_tree": global_tree_path,
         "assignment_summary": assignment_summary_path,
-        "tree_dir": tree_dir,
     }
     outputs.update(ceess_outputs)
     return outputs

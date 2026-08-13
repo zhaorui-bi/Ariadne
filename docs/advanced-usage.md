@@ -41,7 +41,7 @@ Discovery controls the size of the candidate universe. Loosen thresholds when sc
 | --- | --- |
 | `--discovery-min-score` | raise it to remove weak bit-score hits |
 | `--discovery-max-evalue` | lower it for stricter profile-HMM evidence |
-| `--query-hmm` | provide a curated HMM instead of letting Ariadne build one from references |
+| `--query-hmm` | provide a curated HMM instead of letting Ariadne build one from an aligned reference FASTA |
 
 Example:
 
@@ -80,7 +80,6 @@ ariadne classify \
   --candidates results/02_filtering/candidates.filtered.faa \
   --reference-dir reference_fastas/ \
   --top-k 10 \
-  --tree-neighbors 20 \
   --output-dir results/03_classification_top10/
 ```
 

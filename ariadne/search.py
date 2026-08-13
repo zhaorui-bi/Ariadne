@@ -13,9 +13,6 @@ workflow reproducible and makes every stage independently inspectable.
 from __future__ import annotations
 
 import logging
-import shutil
-import subprocess
-import tempfile
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Tuple, Union
 
@@ -29,54 +26,25 @@ logger = logging.getLogger(__name__)
 PathLike = Union[str, Path]
 
 
-def _resolve_mafft_binary(preferred: Optional[str] = None) -> str:
-    """Locate a MAFFT executable for temporary alignment generation."""
-    for candidate in [preferred, "mafft"]:
-        if not candidate:
-            continue
-        resolved = shutil.which(candidate)
-        if resolved:
-            return resolved
-    raise FileNotFoundError("Could not find MAFFT executable. Please install `mafft` or pass a prebuilt HMM.")
-
-
-def _run_mafft_alignment(input_fasta: PathLike, output_fasta: PathLike, *, mafft_bin: Optional[str] = None) -> Path:
-    """Align an unaligned protein FASTA with MAFFT."""
-    mafft = _resolve_mafft_binary(mafft_bin)
-    output_path = Path(output_fasta)
-    command = [mafft, "--auto", str(input_fasta)]
-    logger.info("Input FASTA is not aligned; running MAFFT before hmmbuild: %s", " ".join(command))
-    with output_path.open("w") as handle:
-        subprocess.run(command, check=True, stdout=handle, stderr=subprocess.PIPE, text=True)
-    return output_path
-
-
 def build_hmm(alignment_fasta: PathLike, output_hmm: PathLike, *, name: Optional[str] = None) -> Path:
     """Build a profile HMM from an aligned FASTA/MSA file.
 
-    If the input FASTA is not a valid multiple sequence alignment, Ariadne
-    temporarily aligns it with MAFFT before constructing the profile with
-    pyhmmer. The returned path always points to the written HMM file.
+    The input must already be a valid multiple sequence alignment. Pass a
+    prebuilt HMM to discovery when you do not want to construct one here.
     """
     alignment_path = Path(alignment_fasta)
     alphabet = pyhmmer.easel.Alphabet.amino()
     format_name = None
     if alignment_path.suffix.lower() in {".fa", ".faa", ".fasta", ".afa"}:
         format_name = "afa"
-    temp_alignment_path: Optional[Path] = None
     try:
-        try:
-            with pyhmmer.easel.MSAFile(str(alignment_path), digital=True, alphabet=alphabet, format=format_name) as msa_file:
-                msa = msa_file.read()
-        except ValueError:
-            with tempfile.NamedTemporaryFile("w", suffix=".afa", delete=False) as handle:
-                temp_alignment_path = Path(handle.name)
-            _run_mafft_alignment(alignment_path, temp_alignment_path)
-            with pyhmmer.easel.MSAFile(str(temp_alignment_path), digital=True, alphabet=alphabet, format="afa") as msa_file:
-                msa = msa_file.read()
-    finally:
-        if temp_alignment_path is not None and temp_alignment_path.exists():
-            temp_alignment_path.unlink(missing_ok=True)
+        with pyhmmer.easel.MSAFile(str(alignment_path), digital=True, alphabet=alphabet, format=format_name) as msa_file:
+            msa = msa_file.read()
+    except ValueError as exc:
+        raise ValueError(
+            f"{alignment_path} is not a valid protein alignment. "
+            "Provide a pre-aligned FASTA/MSA or a prebuilt HMM."
+        ) from exc
     if not msa.name:
         msa.name = name or Path(output_hmm).stem
     builder = pyhmmer.plan7.Builder(alphabet)

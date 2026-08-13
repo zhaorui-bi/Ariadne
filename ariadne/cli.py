@@ -350,7 +350,6 @@ def _classify_from_args(candidates: Path, reference_dir: Path, output_dir: Path,
         output_dir,
         hmm_dir=_resolve_tps_hmm_dir(args, output_dir),
         top_k=args.top_k,
-        tree_neighbors=args.tree_neighbors,
         ceess_xlsx=None if args.skip_ceess_model else args.ceess_xlsx,
         ceess_model_name=args.ceess_model_name,
         ceess_batch_size=args.ceess_batch_size,
@@ -497,7 +496,6 @@ def _add_classification_arguments(parser: argparse.ArgumentParser) -> None:
     group = parser.add_argument_group("classification")
     group.add_argument("--tps-hmm-dir", default=None, type=Path, help="Optional directory containing TPS HMM profiles (*.hmm). When omitted, Ariadne builds them from --reference-dir.")
     group.add_argument("--top-k", type=int, default=5, help="Number of nearest reference neighbours reported per candidate.")
-    group.add_argument("--tree-neighbors", type=int, default=12, help="Neighbours used when building each candidate's local context tree.")
 
 
 def _add_ceess_arguments(parser: argparse.ArgumentParser) -> None:
