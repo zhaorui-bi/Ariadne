@@ -5,7 +5,7 @@
 Ariadne is organized as a sequential, evidence-preserving workflow for terpene synthase discovery. The design goal is not only to emit a final label, but to keep enough intermediate evidence for reruns, candidate auditing, manuscript reporting, and wet-lab selection.
 
 <figure class="algorithm-figure">
-  <img src="../images/algorithm-framework.png" alt="Ariadne algorithm framework with four stages">
+  <img src="images/algorithm-framework.png" alt="Ariadne algorithm framework with four stages">
   <figcaption><strong>Figure 1.</strong> The documented Ariadne workflow follows four computational stages: discovery, filtering, classification, and visualization. Optional ESM2 CeeSs scoring is attached to the classification layer.</figcaption>
 </figure>
 
@@ -175,8 +175,15 @@ The visualization layer is produced under `03_classification/`:
 - `embedding.tsv` - projected coordinates and labels;
 - `embedding_variance.tsv` - explained variance or projection metadata;
 - `embedding.svg` - 2D visual inspection plot;
-- `embedding_3d_sections.svg` - three orthogonal 3D projection panels;
+- `embedding_3d_sections.svg` - three orthogonal LDA/PCA panels (LD1–LD2, LD1–LD3, LD2–LD3);
 - `ceess_embedding.svg` - optional ESM2 CeeSs projection when the ESM layer is enabled.
+
+`embedding_3d_sections.svg` is the manuscript-style summary: reference clades are colored by source lineage, candidate CeeSs are orange diamonds, and candidate non-CeeSs are teal squares.
+
+<figure class="paper-figure">
+  <img src="images/figure-s2-lda.png" alt="LDA projection of coral TPS references and coral-like candidates">
+  <figcaption><strong>Figure S2.</strong> LDA projection of coral TPS references and coral-like candidates in HMM-derived feature space. Reference clades are colored by source lineage (bacteria, coral, fungi, insect and plant). Candidate CeeSs and candidate non-CeeSs are shown as orange diamonds and teal squares, respectively. (A) LD1 versus LD2, (B) LD1 versus LD3 and (C) LD2 versus LD3.</figcaption>
+</figure>
 
 ## Why This Structure Works
 

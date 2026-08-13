@@ -116,7 +116,7 @@ The `classify` command accepts the same `--ceess-*` parameters as `run`.
 
 ## `ariadne prepare-references`
 
-Prepare reference FASTA files from coral, insect, fungal, plant, bacterial, or extra sources.
+Prepare reference FASTA files from coral, insect, fungi, plant, bacterial, or extra sources. The `--fungal-fasta` / `--fungi-fasta` inputs are stored as the `fungi` lineage so legends match Figure S2.
 
 | Parameter | Default | Description |
 |---|---|---|

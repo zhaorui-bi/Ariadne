@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Optional, Union
 
 from ariadne.data import load_reference_records
-from ariadne.utils import FastaRecord, parse_coverage, read_fasta, write_fasta, write_tsv
+from ariadne.utils import FastaRecord, ensure_directory, parse_coverage, read_fasta, write_fasta, write_tsv
 
 PathLike = Union[str, Path]
 
@@ -218,8 +218,7 @@ def filter_candidates(
             }
         )
 
-    destination = Path(output_dir)
-    destination.mkdir(parents=True, exist_ok=True)
+    destination = ensure_directory(output_dir)
     filtered_fasta_path = write_fasta(representatives, destination / "candidates.filtered.faa")
     report_path = write_tsv(removed_rows, destination / "filter_report.tsv")
     cluster_path = write_tsv(cluster_rows, destination / "dedupe_clusters.tsv")

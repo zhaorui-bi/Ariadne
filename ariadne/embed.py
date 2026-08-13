@@ -2,7 +2,7 @@
 
 Each sequence is converted into a vector of HMM scores, normalised, embedded,
 and compared against reference sequences to infer a likely source group such as
-coral, insect, plant, fungal, or bacterial TPS collections.
+coral, insect, plant, fungi, or bacterial TPS collections.
 
 The module intentionally separates two concerns:
 
@@ -30,7 +30,15 @@ from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 
 from ariadne.data import load_reference_records
 from ariadne.model import DEFAULT_ESM_MODEL_NAME
-from ariadne.utils import FastaRecord, ensure_directory, read_fasta, sanitize_newick_name, write_fasta, write_tsv
+from ariadne.utils import (
+    FastaRecord,
+    as_text,
+    ensure_directory,
+    read_fasta,
+    sanitize_newick_name,
+    write_fasta,
+    write_tsv,
+)
 
 PathLike = Union[str, Path]
 
@@ -75,7 +83,10 @@ def _score_records_against_hmms(records: list[FastaRecord], hmm_paths: list[Path
                 hmm = hmm_file.read()
             hits = pipeline.search_hmm(hmm, sequences)
             for hit in hits:
-                row_index = name_to_index[hit.name]
+                hit_name = as_text(hit.name)
+                row_index = name_to_index.get(hit_name)
+                if row_index is None:
+                    continue
                 matrix[row_index, column_index] = max(matrix[row_index, column_index], float(hit.score))
     finally:
         temp_path.unlink(missing_ok=True)
@@ -378,25 +389,6 @@ def _upgma_newick(names: list[str], distances: np.ndarray) -> str:
     return labels[active[0]] + ";"
 
 
-def _color_map(sources: list[str]) -> dict[str, str]:
-    """Assign deterministic colours to reference sources for plotting."""
-    palette = [
-        "#1f77b4",
-        "#ff7f0e",
-        "#2ca02c",
-        "#d62728",
-        "#9467bd",
-        "#8c564b",
-        "#e377c2",
-        "#17becf",
-        "#bcbd22",
-    ]
-    mapping: dict[str, str] = {}
-    for index, source in enumerate(sorted(set(sources))):
-        mapping[source] = palette[index % len(palette)]
-    return mapping
-
-
 def _candidate_group(record: FastaRecord) -> str:
     """Map a record to a candidate/reference display category."""
     if record.metadata.get("source") != "candidate":
@@ -543,7 +535,7 @@ def _render_scatter(
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}" font-family="{font}">',
         f'<rect width="{width}" height="{height}" fill="white" />',
         f'<text x="{outer_left}" y="{outer_top + 24}" font-size="22" font-weight="700" fill="#111827">Ariadne TPS Feature Embedding</text>',
-        f'<text x="{outer_left}" y="{outer_top + 46}" font-size="11" fill="#6B7280" font-style="italic">Reference clades define the background feature space; candidate markers show discovered sequences. Projection: {method.upper()}.</text>',
+        f'<text x="{outer_left}" y="{outer_top + 46}" font-size="11" fill="#6B7280" font-style="italic">Reference clades define the background feature space; candidate markers show discovered sequences. Projection: {_display_method(method)}.</text>',
         f'<rect x="{plot_left}" y="{plot_top}" width="{plot_width}" height="{plot_height}" fill="white" stroke="{grid_color}" stroke-width="1"/>',
     ]
 
@@ -608,7 +600,7 @@ def _render_scatter(
     current_y = legend_y + 22
     for source in ref_sources:
         svg.append(f'<circle cx="{legend_x + 6}" cy="{current_y - 4}" r="5.5" fill="{ref_colour[source]}" fill-opacity="0.7" stroke="none"/>')
-        svg.append(f'<text x="{legend_x + 18}" y="{current_y}" font-size="12" fill="#374151">{source}</text>')
+        svg.append(f'<text x="{legend_x + 18}" y="{current_y}" font-size="12" fill="#374151">{_source_display_name(source)}</text>')
         current_y += 24
     current_y += 10
     svg.append(f'<text x="{legend_x}" y="{current_y}" font-size="12" font-weight="600" fill="#374151">Candidate groups</text>')
@@ -632,16 +624,22 @@ def _render_scatter(
 # well as colour so printed or grayscale copies remain interpretable.
 # ---------------------------------------------------------------------------
 
-# Named source -> fill colour.
+# Named source -> fill colour. fungi/fungal share the published Figure S2 purple
+# so a fungi.fasta reference directory and --fungal-fasta prepare the same legend.
 _SOURCE_FILL: dict[str, str] = {
     "coral":    "#EE6A50",   # coral-red
     "insect":   "#7B68EE",   # medium-slate-blue
     "bacteria": "#9ACD32",   # yellow-green
-    "fungal":   "#49C3C3",   # teal
+    "fungi":    "#800080",   # purple
+    "fungal":   "#800080",
     "plant":    "#3A7D44",   # dark-green
 }
+_SOURCE_DISPLAY: dict[str, str] = {
+    "fungal": "fungi",
+    "fungi": "fungi",
+}
 # Fallback colours for user-defined reference sources.
-_FILL_EXTRA = ["#87CEFA", "#FFC0CB", "#800080", "#191970", "#FF7F50", "#808080", "#FFD700"]
+_FILL_EXTRA = ["#87CEFA", "#FFC0CB", "#191970", "#FF7F50", "#808080", "#FFD700", "#49C3C3"]
 
 # Candidate-group display configuration. Labels appear only in legends.
 _CANDIDATE_CFG: dict[str, dict] = {
@@ -650,7 +648,7 @@ _CANDIDATE_CFG: dict[str, dict] = {
         "fill": "#D97706", "stroke": "#7C2D12", "shape": "diamond", "r": 8.2, "op": 0.94,
     },
     "candidate_non_ceess": {
-        "label": "Candidate coral-like",
+        "label": "Candidate non-CeeSs",
         "fill": "#0F766E", "stroke": "#134E4A", "shape": "square", "r": 7.6, "op": 0.9,
     },
     "candidate": {
@@ -663,6 +661,23 @@ _CANDIDATE_CFG: dict[str, dict] = {
 def _ref_source_fill(source: str, index: int) -> str:
     """Return a fallback fill colour for one reference source."""
     return _SOURCE_FILL.get(source, _FILL_EXTRA[index % len(_FILL_EXTRA)])
+
+
+def _source_display_name(source: str) -> str:
+    """Return the legend name used for one reference source."""
+    return _SOURCE_DISPLAY.get(source, source)
+
+
+def _display_method(method: str) -> str:
+    """Return a short projection name for figure titles."""
+    lowered = method.lower()
+    if lowered.startswith("lda"):
+        return "LDA"
+    if lowered.startswith("pca"):
+        return "PCA"
+    if not method or method == "empty":
+        return "embedding"
+    return method.replace("_", " ")
 
 
 def _nice_ticks(lo: float, hi: float, target_n: int = 5) -> list[float]:
@@ -800,7 +815,7 @@ def _render_3d_sections(
         # figure title
         f'<text x="{OL}" y="{OT + 26}"'
         f' font-size="19" font-weight="700" fill="#111827">'
-        f'Ariadne TPS Feature Space — {method.upper()} Embedding</text>',
+        f'Ariadne TPS Feature Space — {_display_method(method)}</text>',
         f'<text x="{OL}" y="{OT + 48}"'
         f' font-size="11" fill="#6B7280" font-style="italic">'
         f'Background: reference clades.  Foreground: discovered candidates. '
@@ -920,7 +935,7 @@ def _render_3d_sections(
         svg.append(
             f'<text x="{px0 + 8}" y="{py0 + 24}"'
             f' font-size="16" font-weight="700" fill="#111827">'
-            f'{chr(ord("a") + pi)}</text>',
+            f'{chr(ord("A") + pi)}</text>',
         )
 
         # Paint references first so candidate markers remain visible.
@@ -989,7 +1004,7 @@ def _render_3d_sections(
         )
         svg.append(
             f'<text x="{ix + 16}" y="{leg_y}"'
-            f' font-size="12" fill="#374151">{src}</text>',
+            f' font-size="12" fill="#374151">{_source_display_name(src)}</text>',
         )
         ix += max(66, 9 * len(src) + 28)
 
@@ -1020,7 +1035,7 @@ def _render_3d_sections(
     svg.append(
         f'<text x="{OL}" y="{fn_y}"'
         f' font-size="10" fill="#9CA3AF" font-style="italic">'
-        f'{method.upper()} embedding computed from HMM-score feature matrix (column-mean normalised, z-scored for display). '
+        f'{_display_method(method)} embedding computed from HMM-score feature matrix (column-mean normalised, z-scored for display). '
         f'Candidate IDs omitted from plot; see classification.tsv for per-sequence assignments.</text>',
     )
 

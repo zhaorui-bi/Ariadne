@@ -12,7 +12,16 @@ import logging
 from pathlib import Path
 from typing import Optional, Union
 
-from ariadne.utils import FastaRecord, ensure_directory, read_fasta, slugify, ungap, write_fasta, write_tsv
+from ariadne.utils import (
+    FastaRecord,
+    ensure_directory,
+    is_fasta_path,
+    read_fasta,
+    slugify,
+    ungap,
+    write_fasta,
+    write_tsv,
+)
 
 PathLike = Union[str, Path]
 
@@ -153,6 +162,8 @@ def load_reference_records(reference_dir: PathLike) -> list[FastaRecord]:
     ``prepare-references``.
     """
     directory = Path(reference_dir)
+    if not directory.exists():
+        raise FileNotFoundError(f"Reference directory does not exist: {directory}")
     metadata_map: dict[str, dict[str, str]] = {}
     metadata_path = directory / "metadata.tsv"
     if metadata_path.exists():
@@ -164,9 +175,13 @@ def load_reference_records(reference_dir: PathLike) -> list[FastaRecord]:
                 metadata_map[row["sequence_id"]] = {key: value for key, value in row.items() if value}
 
     records: list[FastaRecord] = []
-    for fasta_path in sorted(directory.glob("*.fa*")):
+    for fasta_path in sorted(path for path in directory.iterdir() if path.is_file() and is_fasta_path(path)):
         source_name = fasta_path.stem.split(".", 1)[0]
+        if source_name in {"fungal"}:
+            source_name = "fungi"
         for record in read_fasta(fasta_path):
+            if not record.sequence:
+                continue
             record.metadata.setdefault("source", source_name)
             record.metadata.setdefault("header", record.header)
             if record.id in metadata_map:

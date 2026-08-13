@@ -48,6 +48,7 @@ __url__         = "https://github.com/zhaorui-bi/Ariadne"
 _LAZY_EXPORTS = {
     # --- core data types & helpers (ariadne.utils) ---------------------------
     "FastaRecord": "utils",
+    "as_text": "utils",
     "read_fasta": "utils",
     "write_fasta": "utils",
     "setup_logging": "utils",
@@ -148,4 +149,4 @@ if TYPE_CHECKING:  # pragma: no cover - aids IDEs / type checkers only
         run_iqtree,
         run_mafft,
     )
-    from ariadne.utils import FastaRecord, read_fasta, setup_logging, write_fasta
+    from ariadne.utils import FastaRecord, as_text, read_fasta, setup_logging, write_fasta

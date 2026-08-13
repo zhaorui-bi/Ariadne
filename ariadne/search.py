@@ -22,7 +22,7 @@ from typing import Dict, List, Optional, Sequence, Tuple, Union
 import pyhmmer
 import pyrodigal
 
-from ariadne.utils import FastaRecord, ensure_directory, parse_coverage, read_fasta, write_fasta, write_tsv
+from ariadne.utils import FastaRecord, as_text, ensure_directory, parse_coverage, read_fasta, write_fasta, write_tsv
 
 logger = logging.getLogger(__name__)
 
@@ -83,6 +83,8 @@ def build_hmm(alignment_fasta: PathLike, output_hmm: PathLike, *, name: Optional
     background = pyhmmer.plan7.Background(alphabet)
     hmm, _, _ = builder.build_msa(msa, background)
     output_path = Path(output_hmm)
+    if output_path.parent and not output_path.parent.exists():
+        output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open("wb") as handle:
         hmm.write(handle, binary=False)
     return output_path
@@ -150,8 +152,8 @@ def search_proteins_with_hmm(
                 continue
             domain = hit.best_domain
             row = {
-                "sequence_id": hit.name,
-                "hmm_name": getattr(hmm, "name", Path(hmm_path).stem),
+                "sequence_id": as_text(hit.name),
+                "hmm_name": as_text(getattr(hmm, "name", Path(hmm_path).stem) or Path(hmm_path).stem),
                 "score": round(hit.score, 4),
                 "evalue": hit.evalue,
                 "bias": round(hit.bias, 4),

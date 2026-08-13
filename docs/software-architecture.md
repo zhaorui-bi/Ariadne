@@ -91,6 +91,6 @@ Also verify:
 
 - `README.md` and `README_ZH.md` describe the same workflow boundary;
 - `mkdocs.yml` navigation includes new user-facing pages;
-- every committed image is under `docs/images/` or another tracked docs path;
+- every committed image is under `docs/images/` or another tracked docs path (`fig/` is local-only);
 - optional ESM2 examples clearly mention `pip install -e '.[esm]'`;
 - release notes document any output-schema changes.

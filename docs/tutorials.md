@@ -46,7 +46,7 @@ Start with:
 - `classification.tsv` - predicted source assignment for each candidate;
 - `nearest_neighbors.tsv` - references that support each assignment;
 - `embedding.svg` - global two-dimensional PCA/LDA view;
-- `embedding_3d_sections.svg` - multi-view geometric summary;
+- `embedding_3d_sections.svg` - three-panel LDA/PCA summary (same layout as Figure S2);
 - `ceess_predictions.tsv`, `ceess_candidates.tsv`, `ceess_candidates.fasta` - optional CeeSs shortlist.
 
 A productive reading order:
@@ -99,4 +99,4 @@ This gives repeated access to `classification.tsv`, `nearest_neighbors.tsv`, and
 1. run `ariadne run` with `--skip-phylogeny`;
 2. screen candidates using `classification.tsv` and `embedding.svg`;
 3. inspect the optional CeeSs shortlist;
-4. archive `pipeline_summary.tsv`, `classification.tsv`, neighbor evidence, and visualization SVGs.
+4. archive `pipeline_summary.tsv`, `classification.tsv`, neighbor evidence, and visualization SVGs (`embedding.svg`, `embedding_3d_sections.svg`).

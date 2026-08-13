@@ -54,7 +54,8 @@ site/
 # Kept local, excluded from the published repository
 # ---------------------------------------------------------------------------
 .github/
-tests/
+# Manuscript working copies (Figure S2 sources, recovery scripts, venvs).
+# Published figures that belong in the docs site live under docs/images/.
 fig/
 
 # ---------------------------------------------------------------------------

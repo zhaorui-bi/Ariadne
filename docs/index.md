@@ -27,7 +27,7 @@ The documentation follows the project model used in the OUC-HWU guide: concise n
 **Documentation Status**
 
 - Version baseline: `ariadne-tps 1.1.0`
-- Updated: 2026-07-09
+- Updated: 2026-08-13
 - Maintainer: Zhaorui Jiang
 - Primary outputs: TSV evidence tables and SVG projections
 - Repository: [zhaorui-bi/Ariadne](https://github.com/zhaorui-bi/Ariadne)
@@ -91,9 +91,9 @@ Primary artifact: `classification.tsv`
 <div class="workflow-step" markdown>
 <span class="stage-label">Stage IV</span>
 ### Visualization
-Project the feature space with LDA or PCA so candidate placement can be inspected before experimental validation.
+Project the feature space with LDA or PCA so candidate placement can be inspected before experimental validation. The three-panel SVG follows the Figure S2 grammar: lineage-colored references, orange CeeSs diamonds, and teal non-CeeSs squares.
 
-Primary artifact: `embedding.svg`
+Primary artifact: `embedding_3d_sections.svg`
 </div>
 
 </div>

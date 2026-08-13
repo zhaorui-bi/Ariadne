@@ -16,6 +16,7 @@ from typing import Optional, Tuple, Union
 
 from ariadne import __version__
 from ariadne import utils as _log
+from ariadne.utils import FASTA_SUFFIXES, first_existing
 
 PathLike = Union[str, Path]
 
@@ -27,20 +28,27 @@ def _repo_root() -> Path:
     return Path(__file__).resolve().parent.parent
 
 
-def _first_existing_path(*candidates: PathLike) -> Optional[Path]:
-    """Return the first existing path from a prioritized list of candidates."""
-    for candidate in candidates:
-        if candidate is None:
-            continue
-        path = Path(candidate).expanduser().resolve()
-        if path.exists():
-            return path
-    return None
+def _search_roots() -> tuple[Path, ...]:
+    """Return directories checked for optional local resources."""
+    return (Path.cwd(), _repo_root(), Path(__file__).resolve().parent)
+
+
+def _default_named_fasta(*stems: str) -> Optional[Path]:
+    """Locate an optional reference FASTA by stem name."""
+    candidates: list[Path] = []
+    for root in _search_roots():
+        for stem in stems:
+            for suffix in FASTA_SUFFIXES:
+                candidates.append(root / f"{stem}{suffix}")
+    return first_existing(*candidates)
 
 
 def _default_coral() -> Optional[Path]:
     """Locate the default coral reference FASTA when present."""
-    return _first_existing_path(
+    named = _default_named_fasta("coral")
+    if named is not None:
+        return named
+    return first_existing(
         Path.cwd() / "coralTPS (modified)-cembrene.fasta",
         _repo_root() / "coralTPS (modified)-cembrene.fasta",
         Path(__file__).resolve().parent / "coralTPS (modified)-cembrene.fasta",
@@ -49,7 +57,7 @@ def _default_coral() -> Optional[Path]:
 
 def _default_insect() -> Optional[Path]:
     """Locate the default insect workbook when present."""
-    return _first_existing_path(
+    return first_existing(
         Path.cwd() / "Insecta TPS.xlsx",
         _repo_root() / "Insecta TPS.xlsx",
         Path(__file__).resolve().parent / "Insecta TPS.xlsx",
@@ -58,58 +66,30 @@ def _default_insect() -> Optional[Path]:
 
 def _default_bacteria() -> Optional[Path]:
     """Locate an optional bacterial reference FASTA."""
-    return _first_existing_path(
-        Path.cwd() / "bacteria.fasta",
-        Path.cwd() / "bacteria.fa",
-        Path.cwd() / "bacteria.faa",
-        _repo_root() / "bacteria.fasta",
-        _repo_root() / "bacteria.fa",
-        _repo_root() / "bacteria.faa",
-    )
+    return _default_named_fasta("bacteria")
 
 
 def _default_fungal() -> Optional[Path]:
     """Locate an optional fungal reference FASTA."""
-    return _first_existing_path(
-        Path.cwd() / "fungal.fasta",
-        Path.cwd() / "fungal.fa",
-        Path.cwd() / "fungal.faa",
-        Path.cwd() / "fungi.fasta",
-        Path.cwd() / "fungi.fa",
-        Path.cwd() / "fungi.faa",
-        _repo_root() / "fungal.fasta",
-        _repo_root() / "fungal.fa",
-        _repo_root() / "fungal.faa",
-        _repo_root() / "fungi.fasta",
-        _repo_root() / "fungi.fa",
-        _repo_root() / "fungi.faa",
-    )
+    return _default_named_fasta("fungi", "fungal")
 
 
 def _default_plant() -> Optional[Path]:
     """Locate an optional plant reference FASTA."""
-    return _first_existing_path(
-        Path.cwd() / "plant.fasta",
-        Path.cwd() / "plant.fa",
-        Path.cwd() / "plant.faa",
-        _repo_root() / "plant.fasta",
-        _repo_root() / "plant.fa",
-        _repo_root() / "plant.faa",
-    )
+    return _default_named_fasta("plant")
 
 
 def _default_reference_dir() -> Optional[Path]:
     """Locate the default prepared reference directory when present."""
-    return _first_existing_path(
-        Path.cwd() / "tree",
-        _repo_root() / "tree",
-    )
+    return first_existing(Path.cwd() / "tree", _repo_root() / "tree", Path.cwd() / "reference_fastas")
 
 
 def _default_tps_xlsx() -> Optional[Path]:
     """Locate the coral TPS spreadsheet used by the integrated CeeSs workflow."""
-    return _first_existing_path(
+    return first_existing(
+        Path.cwd() / "TPS.xlsx",
         Path.cwd() / "TPS" / "TPS.xlsx",
+        _repo_root() / "TPS.xlsx",
         _repo_root() / "TPS" / "TPS.xlsx",
     )
 
@@ -135,7 +115,7 @@ def _default_reference_alignment(reference_dir: Optional[PathLike] = None) -> Op
                 default_reference_dir / "coral.faa",
             ]
         )
-    return _first_existing_path(*candidates)
+    return first_existing(*candidates)
 
 
 def _find_reference_alignment(reference_dir: PathLike) -> Path:
@@ -161,7 +141,9 @@ def _find_reference_alignment(reference_dir: PathLike) -> Path:
 def _reference_fasta_paths(reference_dir: PathLike) -> list[Path]:
     """Collect FASTA files from a prepared reference directory."""
     directory = Path(reference_dir)
-    fasta_paths = sorted(directory.glob("*.fa*"))
+    from ariadne.utils import is_fasta_path
+
+    fasta_paths = sorted(path for path in directory.glob("*") if path.is_file() and is_fasta_path(path))
     if not fasta_paths:
         raise FileNotFoundError(f"No FASTA files were found in reference directory: {directory}")
     return fasta_paths
@@ -217,12 +199,16 @@ def _auto_build_tps_hmm_library(reference_dir: PathLike, output_dir: PathLike) -
     return destination
 
 
-def _parse_extra_reference(spec: str) -> Tuple[str, str]:
-    """Parse ``SOURCE=PATH`` syntax used for extra references."""
+def _parse_named_path(spec: str, *, kind: str = "reference") -> Tuple[str, Path]:
+    """Parse ``NAME=PATH`` syntax used for extra references and HMM alignments."""
     if "=" not in spec:
-        raise ValueError(f"Expected SOURCE=PATH for extra references, got: {spec}")
-    source, path = spec.split("=", 1)
-    return source.strip(), path.strip()
+        raise ValueError(f"Expected NAME=PATH for extra {kind}s, got: {spec}")
+    name, path_text = spec.split("=", 1)
+    name = name.strip()
+    path = Path(path_text.strip()).expanduser()
+    if not name:
+        raise ValueError(f"Missing name in extra {kind} spec: {spec}")
+    return name, path
 
 
 def _existing_path_or_none(value: Optional[PathLike], *, label: str) -> Optional[Path]:
@@ -261,7 +247,7 @@ def cmd_prepare_references(args: argparse.Namespace) -> int:
     fungal_path = args.fungi_fasta if args.fungi_fasta is not None else args.fungal_fasta
     for source_name, source_path in (
         ("bacteria", args.bacteria_fasta),
-        ("fungal", fungal_path),
+        ("fungi", fungal_path),
         ("plant", args.plant_fasta),
     ):
         prepared_path = _existing_path_or_none(source_path, label=f"{source_name} FASTA")
@@ -271,8 +257,11 @@ def cmd_prepare_references(args: argparse.Namespace) -> int:
         all_records.extend(extra_records)
 
     for spec in args.extra_fasta or []:
-        source, path = _parse_extra_reference(spec)
-        _, extra_records = prepare_extra_reference(path, output_dir, source=source)
+        source, path = _parse_named_path(spec)
+        prepared_path = _existing_path_or_none(path, label=f"{source} FASTA")
+        if prepared_path is None:
+            continue
+        _, extra_records = prepare_extra_reference(prepared_path, output_dir, source=source)
         all_records.extend(extra_records)
 
     if not all_records:
@@ -305,18 +294,85 @@ def cmd_build_tps_hmm_library(args: argparse.Namespace) -> int:
     built_paths: list[Path] = []
     for spec in args.alignment:
         if "=" in spec:
-            name, alignment_path_text = spec.split("=", 1)
-            alignment_path = Path(alignment_path_text).expanduser()
-            hmm_name = name.strip()
+            hmm_name, alignment_path = _parse_named_path(spec, kind="alignment")
         else:
             alignment_path = Path(spec).expanduser()
             hmm_name = alignment_path.stem
+        if not alignment_path.exists():
+            raise FileNotFoundError(f"Alignment FASTA not found: {alignment_path}")
         output_path = output_dir / f"{hmm_name}.hmm"
         built_paths.append(build_hmm(alignment_path, output_path, name=hmm_name))
     logger.info("Built %d TPS HMM profiles in %s", len(built_paths), output_dir)
     for path in built_paths:
         logger.info("  %s", path)
     return 0
+
+
+def _log_outputs(outputs: dict) -> None:
+    """Print a stable key/value listing of stage artifacts."""
+    for key, value in outputs.items():
+        logger.info("  %-28s %s", f"{key}:", value)
+
+
+def _resolve_query_hmm(args: argparse.Namespace, discovery_dir: Path) -> Path:
+    """Return a discovery HMM, preferring an explicit path then a bundled or built one."""
+    if args.query_hmm:
+        hmm_path = Path(args.query_hmm)
+        if not hmm_path.exists():
+            raise FileNotFoundError(f"Query HMM not found: {hmm_path}")
+        return hmm_path
+    bundled = _bundled_query_hmm()
+    if bundled is not None:
+        logger.info("No --query-hmm provided; using bundled discovery HMM from %s", bundled)
+        return bundled
+    return _auto_build_query_hmm(args.reference_dir, discovery_dir / "query.hmm", name=args.hmm_name)
+
+
+def _resolve_tps_hmm_dir(args: argparse.Namespace, output_dir: Path) -> Path:
+    """Return a TPS HMM library directory, building one from references when needed."""
+    if args.tps_hmm_dir is not None:
+        hmm_dir = Path(args.tps_hmm_dir)
+        if not hmm_dir.exists():
+            raise FileNotFoundError(f"TPS HMM directory not found: {hmm_dir}")
+        return hmm_dir
+    bundled = _bundled_tps_hmm_dir()
+    if bundled is not None:
+        logger.info("No --tps-hmm-dir provided; using bundled TPS HMM library from %s", bundled)
+        return bundled
+    return _auto_build_tps_hmm_library(args.reference_dir, Path(output_dir) / "_auto_tps_hmms")
+
+
+def _classify_from_args(candidates: Path, reference_dir: Path, output_dir: Path, args: argparse.Namespace) -> dict:
+    """Run classification with the shared CLI CeeSs/HMM arguments."""
+    from ariadne.embed import classify_candidates
+
+    return classify_candidates(
+        candidates,
+        reference_dir,
+        output_dir,
+        hmm_dir=_resolve_tps_hmm_dir(args, output_dir),
+        top_k=args.top_k,
+        tree_neighbors=args.tree_neighbors,
+        ceess_xlsx=None if args.skip_ceess_model else args.ceess_xlsx,
+        ceess_model_name=args.ceess_model_name,
+        ceess_batch_size=args.ceess_batch_size,
+        ceess_max_length=args.ceess_max_length,
+        ceess_device=args.ceess_device,
+        ceess_cv_folds=args.ceess_cv_folds,
+        ceess_random_state=args.ceess_random_state,
+        ceess_threshold=args.ceess_threshold,
+        ceess_classifier=args.ceess_classifier,
+        ceess_epochs=args.ceess_epochs,
+        ceess_hidden_dim=args.ceess_hidden_dim,
+        ceess_representation_dim=args.ceess_barlow_representation_dim,
+        ceess_projection_dim=args.ceess_barlow_projection_dim,
+        ceess_dropout=args.ceess_dropout,
+        ceess_learning_rate=args.ceess_learning_rate,
+        ceess_weight_decay=args.ceess_weight_decay,
+        ceess_train_batch_size=args.ceess_train_batch_size,
+        ceess_barlow_redundancy_weight=args.ceess_barlow_redundancy_weight,
+        ceess_mlp_checkpoint=args.ceess_mlp_checkpoint,
+    )
 
 
 def cmd_discover(args: argparse.Namespace) -> int:
@@ -347,8 +403,7 @@ def cmd_discover(args: argparse.Namespace) -> int:
         )
     else:
         raise ValueError("Please provide either --protein-folder (preferred) or --transcriptomes for discover.")
-    for key, value in outputs.items():
-        logger.info("  %-28s %s", key + ":", value)
+    _log_outputs(outputs)
     return 0
 
 
@@ -364,60 +419,19 @@ def cmd_filter(args: argparse.Namespace) -> int:
         identity_threshold=args.identity_threshold,
         reference_dir=args.reference_dir,
     )
-    for key, value in outputs.items():
-        logger.info("  %-28s %s", key + ":", value)
+    _log_outputs(outputs)
     return 0
 
 
 def cmd_classify(args: argparse.Namespace) -> int:
     """Run stage 3 feature-space classification."""
-    from ariadne.embed import classify_candidates
-
-    if args.tps_hmm_dir is not None:
-        hmm_dir = Path(args.tps_hmm_dir)
-    elif _bundled_tps_hmm_dir() is not None:
-        hmm_dir = _bundled_tps_hmm_dir()
-        logger.info("No --tps-hmm-dir provided; using bundled TPS HMM library from %s", hmm_dir)
-    else:
-        hmm_dir = _auto_build_tps_hmm_library(
-            args.reference_dir,
-            Path(args.output_dir) / "_auto_tps_hmms",
-        )
-    outputs = classify_candidates(
-        args.candidates,
-        args.reference_dir,
-        args.output_dir,
-        hmm_dir=hmm_dir,
-        top_k=args.top_k,
-        tree_neighbors=args.tree_neighbors,
-        ceess_xlsx=None if args.skip_ceess_model else args.ceess_xlsx,
-        ceess_model_name=args.ceess_model_name,
-        ceess_batch_size=args.ceess_batch_size,
-        ceess_max_length=args.ceess_max_length,
-        ceess_device=args.ceess_device,
-        ceess_cv_folds=args.ceess_cv_folds,
-        ceess_random_state=args.ceess_random_state,
-        ceess_threshold=args.ceess_threshold,
-        ceess_classifier=args.ceess_classifier,
-        ceess_epochs=args.ceess_epochs,
-        ceess_hidden_dim=args.ceess_hidden_dim,
-        ceess_representation_dim=args.ceess_barlow_representation_dim,
-        ceess_projection_dim=args.ceess_barlow_projection_dim,
-        ceess_dropout=args.ceess_dropout,
-        ceess_learning_rate=args.ceess_learning_rate,
-        ceess_weight_decay=args.ceess_weight_decay,
-        ceess_train_batch_size=args.ceess_train_batch_size,
-        ceess_barlow_redundancy_weight=args.ceess_barlow_redundancy_weight,
-        ceess_mlp_checkpoint=args.ceess_mlp_checkpoint,
-    )
-    for key, value in outputs.items():
-        logger.info("  %-28s %s", key + ":", value)
+    outputs = _classify_from_args(args.candidates, args.reference_dir, args.output_dir, args)
+    _log_outputs(outputs)
     return 0
 
 
 def cmd_run(args: argparse.Namespace) -> int:
     """Execute the full Ariadne workflow end to end."""
-    from ariadne.embed import classify_candidates
     from ariadne.filter import filter_candidates
     from ariadne.search import collect_protein_files, discover_candidates, discover_candidates_from_proteins
     from ariadne.tree import build_phylogeny
@@ -429,13 +443,7 @@ def cmd_run(args: argparse.Namespace) -> int:
     classification_dir = ensure_directory(root / "03_classification")
     phylogeny_dir = ensure_directory(root / "04_phylogeny") if not args.skip_phylogeny else None
 
-    if args.query_hmm:
-        hmm_path = Path(args.query_hmm)
-    elif _bundled_query_hmm() is not None:
-        hmm_path = _bundled_query_hmm()
-        logger.info("No --query-hmm provided; using bundled discovery HMM from %s", hmm_path)
-    else:
-        hmm_path = _auto_build_query_hmm(args.reference_dir, discovery_dir / "query.hmm", name=args.hmm_name)
+    hmm_path = _resolve_query_hmm(args, discovery_dir)
 
     if args.protein_folder:
         protein_paths = collect_protein_files(args.protein_folder, protein_glob=args.protein_glob)
@@ -469,42 +477,11 @@ def cmd_run(args: argparse.Namespace) -> int:
         identity_threshold=args.identity_threshold,
         reference_dir=args.reference_dir,
     )
-    if args.tps_hmm_dir is not None:
-        tps_hmm_dir = Path(args.tps_hmm_dir)
-    elif _bundled_tps_hmm_dir() is not None:
-        tps_hmm_dir = _bundled_tps_hmm_dir()
-        logger.info("No --tps-hmm-dir provided; using bundled TPS HMM library from %s", tps_hmm_dir)
-    else:
-        tps_hmm_dir = _auto_build_tps_hmm_library(
-            args.reference_dir,
-            classification_dir / "_auto_tps_hmms",
-        )
-    classification_outputs = classify_candidates(
+    classification_outputs = _classify_from_args(
         filtering_outputs["filtered_fasta"],
         args.reference_dir,
         classification_dir,
-        hmm_dir=tps_hmm_dir,
-        top_k=args.top_k,
-        tree_neighbors=args.tree_neighbors,
-        ceess_xlsx=None if args.skip_ceess_model else args.ceess_xlsx,
-        ceess_model_name=args.ceess_model_name,
-        ceess_batch_size=args.ceess_batch_size,
-        ceess_max_length=args.ceess_max_length,
-        ceess_device=args.ceess_device,
-        ceess_cv_folds=args.ceess_cv_folds,
-        ceess_random_state=args.ceess_random_state,
-        ceess_threshold=args.ceess_threshold,
-        ceess_classifier=args.ceess_classifier,
-        ceess_epochs=args.ceess_epochs,
-        ceess_hidden_dim=args.ceess_hidden_dim,
-        ceess_representation_dim=args.ceess_barlow_representation_dim,
-        ceess_projection_dim=args.ceess_barlow_projection_dim,
-        ceess_dropout=args.ceess_dropout,
-        ceess_learning_rate=args.ceess_learning_rate,
-        ceess_weight_decay=args.ceess_weight_decay,
-        ceess_train_batch_size=args.ceess_train_batch_size,
-        ceess_barlow_redundancy_weight=args.ceess_barlow_redundancy_weight,
-        ceess_mlp_checkpoint=args.ceess_mlp_checkpoint,
+        args,
     )
     phylogeny_outputs = {}
     if not args.skip_phylogeny:
@@ -550,8 +527,7 @@ def cmd_phylogeny(args: argparse.Namespace) -> int:
         iqtree_bootstrap=args.iqtree_bootstrap,
         iqtree_fast=not args.no_iqtree_fast,
     )
-    for key, value in outputs.items():
-        logger.info("  %-28s %s", key + ":", value)
+    _log_outputs(outputs)
     return 0
 
 
@@ -582,7 +558,7 @@ def _add_ceess_arguments(parser: argparse.ArgumentParser) -> None:
     group.add_argument("--ceess-model-name", default=DEFAULT_ESM_MODEL_NAME, help=esm_model_help_text())
     group.add_argument("--ceess-threshold", type=float, default=0.9, help="Probability threshold used to keep predicted CeeSs candidates.")
     group.add_argument("--ceess-device", default=None, help="Optional torch device for the ESM CeeSs model, for example cpu or cuda.")
-    group.add_argument("--ceess-xlsx", type=Path, default=_default_tps_xlsx(), help="Optional coral TPS workbook used to train the ESM CeeSs model. Defaults to TPS/TPS.xlsx when present.")
+    group.add_argument("--ceess-xlsx", type=Path, default=_default_tps_xlsx(), help="Optional coral TPS workbook used to train the ESM CeeSs model. Defaults to TPS.xlsx or TPS/TPS.xlsx when present.")
 
     advanced = parser.add_argument_group(
         "CeeSs advanced tuning",
@@ -763,4 +739,15 @@ def main(argv: Optional[list[str]] = None) -> int:
         return 0
 
     _log.print_banner(__version__)
-    return args.func(args)
+    try:
+        return args.func(args)
+    except BrokenPipeError:
+        return 0
+    except KeyboardInterrupt:
+        logger.error("Interrupted.")
+        return 130
+    except (FileNotFoundError, NotADirectoryError, ValueError, RuntimeError) as exc:
+        logger.error("%s", exc)
+        if args.verbose:
+            raise
+        return 1

@@ -30,6 +30,9 @@ from pathlib import Path
 from typing import Iterable, Optional, Union
 
 PathLike = Union[str, Path]
+FASTA_SUFFIXES = (".fa", ".faa", ".fasta", ".pep", ".prot", ".afa")
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # ANSI colour helpers
@@ -196,7 +199,8 @@ class FastaRecord:
 
     @property
     def id(self) -> str:
-        return self.header.split()[0]
+        tokens = self.header.split()
+        return tokens[0] if tokens else "unnamed"
 
     @property
     def description(self) -> str:
@@ -234,7 +238,16 @@ def clean_sequence(sequence: str, *, keep_gaps: bool = False) -> str:
     return AA_PATTERN.sub("", sequence)
 
 
-_logger = logging.getLogger(__name__)
+def as_text(value: object) -> str:
+    """Decode pyhmmer/HMMER byte names and stringify other identifiers."""
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace")
+    return str(value)
+
+
+def is_fasta_path(path: PathLike) -> bool:
+    """Return True when *path* uses a recognised FASTA suffix."""
+    return Path(path).suffix.lower() in FASTA_SUFFIXES
 
 
 def _record_from_header_and_chunks(header: str, chunks: list[str], *, keep_gaps: bool) -> FastaRecord:
@@ -247,7 +260,7 @@ def _record_from_header_and_chunks(header: str, chunks: list[str], *, keep_gaps:
         candidate_header, embedded = parts
         cleaned_embedded = clean_sequence(embedded, keep_gaps=keep_gaps)
         if len(cleaned_embedded) >= 30 and cleaned_embedded == clean_sequence(cleaned_embedded, keep_gaps=keep_gaps):
-            _logger.warning("Recovered malformed FASTA record with header-embedded sequence: %s", candidate_header)
+            logger.warning("Recovered malformed FASTA record with header-embedded sequence: %s", candidate_header)
             return FastaRecord(header=candidate_header, sequence=cleaned_embedded)
     return FastaRecord(header=header, sequence="")
 
@@ -262,7 +275,7 @@ def read_fasta(path: PathLike, *, keep_gaps: bool = False) -> list[FastaRecord]:
     records: list[FastaRecord] = []
     header: Optional[str] = None
     chunks: list[str] = []
-    with Path(path).open() as handle:
+    with Path(path).open(encoding="utf-8") as handle:
         for raw_line in handle:
             line = raw_line.strip()
             if not line:
@@ -287,7 +300,7 @@ def write_fasta(records: Iterable[FastaRecord], path: PathLike, *, width: int = 
     target = Path(path)
     if target.parent and not target.parent.exists():
         target.parent.mkdir(parents=True, exist_ok=True)
-    with target.open("w") as handle:
+    with target.open("w", encoding="utf-8") as handle:
         for record in records:
             handle.write(f">{record.header}\n")
             for offset in range(0, len(record.sequence), width):
@@ -314,12 +327,14 @@ def slugify(text: str) -> str:
     return compact.strip("_") or "unknown"
 
 
-def first_existing(*paths: PathLike) -> Optional[Path]:
+def first_existing(*paths: Optional[PathLike]) -> Optional[Path]:
     """Return the first existing path from a list of candidates."""
     for path in paths:
-        candidate = Path(path)
+        if path is None:
+            continue
+        candidate = Path(path).expanduser()
         if candidate.exists():
-            return candidate
+            return candidate.resolve()
     return None
 
 
@@ -342,7 +357,7 @@ def write_tsv(rows: Iterable[dict[str, object]], path: PathLike) -> Path:
         for key in row:
             if key not in fieldnames:
                 fieldnames.append(key)
-    with target.open("w", newline="") as handle:
+    with target.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames, delimiter="\t")
         writer.writeheader()
         for row in rows:
@@ -373,6 +388,3 @@ def pairwise_identity(sequence_a: str, sequence_b: str) -> float:
         if char_a == char_b:
             matches += 1
     return matches / length
-
-
-logger = logging.getLogger(__name__)

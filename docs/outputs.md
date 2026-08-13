@@ -43,11 +43,13 @@ Use `--skip-phylogeny` with `ariadne run` to keep the output layout aligned with
 | `embedding.tsv` | PCA/LDA coordinates and labels |
 | `embedding_variance.tsv` | variance / projection metadata |
 | `embedding.svg` | 2-D visual inspection plot |
-| `embedding_3d_sections.svg` | publication-style multi-view embedding figure |
+| `embedding_3d_sections.svg` | publication-style three-panel LDA/PCA figure (LD1–LD2, LD1–LD3, LD2–LD3) |
 | `candidate_cluster_context.tsv` | local cluster context per candidate |
 | `assignment_summary.tsv` | count and confidence summary by predicted source |
 
-**Inspect first:** `classification.tsv`, then `nearest_neighbors.tsv`, then `embedding.svg`.
+**Inspect first:** `classification.tsv`, then `nearest_neighbors.tsv`, then `embedding.svg` and `embedding_3d_sections.svg`.
+
+The three-panel LDA layout matches the documented [Figure S2](method.md#stage-iv---pcalda-visualization): references by lineage, candidate CeeSs as orange diamonds, and candidate non-CeeSs as teal squares.
 
 ### Optional CeeSs Outputs
 

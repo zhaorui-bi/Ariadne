@@ -33,7 +33,7 @@ Optional ESM2 scoring can prioritize coral-like **cembrene-class synthase (CeeSs
 - HMM-based discovery from transcriptomes or predicted protein FASTAs.
 - Coverage, length, and near-duplicate filtering with TSV audit reports.
 - Reference-space TPS classification with nearest-neighbor evidence.
-- PCA/LDA SVG projections for candidate triage.
+- PCA/LDA SVG projections for candidate triage, including a three-panel LDA figure (LD1–LD2, LD1–LD3, LD2–LD3).
 - Optional ESM2 CeeSs scoring and FASTA export.
 
 ## Installation

@@ -33,7 +33,7 @@ Discovery -> Filtering -> Classification -> PCA/LDA visualization
 - 支持从转录组或预测蛋白 FASTA 进行 HMM 候选发现。
 - 覆盖度、长度与近重复过滤，并输出 TSV 审计表。
 - 基于参考序列空间进行 TPS 分类，并保留近邻证据。
-- 输出 PCA/LDA SVG 图，用于候选人工筛选。
+- 输出 PCA/LDA SVG 图（含 LD1–LD2 / LD1–LD3 / LD2–LD3 三面板），用于候选人工筛选。
 - 可选 ESM2 CeeSs 打分与候选 FASTA 导出。
 
 ## 安装

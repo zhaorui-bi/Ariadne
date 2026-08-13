@@ -79,7 +79,7 @@ This executes the README-aligned workflow:
 1. candidate discovery;
 2. coverage / length filtering and near-duplicate removal;
 3. TPS feature-space classification;
-4. PCA/LDA visualization under `03_classification/`.
+4. PCA/LDA visualization under `03_classification/` (`embedding.svg` and the three-panel `embedding_3d_sections.svg`).
 
 If `TPS.xlsx` is present and the ESM dependencies are installed, the classification stage also writes CeeSs predictions and candidate shortlists.
 
