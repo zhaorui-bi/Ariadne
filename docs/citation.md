@@ -1,18 +1,24 @@
 # Citation
 
-If Ariadne is useful in your work, please cite the accompanying paper:
+If Ariadne is useful in your work, please cite the accompanying paper, now published in *Journal of Natural Products*:
 
-Wang, Y.; Yu, M.; Jiang, Z.; Zhou, C.; Feng, W.; Yu, K.; Ju, J.; Li, F. Identification of Cembrene Synthases from Coral Reveals the Polyphyletic Origins of Cembranoid Biosynthesis. 2026.
+Wang, Y.; Yu, M.; Jiang, Z.; Zhou, C.; Feng, W.; Yu, K.; Ju, J.; Li, F. Identification of Cembrene Synthases Uncovers Polyphyletic Origins of 14-Membered Carbocyclic Cembranoids Biosynthesis in Corals. *J. Nat. Prod.* **2026**. DOI: [10.1021/acs.jnatprod.6c00686](https://doi.org/10.1021/acs.jnatprod.6c00686)
 
 ```bibtex
 @article{wang2026cembrene,
-  author  = {Wang, Yinhao and Yu, Mengmeng and Jiang, Zhaorui and Zhou, Chengyu and Feng, Wei and Yu, Ke and Ju, Jianhua and Li, Feng},
-  title   = {Identification of Cembrene Synthases from Coral Reveals the Polyphyletic Origins of Cembranoid Biosynthesis},
-  year    = {2026}
+  author    = {Wang, Yinhao and Yu, Mengmeng and Jiang, Zhaorui and Zhou, Chengyu and Feng, Wei and Yu, Ke and Ju, Jianhua and Li, Feng},
+  title     = {Identification of Cembrene Synthases Uncovers Polyphyletic Origins of 14-Membered Carbocyclic Cembranoids Biosynthesis in Corals},
+  journal   = {Journal of Natural Products},
+  year      = {2026},
+  month     = {sep},
+  publisher = {American Chemical Society},
+  doi       = {10.1021/acs.jnatprod.6c00686},
+  url       = {https://doi.org/10.1021/acs.jnatprod.6c00686},
+  note      = {Published online September 8, 2026}
 }
 ```
 
-The Ariadne software described in that work is available at [https://github.com/zhaorui-bi/Ariadne](https://github.com/zhaorui-bi/Ariadne).
+The article is available at [https://doi.org/10.1021/acs.jnatprod.6c00686](https://doi.org/10.1021/acs.jnatprod.6c00686). The Ariadne software described in that work is available at [https://github.com/zhaorui-bi/Ariadne](https://github.com/zhaorui-bi/Ariadne).
 
 Suggested short description:
 

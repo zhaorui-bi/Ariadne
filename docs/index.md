@@ -27,9 +27,10 @@ The documentation follows the project model used in the OUC-HWU guide: concise n
 **Documentation Status**
 
 - Version baseline: `ariadne-tps 1.1.0`
-- Updated: 2026-08-13
+- Updated: 2026-09-10
 - Maintainer: Zhaorui Jiang
 - Primary outputs: TSV evidence tables and SVG projections
+- Paper: [J. Nat. Prod. 2026](https://doi.org/10.1021/acs.jnatprod.6c00686)
 - Repository: [zhaorui-bi/Ariadne](https://github.com/zhaorui-bi/Ariadne)
 </div>
 </section>
@@ -142,6 +143,11 @@ Review package structure, public API contracts, dependency boundaries, and relea
 <div class="evidence-card" markdown>
 ### [Outputs](outputs.md)
 Interpret every table and figure emitted by the pipeline, including CeeSs and embedding artifacts.
+</div>
+
+<div class="evidence-card" markdown>
+### [Citation](citation.md)
+Cite the *Journal of Natural Products* article ([DOI: 10.1021/acs.jnatprod.6c00686](https://doi.org/10.1021/acs.jnatprod.6c00686)).
 </div>
 
 </div>

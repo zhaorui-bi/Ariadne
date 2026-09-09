@@ -14,6 +14,7 @@
   <img alt="Version" src="https://img.shields.io/badge/Version-1.1.0-0f766e?style=flat-square">
   <img alt="License" src="https://img.shields.io/badge/License-MIT-c2410c?style=flat-square">
   <img alt="Docs" src="https://img.shields.io/badge/Docs-MkDocs-1d4ed8?style=flat-square">
+  <a href="https://doi.org/10.1021/acs.jnatprod.6c00686"><img alt="DOI" src="https://img.shields.io/badge/DOI-10.1021%2Facs.jnatprod.6c00686-084c61?style=flat-square"></a>
 </p>
 
 ---
@@ -111,11 +112,21 @@ mkdocs build --strict
 
 ## Citation
 
+If you use Ariadne in your work, please cite:
+
+Wang, Y.; Yu, M.; Jiang, Z.; Zhou, C.; Feng, W.; Yu, K.; Ju, J.; Li, F. Identification of Cembrene Synthases Uncovers Polyphyletic Origins of 14-Membered Carbocyclic Cembranoids Biosynthesis in Corals. *J. Nat. Prod.* **2026**. DOI: [10.1021/acs.jnatprod.6c00686](https://doi.org/10.1021/acs.jnatprod.6c00686)
+
 ```bibtex
 @article{wang2026cembrene,
-  author  = {Wang, Yinhao and Yu, Mengmeng and Jiang, Zhaorui and Zhou, Chengyu and Feng, Wei and Yu, Ke and Ju, Jianhua and Li, Feng},
-  title   = {Identification of Cembrene Synthases from Coral Reveals the Polyphyletic Origins of Cembranoid Biosynthesis},
-  year    = {2026}
+  author    = {Wang, Yinhao and Yu, Mengmeng and Jiang, Zhaorui and Zhou, Chengyu and Feng, Wei and Yu, Ke and Ju, Jianhua and Li, Feng},
+  title     = {Identification of Cembrene Synthases Uncovers Polyphyletic Origins of 14-Membered Carbocyclic Cembranoids Biosynthesis in Corals},
+  journal   = {Journal of Natural Products},
+  year      = {2026},
+  month     = {sep},
+  publisher = {American Chemical Society},
+  doi       = {10.1021/acs.jnatprod.6c00686},
+  url       = {https://doi.org/10.1021/acs.jnatprod.6c00686},
+  note      = {Published online September 8, 2026}
 }
 ```
 

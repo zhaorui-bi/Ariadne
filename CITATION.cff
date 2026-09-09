@@ -1,0 +1,65 @@
+cff-version: 1.2.0
+message: If you use Ariadne, please cite the accompanying Journal of Natural Products article.
+title: Ariadne
+type: software
+abstract: A four-stage platform for coral terpene synthase discovery and cembrene-class synthase (CeeSs) prioritization.
+authors:
+  - family-names: Wang
+    given-names: Yinhao
+  - family-names: Yu
+    given-names: Mengmeng
+  - family-names: Jiang
+    given-names: Zhaorui
+  - family-names: Zhou
+    given-names: Chengyu
+  - family-names: Feng
+    given-names: Wei
+  - family-names: Yu
+    given-names: Ke
+    orcid: https://orcid.org/0009-0004-3446-5057
+  - family-names: Ju
+    given-names: Jianhua
+    orcid: https://orcid.org/0000-0001-7712-8027
+  - family-names: Li
+    given-names: Feng
+    orcid: https://orcid.org/0009-0007-4941-0966
+version: 1.1.0
+license: MIT
+repository-code: https://github.com/zhaorui-bi/Ariadne
+url: https://github.com/zhaorui-bi/Ariadne
+identifiers:
+  - type: doi
+    value: 10.1021/acs.jnatprod.6c00686
+    description: Journal of Natural Products article
+preferred-citation:
+  type: article
+  authors:
+    - family-names: Wang
+      given-names: Yinhao
+    - family-names: Yu
+      given-names: Mengmeng
+    - family-names: Jiang
+      given-names: Zhaorui
+    - family-names: Zhou
+      given-names: Chengyu
+    - family-names: Feng
+      given-names: Wei
+    - family-names: Yu
+      given-names: Ke
+      orcid: https://orcid.org/0009-0004-3446-5057
+    - family-names: Ju
+      given-names: Jianhua
+      orcid: https://orcid.org/0000-0001-7712-8027
+    - family-names: Li
+      given-names: Feng
+      orcid: https://orcid.org/0009-0007-4941-0966
+  title: Identification of Cembrene Synthases Uncovers Polyphyletic Origins of 14-Membered Carbocyclic Cembranoids Biosynthesis in Corals
+  journal: Journal of Natural Products
+  year: 2026
+  month: 9
+  date-published: 2026-09-08
+  publisher:
+    name: American Chemical Society
+  doi: 10.1021/acs.jnatprod.6c00686
+  url: https://doi.org/10.1021/acs.jnatprod.6c00686
+  issn: 0163-3864
