@@ -12,7 +12,7 @@ Ariadne is organized as a sequential, evidence-preserving workflow for coral ter
 </figure>
 
 <div class="method-caption" markdown>
-The current main workflow is aligned with the README: users provide a reference FASTA directory with `--reference-dir`; Ariadne can build the needed HMM resources from those references when prebuilt profiles are not supplied; Stage IV is PCA/LDA visualization and candidate triage.
+Users provide a reference FASTA directory with `--reference-dir`. Ariadne can build the needed HMM resources from those references when prebuilt profiles are not supplied. Stage IV is PCA/LDA visualization and candidate triage.
 </div>
 
 ## Stage I - Discovery

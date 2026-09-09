@@ -75,7 +75,7 @@ ariadne run \
   --output-dir results/
 ```
 
-This executes the README-aligned workflow:
+This executes the documented four-stage workflow:
 
 1. candidate discovery;
 2. coverage / length filtering and near-duplicate removal;

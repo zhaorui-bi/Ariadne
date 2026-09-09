@@ -2,7 +2,7 @@
 
 <p class="page-kicker"><span class="icon-mark"><img src="images/icons/install.svg" alt=""></span><span class="research-hero__eyebrow">Command flags</span></p>
 
-Ariadne exposes one command for each main workflow stage plus `run`, which executes the README-aligned workflow through classification and PCA/LDA visualization. Required parameters are marked **required**.
+Ariadne exposes one command for each main workflow stage plus `run`, which executes the documented workflow through classification and PCA/LDA visualization. Required parameters are marked **required**.
 
 ## Command Map
 
@@ -13,7 +13,7 @@ Ariadne exposes one command for each main workflow stage plus `run`, which execu
 | `ariadne classify` | Stages 3-4: classification plus PCA/LDA visualization |
 | `ariadne prepare-references` | prepare reference FASTA files from source data |
 
-The installed CLI may still expose legacy or developer helper commands, including lower-level discovery helpers. They are not part of the current no-prep README workflow; use `ariadne run` for Stage 1.
+The installed CLI may still expose legacy or developer helper commands, including lower-level discovery helpers. They are not part of the current documented workflow; use `ariadne run` for Stage 1.
 
 ---
 

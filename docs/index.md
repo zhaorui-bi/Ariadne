@@ -60,7 +60,7 @@ These numbers come from the *Journal of Natural Products* study. They describe t
 <div class="highlight-card" markdown>
 <p class="icon-mark"><img src="images/icons/target.svg" alt=""></p>
 **80%**
-<span>Accuracy on 90 TPS homologs</span>
+<span>Prediction accuracy on 90 TPS homologs</span>
 </div>
 
 <div class="highlight-card" markdown>

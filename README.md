@@ -43,7 +43,7 @@ Results from the accompanying article, not claims about a local software run:
     <td align="center" valign="top" width="25%">
       <img src="docs/images/icons/target.svg" width="28" height="28" alt=""><br>
       <strong>80% accuracy</strong><br>
-      experimental validation rate across 90 TPS homologs
+      prediction accuracy from 90 TPS homologs
     </td>
     <td align="center" valign="top" width="25%">
       <img src="docs/images/icons/ring.svg" width="28" height="28" alt=""><br>

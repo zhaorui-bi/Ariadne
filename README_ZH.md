@@ -43,7 +43,7 @@
     <td align="center" valign="top" width="25%">
       <img src="docs/images/icons/target.svg" width="28" height="28" alt=""><br>
       <strong>80% 准确率</strong><br>
-      90 个 TPS 同源蛋白的实验验证率
+      对 90 个 TPS 同源蛋白的预测准确率
     </td>
     <td align="center" valign="top" width="25%">
       <img src="docs/images/icons/ring.svg" width="28" height="28" alt=""><br>

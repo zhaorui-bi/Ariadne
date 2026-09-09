@@ -71,12 +71,11 @@ ariadne = "ariadne.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/zhaorui-bi/Ariadne"
-Documentation = "https://github.com/zhaorui-bi/Ariadne/tree/main/docs"
+Documentation = "https://ariadne-platform.readthedocs.io/en/latest/"
 Repository = "https://github.com/zhaorui-bi/Ariadne"
 Issues = "https://github.com/zhaorui-bi/Ariadne/issues"
 Paper = "https://doi.org/10.1021/acs.jnatprod.6c00686"
 DOI = "https://doi.org/10.1021/acs.jnatprod.6c00686"
-Changelog = "https://github.com/zhaorui-bi/Ariadne/blob/main/CHANGELOG.md"
 
 [tool.setuptools]
 packages = ["ariadne"]
