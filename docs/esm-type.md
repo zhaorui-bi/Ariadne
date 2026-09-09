@@ -1,5 +1,7 @@
 # CeeSs Classifier (`ariadne.model`)
 
+<p class="page-kicker"><span class="icon-mark"><img src="images/icons/target.svg" alt=""></span><span class="research-hero__eyebrow">Optional ESM2 scoring</span></p>
+
 ## Motivation
 
 The root-level `TPS.xlsx` workbook is a small but high-quality supervised dataset for coral TPS representation learning. Each row pairs a sequence with its type annotation:

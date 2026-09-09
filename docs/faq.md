@@ -1,5 +1,11 @@
 # FAQ
 
+<p class="page-kicker"><span class="icon-mark"><img src="images/icons/book.svg" alt=""></span><span class="research-hero__eyebrow">Common questions</span></p>
+
+## How Does This Software Relate To The Paper?
+
+Ariadne is the computational platform described in Wang et al., *J. Nat. Prod.* **2026**. The published study used the workflow to prioritize coral TPS homologs and experimentally validate cembrene synthases. Phylogenetic analysis and enzyme engineering reported in the article are downstream scientific analyses enabled by those candidates, not additional commands in this package.
+
 ## What Should I Use For `--reference-dir`?
 
 Use a directory containing your curated multi-clade TPS reference FASTAs. The optional root-level `TPS.xlsx` workbook is used for CeeSs scoring when ESM dependencies are installed.

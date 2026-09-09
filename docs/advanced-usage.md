@@ -1,5 +1,7 @@
 # Advanced Usage
 
+<p class="page-kicker"><span class="icon-mark"><img src="images/icons/filter.svg" alt=""></span><span class="research-hero__eyebrow">Thresholds and classifier heads</span></p>
+
 This page collects the knobs that are useful after the first successful run. Keep the defaults for routine screening, then tune one layer at a time so changes remain interpretable.
 
 ## Manuscript-grade Run Template

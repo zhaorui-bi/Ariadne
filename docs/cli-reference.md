@@ -1,5 +1,7 @@
 # CLI Reference
 
+<p class="page-kicker"><span class="icon-mark"><img src="images/icons/install.svg" alt=""></span><span class="research-hero__eyebrow">Command flags</span></p>
+
 Ariadne exposes one command for each main workflow stage plus `run`, which executes the README-aligned workflow through classification and PCA/LDA visualization. Required parameters are marked **required**.
 
 ## Command Map

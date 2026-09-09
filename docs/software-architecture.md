@@ -1,6 +1,8 @@
 # Software Architecture
 
-Ariadne is structured as a reusable Python package first and a command-line tool second. The CLI is a thin layer over the same stage functions that are available from the Python API.
+<p class="page-kicker"><span class="icon-mark"><img src="images/icons/classify.svg" alt=""></span><span class="research-hero__eyebrow">Package layout</span></p>
+
+Ariadne is structured as a reusable Python package first and a command-line tool second. The CLI is a thin layer over the same stage functions that are available from the Python API. The published *J. Nat. Prod.* analysis used this stage layout; it did not depend on a separate phylogeny module.
 
 ## Package Layout
 

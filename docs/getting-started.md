@@ -1,6 +1,8 @@
 # Getting Started
 
-Ariadne is designed for a reproducible research workflow: one environment, one reference FASTA directory, and one command that takes protein or transcriptome inputs through classification and PCA/LDA visualization.
+<p class="page-kicker"><span class="icon-mark"><img src="images/icons/install.svg" alt=""></span><span class="research-hero__eyebrow">Installation and first run</span></p>
+
+Ariadne is the software platform behind Wang et al., *J. Nat. Prod.* **2026**. A first run should feel like a reproducible research workflow: one environment, one reference FASTA directory, and one command that takes protein or transcriptome inputs through classification and PCA/LDA visualization. The published CeeSs identifications required subsequent heterologous expression; this page only installs and executes the computational stages.
 
 ## Requirements
 

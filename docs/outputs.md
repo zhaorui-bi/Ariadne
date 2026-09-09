@@ -1,6 +1,8 @@
 # Outputs
 
-A standard README-aligned `ariadne run` produces discovery, filtering, and classification/visualization directories plus a top-level summary:
+<p class="page-kicker"><span class="icon-mark"><img src="images/icons/output.svg" alt=""></span><span class="research-hero__eyebrow">Tables and figures</span></p>
+
+A standard `ariadne run` produces discovery, filtering, and classification/visualization directories plus a top-level summary:
 
 ```text
 results/

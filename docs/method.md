@@ -1,8 +1,10 @@
 # Method
 
+<p class="page-kicker"><span class="icon-mark"><img src="images/icons/book.svg" alt=""></span><span class="research-hero__eyebrow">Computational design</span></p>
+
 ## Conceptual Framing
 
-Ariadne is organized as a sequential, evidence-preserving workflow for terpene synthase discovery. The design goal is not only to emit a final label, but to keep enough intermediate evidence for reruns, candidate auditing, manuscript reporting, and wet-lab selection.
+Ariadne is organized as a sequential, evidence-preserving workflow for coral terpene synthase discovery. The article used this structure to move from a large TPS homolog set to a short CeeSs list that could be expressed in yeast. The design goal is not only to emit a final label, but to keep enough intermediate evidence for reruns, candidate auditing, manuscript reporting, and wet-lab selection.
 
 <figure class="algorithm-figure" markdown="1">
 ![Ariadne algorithm framework with four stages](images/algorithm-framework.png)

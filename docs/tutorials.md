@@ -1,6 +1,8 @@
 # Tutorials
 
-These tutorials mirror the current README workflow: run the pipeline, read the classification layer, and use PCA/LDA visualization for candidate triage.
+<p class="page-kicker"><span class="icon-mark"><img src="images/icons/discovery.svg" alt=""></span><span class="research-hero__eyebrow">Worked examples</span></p>
+
+These tutorials mirror the published workflow: run the pipeline, read the classification layer, and use PCA/LDA visualization for candidate triage.
 
 ## 1 · Run The Local Smoke Test
 

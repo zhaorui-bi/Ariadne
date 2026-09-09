@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "ariadne-tps"
 version = "1.1.0"
-description = "Research-grade platform for terpene synthase discovery, CeeSs prioritization, and PCA/LDA visualization."
+description = "Genome-wide targeted mining of coral terpene synthases and cembrene-class synthase (CeeSs) prioritization."
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }

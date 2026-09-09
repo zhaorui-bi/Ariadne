@@ -1,18 +1,26 @@
 site_name: Ariadne
-site_description: Research documentation for Ariadne, a four-stage TPS discovery and CeeSs prioritization framework.
-site_author: Zhaorui Jiang
+site_description: Genome-wide targeted mining of coral terpene synthases and cembrene-class synthase (CeeSs) prioritization. Computational platform described in Journal of Natural Products (2026).
+site_author: Ariadne authors
 repo_url: https://github.com/zhaorui-bi/Ariadne
 repo_name: zhaorui-bi/Ariadne
 edit_uri: edit/main/docs/
 docs_dir: docs
 site_dir: site
-copyright: "Copyright &copy; Zhaorui Jiang"
+copyright: "Copyright &copy; 2026 Ariadne authors &middot; Wang et al., J. Nat. Prod. 2026"
 
 theme:
   name: material
   language: en
   logo: logo.png
   favicon: logo.png
+  icon:
+    repo: fontawesome/brands/github
+    annotation: material/arrow-right-circle
+    admonition:
+      note: fontawesome/solid/book-open
+      tip: fontawesome/solid/lightbulb
+      warning: fontawesome/solid/triangle-exclamation
+      abstract: fontawesome/solid/flask
   features:
     - navigation.instant
     - navigation.tracking
@@ -73,16 +81,28 @@ markdown_extensions:
 extra_css:
   - stylesheets/extra.css
 
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/zhaorui-bi/Ariadne
+      name: GitHub repository
+    - icon: fontawesome/solid/book-open
+      link: https://doi.org/10.1021/acs.jnatprod.6c00686
+      name: Journal of Natural Products article
+    - icon: fontawesome/solid/file-lines
+      link: https://ariadne-platform.readthedocs.io/en/latest/
+      name: Read the Docs
+
 nav:
   - Home: index.md
   - Getting Started: getting-started.md
   - Method: method.md
-  - ESM Type Model: esm-type.md
+  - CeeSs Classifier: esm-type.md
   - Advanced Usage: advanced-usage.md
   - Software Architecture: software-architecture.md
   - Tutorials: tutorials.md
   - CLI Reference: cli-reference.md
   - Outputs: outputs.md
-  - Documentation Site: documentation-site.md
   - FAQ: faq.md
   - Citation: citation.md
+  - Documentation Site: documentation-site.md
